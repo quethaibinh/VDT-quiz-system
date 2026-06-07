@@ -1,0 +1,41 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          # Cau hinh CORS toan cuc cho gateway.
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOriginPatterns: "*"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - OPTIONS
+                allowedHeaders: "*"
+                allowCredentials: true
+
+          # Dinh tuyen request tu gateway xuong cac microservice.
+          routes:
+            - id: auth-service-route
+              uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/v1/api/auth-service/**
+
+            - id: question-service-route
+              uri: ${QUESTION_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/v1/api/question-service/**
+
+jwt:
+  secret: ${JWT_SECRET}
