@@ -1,0 +1,29 @@
+info:
+  name: register
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: http://localhost:8080/v1/api/auth-service/register
+  body:
+    type: json
+    data: |-
+      {
+        "username": "thanh3",
+        "password": "123456",
+        "fullName": "vu duc thanh",
+        "email": "thanh@gmail.com",
+        "studentCode": "B22DCCN801",
+        "phone": "8888888888",
+        "nationalId": "888888888888",
+        "birthDate": "2004-07-03",
+        "gender": "MALE"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

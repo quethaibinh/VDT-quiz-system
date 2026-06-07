@@ -1,0 +1,23 @@
+info:
+  name: register
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: http://localhost:8081/public/api/auth-service/register
+  body:
+    type: json
+    data: |-
+      {
+        "username": "thanh",
+        "password": "123456",
+        "fullName": "thanh"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
