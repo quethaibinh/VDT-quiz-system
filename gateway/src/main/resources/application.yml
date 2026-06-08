@@ -33,7 +33,7 @@ spring:
                 - Path=/v1/api/auth-service/**
 
             - id: question-service-route
-              uri: ${QUESTION_SERVICE_URL:http://localhost:8083}
+              uri: ${QUESTION_SERVICE_URL:http://localhost:8082}
               predicates:
                 - Path=/v1/api/question-service/**
 

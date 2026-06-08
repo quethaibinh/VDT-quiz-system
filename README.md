@@ -7,7 +7,9 @@ repository:
 
 - API Gateway: `http://localhost:8080`
 - Auth Service: `http://localhost:8081`
+- Question Service: `http://localhost:8082`
 - Auth PostgreSQL: `localhost:5433`
+- Question PostgreSQL: `localhost:5434`
 
 ### Prerequisites
 
@@ -59,5 +61,5 @@ Stop containers and delete the PostgreSQL volume:
 docker compose down -v
 ```
 
-The `question-service` gateway route remains configured, but that service is
-not included because its source code is not present in this repository yet.
+The `question-service` gateway route is included in Docker Compose. It uses a
+separate PostgreSQL container and publishes that database on local port `5434`.
