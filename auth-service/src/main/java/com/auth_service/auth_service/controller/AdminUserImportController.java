@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/v1/api/auth-service/admin/users")
+@RequestMapping("/v1/api/admin/auth-service/users")
 public class AdminUserImportController {
 
     private final UserImportService userImportService;

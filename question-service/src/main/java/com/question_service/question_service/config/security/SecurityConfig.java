@@ -35,7 +35,7 @@ public class SecurityConfig {
         http.cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
                     config.setAllowedOriginPatterns(List.of("*"));
-                    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                     config.setAllowedHeaders(List.of("*"));
                     config.setAllowCredentials(true);
                     return config;
@@ -43,8 +43,8 @@ public class SecurityConfig {
                 .csrf(customizer -> customizer.disable())
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/v1/api/question-service/public/**").permitAll()
-                        .requestMatchers("/v1/api/question-service/admin/**").hasRole("ADMIN")
                         .requestMatchers("/v1/api/question-service/teacher/**").hasRole("TEACHER")
+                        .requestMatchers("/v1/api/admin/question-service/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

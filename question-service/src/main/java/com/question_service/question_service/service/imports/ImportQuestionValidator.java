@@ -7,7 +7,11 @@ import com.question_service.question_service.model.dto.imports.NormalizedQuestio
 import com.question_service.question_service.model.entity.ContentFormat;
 import com.question_service.question_service.model.entity.Difficulty;
 import com.question_service.question_service.model.entity.OptionKey;
+import com.question_service.question_service.model.entity.Subject;
+import com.question_service.question_service.model.entity.SubjectStatus;
+import com.question_service.question_service.model.entity.SubjectTeacherStatus;
 import com.question_service.question_service.repository.SubjectRepo;
+import com.question_service.question_service.repository.SubjectTeacherRepo;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -25,23 +29,67 @@ public class ImportQuestionValidator {
     private static final Set<String> QUESTION_STATUSES = Set.of("PUBLIC", "PRIVATE");
 
     private final SubjectRepo subjectRepo;
+    private final SubjectTeacherRepo subjectTeacherRepo;
 
-    public ImportQuestionValidator(SubjectRepo subjectRepo) {
+    public ImportQuestionValidator(SubjectRepo subjectRepo, SubjectTeacherRepo subjectTeacherRepo) {
         this.subjectRepo = subjectRepo;
+        this.subjectTeacherRepo = subjectTeacherRepo;
     }
 
-    public ImportQuestionValidationResult validate(UUID subjectId, List<ImportQuestionRowDTO> rows) {
+    public ImportQuestionValidationResult validate(UUID subjectId, UUID teacherId, List<ImportQuestionRowDTO> rows) {
         ImportQuestionValidationResult result = new ImportQuestionValidationResult();
 
-        if (subjectId == null || !subjectRepo.existsById(subjectId)) {
+        ImportQuestionValidationResult accessResult = validateAccess(subjectId, teacherId);
+        if (accessResult.hasErrors()) {
+            return accessResult;
+        }
+
+        return validateRows(rows);
+    }
+
+    public ImportQuestionValidationResult validateAccess(UUID subjectId, UUID teacherId) {
+        ImportQuestionValidationResult result = new ImportQuestionValidationResult();
+
+        if (subjectId == null) {
+            result.addError(new ImportQuestionErrorDTO(0, "subjectId", "SUBJECT_NOT_FOUND", "Subject does not exist"));
+            return result;
+        }
+
+        Subject subject = subjectRepo.findById(subjectId).orElse(null);
+        if (subject == null) {
+            result.addError(new ImportQuestionErrorDTO(0, "subjectId", "SUBJECT_NOT_FOUND", "Subject does not exist"));
+            return result;
+        }
+
+        if (!SubjectStatus.ACTIVE.equals(subject.getStatus())) {
             result.addError(new ImportQuestionErrorDTO(
                     0,
                     "subjectId",
-                    "SUBJECT_NOT_FOUND",
-                    "Subject does not exist"
+                    "SUBJECT_NOT_ACTIVE",
+                    "Subject is not active"
             ));
             return result;
         }
+
+        if (teacherId == null || !subjectTeacherRepo.existsBySubjectIdAndTeacherIdAndStatus(
+                subjectId,
+                teacherId,
+                SubjectTeacherStatus.ACTIVE
+        )) {
+            result.addError(new ImportQuestionErrorDTO(
+                    0,
+                    "subjectId",
+                    "SUBJECT_FORBIDDEN",
+                    "Teacher is not assigned to this subject"
+            ));
+            return result;
+        }
+
+        return result;
+    }
+
+    public ImportQuestionValidationResult validateRows(List<ImportQuestionRowDTO> rows) {
+        ImportQuestionValidationResult result = new ImportQuestionValidationResult();
 
         for (ImportQuestionRowDTO row : rows) {
             validateRow(row, result);

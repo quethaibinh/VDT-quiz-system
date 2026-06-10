@@ -1,18 +1,18 @@
 info:
-  name: admin register
+  name: teacher import question
   type: http
-  seq: 3
+  seq: 4
 
 http:
   method: POST
-  url: "{{url}}/v1/api/admin/auth-service/users/import"
+  url: "{{url}}/v1/api/question-service/teacher/subjects/c0e5a9d5-4fcf-4f7e-bc50-f08077e913b9/questions/import"
   body:
     type: multipart-form
     data:
       - name: file
         type: file
         value:
-          - D:\VDT\mini-project\quiz_v0.2_coding\docs\samples\student-import-100.xlsx
+          - D:\VDT\mini-project\quiz_v0.2_coding\docs\samples\philosophy-question-import-100.xlsx
   auth:
     type: bearer
     token: "{{token}}"

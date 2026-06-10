@@ -34,6 +34,14 @@ public class ImportQuestionService {
         ImportQuestionResultDTO result = new ImportQuestionResultDTO();
         List<ImportQuestionRowDTO> rows;
 
+        ImportQuestionValidationResult accessResult = importQuestionValidator.validateAccess(subjectId, teacherId);
+        if (accessResult.hasErrors()) {
+            for (ImportQuestionErrorDTO error : accessResult.getErrors()) {
+                result.addError(error);
+            }
+            return result;
+        }
+
         try {
             rows = excelQuestionParser.parse(file);
         } catch (Exception exception) {
@@ -57,7 +65,7 @@ public class ImportQuestionService {
             return result;
         }
 
-        ImportQuestionValidationResult validationResult = importQuestionValidator.validate(subjectId, rows);
+        ImportQuestionValidationResult validationResult = importQuestionValidator.validateRows(rows);
 
         if (validationResult.hasErrors()) {
             for (ImportQuestionErrorDTO error : validationResult.getErrors()) {

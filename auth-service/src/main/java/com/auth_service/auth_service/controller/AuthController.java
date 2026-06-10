@@ -26,9 +26,4 @@ public class AuthController {
         userService.register(register);
     }
 
-    @PostMapping("/admin/register")
-    public void adminRegister(){
-
-    }
-
 }

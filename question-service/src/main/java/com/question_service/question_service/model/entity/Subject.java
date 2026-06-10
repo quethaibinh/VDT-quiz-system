@@ -21,7 +21,8 @@ public class Subject extends BaseEntity{
     @Column(name = "name", nullable = false)
     private String name;
     private String description;
-    private UUID owner_teacher_id;
+    private UUID createdByAdminId;
+    private UUID updatedByAdminId;
     @Column(name = "status", nullable = false)
     private String status;
 

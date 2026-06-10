@@ -42,8 +42,9 @@ class ImportQuestionServiceTests {
                 "Status must be PUBLIC or PRIVATE"
         ));
 
+        when(validator.validateAccess(subjectId, teacherId)).thenReturn(new ImportQuestionValidationResult());
         when(parser.parse(file)).thenReturn(rows);
-        when(validator.validate(subjectId, rows)).thenReturn(validationResult);
+        when(validator.validateRows(rows)).thenReturn(validationResult);
 
         ImportQuestionResultDTO result = service.importQuestions(subjectId, teacherId, file);
 
@@ -69,8 +70,9 @@ class ImportQuestionServiceTests {
                 1
         );
 
+        when(validator.validateAccess(subjectId, teacherId)).thenReturn(new ImportQuestionValidationResult());
         when(parser.parse(file)).thenReturn(rows);
-        when(validator.validate(subjectId, rows)).thenReturn(validationResult);
+        when(validator.validateRows(rows)).thenReturn(validationResult);
         when(creationService.createQuestions(subjectId, teacherId, file, validationResult.getRows()))
                 .thenReturn(creationResult);
 
@@ -85,6 +87,7 @@ class ImportQuestionServiceTests {
 
     @Test
     void rejectsFileWithNoQuestionRows() throws Exception {
+        when(validator.validateAccess(subjectId, teacherId)).thenReturn(new ImportQuestionValidationResult());
         when(parser.parse(file)).thenReturn(List.of());
 
         ImportQuestionResultDTO result = service.importQuestions(subjectId, teacherId, file);
@@ -94,8 +97,35 @@ class ImportQuestionServiceTests {
         assertThat(result.getErrors().getFirst().getErrorCode()).isEqualTo("NO_ROWS");
         verify(validator, never()).validate(
                 org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any()
         );
+        verify(validator, never()).validateRows(org.mockito.ArgumentMatchers.any());
+        verify(creationService, never()).createQuestions(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
+    void rejectsSubjectAccessBeforeParsingFile() throws Exception {
+        ImportQuestionValidationResult accessResult = new ImportQuestionValidationResult();
+        accessResult.addError(new ImportQuestionErrorDTO(
+                0,
+                "subjectId",
+                "SUBJECT_FORBIDDEN",
+                "Teacher is not assigned to this subject"
+        ));
+
+        when(validator.validateAccess(subjectId, teacherId)).thenReturn(accessResult);
+
+        ImportQuestionResultDTO result = service.importQuestions(subjectId, teacherId, file);
+
+        assertThat(result.isImported()).isFalse();
+        assertThat(result.getErrors().getFirst().getErrorCode()).isEqualTo("SUBJECT_FORBIDDEN");
+        verify(parser, never()).parse(file);
         verify(creationService, never()).createQuestions(
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(),
