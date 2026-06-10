@@ -1,0 +1,6 @@
+name: auth
+variables:
+  - name: token
+    value: ""
+  - name: url
+    value: http://localhost:8080

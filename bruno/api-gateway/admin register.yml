@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: http://localhost:8080/v1/api/auth-service/admin/users/import
+  url: "{{url}}/v1/api/admin/auth-service/users/import"
   body:
     type: multipart-form
     data:
@@ -15,7 +15,7 @@ http:
           - D:\VDT\mini-project\quiz_v0.2_coding\docs\samples\student-import-100.xlsx
   auth:
     type: bearer
-    token: eyJhbGciOiJIUzI1NiJ9.eyJkaXNwbGF5TmFtZSI6InZ1IGR1YyB0aGFuaCIsImZ1bGxOYW1lIjoidnUgZHVjIHRoYW5oIiwidXNlclJvbGUiOiJBRE1JTiIsInVzZXJJZCI6IjkyNDMzNTc4LWMzOGEtNDY1Zi1iNmQ1LTQ0ZGU2OGM2MjRiMiIsInVzZXJuYW1lIjoidGhhbmgyIiwic3ViIjoidGhhbmgyIiwiaWF0IjoxNzgwODE3NTMzLCJleHAiOjE3ODA4MjgzMzN9.CWJ2_6eE2LB0nLPKSJdhAg_tNJ958vC0HfEhVyTWeIY
+    token: "{{token}}"
 
 settings:
   encodeUrl: true

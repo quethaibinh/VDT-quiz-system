@@ -34,8 +34,6 @@ public class SecurityConfig {
                         .pathMatchers("/v1/api/auth-service/login").permitAll()
                         .pathMatchers("/v1/api/auth-service/register").permitAll()
                         .pathMatchers("/v1/api/question-service/public/**").permitAll()
-                        // Các route admin cần token có role phù hợp.
-                        .pathMatchers("/v1/api/auth-service/admin/**").hasRole("ADMIN")
                         .pathMatchers("/v1/api/admin/**").hasRole("ADMIN")
                         // Các request còn lại bắt buộc phải đăng nhập.
                         .anyExchange().authenticated()

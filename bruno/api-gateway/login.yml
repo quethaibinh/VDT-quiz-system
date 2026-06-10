@@ -5,15 +5,29 @@ info:
 
 http:
   method: POST
-  url: http://localhost:8080/v1/api/auth-service/login
+  url: "{{url}}/v1/api/auth-service/login"
   body:
     type: json
     data: |-
       {
-        "username": "thanh",
+        "username": "thanh1",
         "password": "123456"
       }
-  auth: inherit
+  auth:
+    type: bearer
+    token: ""
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const token = res.data || res.getBody();
+        console.log("hello");
+        console.log(token);
+        if (token) {
+          bru.setEnvVar("token", token);
+          console.log("JWT Token đã được cập nhật tự động!");
+        }
 
 settings:
   encodeUrl: true

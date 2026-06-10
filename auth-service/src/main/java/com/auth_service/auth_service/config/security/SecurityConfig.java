@@ -56,7 +56,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(request -> request
                         .requestMatchers(POST, "/v1/api/auth-service/login").permitAll()
                         .requestMatchers(POST, "/v1/api/auth-service/register").permitAll()
-                        .requestMatchers("/v1/api/auth-service/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/v1/api/admin/auth-service/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

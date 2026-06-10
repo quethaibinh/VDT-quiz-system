@@ -5,22 +5,24 @@ info:
 
 http:
   method: POST
-  url: http://localhost:8080/v1/api/auth-service/register
+  url: "{{url}}/v1/api/auth-service/register"
   body:
     type: json
     data: |-
       {
-        "username": "thanh3",
+        "username": "thanh1",
         "password": "123456",
         "fullName": "vu duc thanh",
-        "email": "thanh@gmail.com",
-        "studentCode": "B22DCCN801",
+        "email": "thanh1@gmail.com",
+        "studentCode": "B22DCCN802",
         "phone": "8888888888",
-        "nationalId": "888888888888",
+        "nationalId": "888888888889",
         "birthDate": "2004-07-03",
         "gender": "MALE"
       }
-  auth: inherit
+  auth:
+    type: bearer
+    token: ""
 
 settings:
   encodeUrl: true

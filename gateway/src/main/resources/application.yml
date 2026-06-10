@@ -30,12 +30,12 @@ spring:
             - id: auth-service-route
               uri: ${AUTH_SERVICE_URL:http://localhost:8081}
               predicates:
-                - Path=/v1/api/auth-service/**
+                - Path=/v1/api/auth-service/**,/v1/api/admin/auth-service/**
 
             - id: question-service-route
-              uri: ${QUESTION_SERVICE_URL:http://localhost:8083}
+              uri: ${QUESTION_SERVICE_URL:http://localhost:8082}
               predicates:
-                - Path=/v1/api/question-service/**
+                - Path=/v1/api/question-service/**,/v1/api/admin/question-service/**
 
 jwt:
   secret: ${JWT_SECRET}
