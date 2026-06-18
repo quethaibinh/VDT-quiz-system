@@ -34,7 +34,7 @@ public interface QuestionCollectionItemRepo extends JpaRepository<QuestionCollec
             from QuestionCollectionItem i
             join Question q on q.id = i.questionId
             where i.collectionId = :collectionId
-              and q.visibility = com.question_service.question_service.model.entity.QuestionVisibility.PRIVATE
+              and q.visibility = com.question_service.question_service.model.entity.enums.QuestionVisibility.PRIVATE
             """)
     long countPrivateQuestions(@Param("collectionId") UUID collectionId);
 
