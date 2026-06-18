@@ -2,6 +2,10 @@ package com.question_service.question_service.service.collections;
 
 import com.question_service.question_service.model.dto.collections.*;
 import com.question_service.question_service.model.entity.*;
+import com.question_service.question_service.model.entity.enums.CollectionStatus;
+import com.question_service.question_service.model.entity.enums.Difficulty;
+import com.question_service.question_service.model.entity.enums.QuestionStatus;
+import com.question_service.question_service.model.entity.enums.QuestionVisibility;
 import com.question_service.question_service.repository.*;
 import com.question_service.question_service.service.questions.TeacherQuestionSearchService;
 import org.junit.jupiter.api.BeforeEach;

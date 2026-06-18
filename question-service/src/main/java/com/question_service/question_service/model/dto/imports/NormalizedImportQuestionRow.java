@@ -1,9 +1,9 @@
 package com.question_service.question_service.model.dto.imports;
 
-import com.question_service.question_service.model.entity.ContentFormat;
-import com.question_service.question_service.model.entity.Difficulty;
-import com.question_service.question_service.model.entity.OptionKey;
-import com.question_service.question_service.model.entity.QuestionVisibility;
+import com.question_service.question_service.model.entity.enums.ContentFormat;
+import com.question_service.question_service.model.entity.enums.Difficulty;
+import com.question_service.question_service.model.entity.enums.OptionKey;
+import com.question_service.question_service.model.entity.enums.QuestionVisibility;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

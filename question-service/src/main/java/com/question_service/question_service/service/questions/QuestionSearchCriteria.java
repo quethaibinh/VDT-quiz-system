@@ -1,9 +1,9 @@
 package com.question_service.question_service.service.questions;
 
-import com.question_service.question_service.model.entity.CollectionMembership;
-import com.question_service.question_service.model.entity.Difficulty;
-import com.question_service.question_service.model.entity.OwnershipScope;
-import com.question_service.question_service.model.entity.QuestionVisibility;
+import com.question_service.question_service.model.entity.enums.CollectionMembership;
+import com.question_service.question_service.model.entity.enums.Difficulty;
+import com.question_service.question_service.model.entity.enums.OwnershipScope;
+import com.question_service.question_service.model.entity.enums.QuestionVisibility;
 
 import java.util.List;
 import java.util.UUID;

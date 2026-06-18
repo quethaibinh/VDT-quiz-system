@@ -1,5 +1,6 @@
 package com.question_service.question_service.model.entity;
 
+import com.question_service.question_service.model.entity.enums.ImportStatus;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;

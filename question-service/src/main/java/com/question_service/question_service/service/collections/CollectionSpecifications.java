@@ -1,8 +1,8 @@
 package com.question_service.question_service.service.collections;
 
-import com.question_service.question_service.model.entity.CollectionStatus;
-import com.question_service.question_service.model.entity.CollectionVisibility;
-import com.question_service.question_service.model.entity.OwnershipScope;
+import com.question_service.question_service.model.entity.enums.CollectionStatus;
+import com.question_service.question_service.model.entity.enums.CollectionVisibility;
+import com.question_service.question_service.model.entity.enums.OwnershipScope;
 import com.question_service.question_service.model.entity.QuestionCollection;
 import org.springframework.data.jpa.domain.Specification;
 

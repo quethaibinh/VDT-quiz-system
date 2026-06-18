@@ -4,7 +4,7 @@ import com.question_service.question_service.model.dto.imports.ImportQuestionRow
 import com.question_service.question_service.model.entity.Subject;
 import com.question_service.question_service.model.entity.SubjectStatus;
 import com.question_service.question_service.model.entity.SubjectTeacherStatus;
-import com.question_service.question_service.model.entity.QuestionVisibility;
+import com.question_service.question_service.model.entity.enums.QuestionVisibility;
 import com.question_service.question_service.repository.SubjectRepo;
 import com.question_service.question_service.repository.SubjectTeacherRepo;
 import org.junit.jupiter.api.Test;

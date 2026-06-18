@@ -1,7 +1,7 @@
 package com.question_service.question_service.model.dto.collections;
 
-import com.question_service.question_service.model.entity.CollectionStatus;
-import com.question_service.question_service.model.entity.CollectionVisibility;
+import com.question_service.question_service.model.entity.enums.CollectionStatus;
+import com.question_service.question_service.model.entity.enums.CollectionVisibility;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

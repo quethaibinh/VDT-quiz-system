@@ -1,7 +1,7 @@
 package com.question_service.question_service.model.dto.questions;
 
-import com.question_service.question_service.model.entity.ContentFormat;
-import com.question_service.question_service.model.entity.OptionKey;
+import com.question_service.question_service.model.entity.enums.ContentFormat;
+import com.question_service.question_service.model.entity.enums.OptionKey;
 
 import java.util.UUID;
 
