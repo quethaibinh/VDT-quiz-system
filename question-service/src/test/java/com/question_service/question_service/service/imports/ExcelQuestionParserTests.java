@@ -29,7 +29,7 @@ class ExcelQuestionParserTests {
             header.createCell(4).setCellValue("optionB");
             header.createCell(5).setCellValue("correctOptions");
             header.createCell(6).setCellValue("difficulty");
-            header.createCell(7).setCellValue("status");
+            header.createCell(7).setCellValue("visibility");
 
             var row = sheet.createRow(1);
             row.createCell(0).setCellValue("Algebra");
@@ -59,7 +59,7 @@ class ExcelQuestionParserTests {
         assertThat(rows).hasSize(1);
         assertThat(rows.getFirst().getRowNumber()).isEqualTo(2);
         assertThat(rows.getFirst().getTopicName()).isEqualTo("Algebra");
-        assertThat(rows.getFirst().getStatus()).isEqualTo("PUBLIC");
+        assertThat(rows.getFirst().getVisibility()).isEqualTo("PUBLIC");
     }
 
 }

@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+/**
+ * Dieu phoi kiem tra quyen, doc Excel, validate va luu cau hoi import.
+ */
 public class ImportQuestionService {
 
     private final ExcelQuestionParser excelQuestionParser;
@@ -26,6 +29,9 @@ public class ImportQuestionService {
         this.importedQuestionCreationService = importedQuestionCreationService;
     }
 
+    /**
+     * Chi ghi du lieu khi quyen truy cap va toan bo dong trong tep deu hop le.
+     */
     public ImportQuestionResultDTO importQuestions(
             UUID subjectId,
             UUID teacherId,

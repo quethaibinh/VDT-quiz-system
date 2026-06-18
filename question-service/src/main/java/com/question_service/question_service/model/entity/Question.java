@@ -29,7 +29,12 @@ public class Question extends BaseEntity {
     private Difficulty difficulty;
     private Double defaultScore;
     private int estimatedSecond;
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visibility", nullable = false)
+    private QuestionVisibility visibility = QuestionVisibility.PRIVATE;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private QuestionStatus status = QuestionStatus.ACTIVE;
     @Column(name = "source")
     @Enumerated(EnumType.STRING)
     private Source source;

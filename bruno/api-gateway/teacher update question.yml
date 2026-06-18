@@ -1,0 +1,36 @@
+info:
+  name: teacher update question
+  type: http
+  seq: 13
+
+http:
+  method: PUT
+  url: "{{url}}/v1/api/question-service/teacher/subjects/{{subjectId}}/questions/{{questionId}}"
+  body:
+    type: json
+    data: |-
+      {
+        "topicId": "{{topicId}}",
+        "questionType": "MULTI_CHOICE",
+        "content": "Select all valid statements.",
+        "contentFormat": "PLAIN_TEXT",
+        "explanation": "Updated owner-only explanation",
+        "difficulty": "MEDIUM",
+        "defaultScore": 2.0,
+        "estimatedSecond": 45,
+        "visibility": "PUBLIC",
+        "options": [
+          {"optionKey": "A", "content": "Statement A", "correct": true},
+          {"optionKey": "B", "content": "Statement B", "correct": true},
+          {"optionKey": "C", "content": "Statement C", "correct": false}
+        ]
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

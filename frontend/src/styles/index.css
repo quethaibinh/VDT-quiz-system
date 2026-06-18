@@ -1,0 +1,27 @@
+@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "EB Garamond", Georgia, serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
+  --color-canvas: #faf5ee;
+  --color-surface: #fffdf9;
+  --color-primary: #c2652a;
+  --color-primary-hover: #a95120;
+  --color-accent: #8c3c3c;
+  --color-ink: #3a302a;
+  --color-muted: #756a62;
+  --color-line: #ded6ce;
+  --color-success: #55745a;
+  --color-warning: #a46b22;
+  --color-danger: #a4443d;
+  --shadow-soft: 0 2px 16px rgba(58, 48, 42, 0.06);
+}
+
+:root { color: #3a302a; background: #faf5ee; font-family: "Manrope", system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid #c2652a; outline-offset: 2px; }
+h1, h2, h3 { font-family: "EB Garamond", Georgia, serif; }

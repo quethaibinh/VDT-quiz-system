@@ -12,6 +12,9 @@ import java.util.Optional;
 import java.util.Set;
 
 @Service
+/**
+ * Dieu phoi qua trinh doc, kiem tra va tao nguoi dung tu Excel.
+ */
 public class UserImportService {
 
     private final ExcelUserParser excelUserParser;
@@ -28,6 +31,9 @@ public class UserImportService {
         this.importedUserCreationService = importedUserCreationService;
     }
 
+    /**
+     * Xu ly tung dong doc lap de dong loi khong huy cac dong hop le.
+     */
     public ImportUserResultDTO importUsers(MultipartFile file) throws Exception {
         List<ImportUserRowDTO> rows = excelUserParser.parse(file);
         ImportUserResultDTO result = new ImportUserResultDTO();
@@ -37,7 +43,6 @@ public class UserImportService {
         Set<String> seenStudentCodes = new HashSet<>();
         Set<String> seenTeacherCodes = new HashSet<>();
 
-        // Xu ly doc lap tung dong de dong loi khong rollback cac dong hop le.
         for (ImportUserRowDTO row : rows) {
             Optional<ImportUserErrorDTO> validationError = importUserValidator.validate(
                     row,

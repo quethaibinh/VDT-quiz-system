@@ -17,10 +17,16 @@ import java.util.List;
 import java.util.Map;
 
 @Component
+/**
+ * Doc sheet dau tien cua tep XLSX thanh cac dong import cau hoi.
+ */
 public class ExcelQuestionParser {
 
     private final DataFormatter formatter = new DataFormatter();
 
+    /**
+     * Bo qua dong rong va giu so dong goc de bao loi chinh xac.
+     */
     public List<ImportQuestionRowDTO> parse(MultipartFile file) throws Exception {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Excel file is required");
@@ -69,7 +75,7 @@ public class ExcelQuestionParser {
                         getValue(row, headers, "defaultScore"),
                         getValue(row, headers, "estimatedSecond"),
                         getValue(row, headers, "explanation"),
-                        getValue(row, headers, "status"),
+                        getValue(row, headers, "visibility"),
                         getValue(row, headers, "contentFormat")
                 ));
             }

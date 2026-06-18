@@ -6,6 +6,7 @@ The Docker Compose stack runs every service currently available in this
 repository:
 
 - API Gateway: `http://localhost:8080`
+- Teacher Frontend: `http://localhost:3000`
 - Auth Service: `http://localhost:8081`
 - Question Service: `http://localhost:8082`
 - Auth PostgreSQL: `localhost:5433`
@@ -36,6 +37,10 @@ network. The auth database uses `postgres:5432` inside Docker and publishes
 docker compose up --build -d
 docker compose ps
 ```
+
+Open the Teacher frontend at `http://localhost:3000`. Override the published
+port with `FRONTEND_PORT` in `.env`. Nginx forwards frontend `/v1/api` requests
+to the Gateway over the Compose network.
 
 Follow logs with:
 

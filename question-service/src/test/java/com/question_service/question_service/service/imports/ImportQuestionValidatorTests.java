@@ -4,6 +4,7 @@ import com.question_service.question_service.model.dto.imports.ImportQuestionRow
 import com.question_service.question_service.model.entity.Subject;
 import com.question_service.question_service.model.entity.SubjectStatus;
 import com.question_service.question_service.model.entity.SubjectTeacherStatus;
+import com.question_service.question_service.model.entity.QuestionVisibility;
 import com.question_service.question_service.repository.SubjectRepo;
 import com.question_service.question_service.repository.SubjectTeacherRepo;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ class ImportQuestionValidatorTests {
     private final UUID teacherId = UUID.randomUUID();
 
     @Test
-    void acceptsValidMultiChoiceQuestionAndNormalizesStatus() {
+    void acceptsValidMultiChoiceQuestionAndNormalizesVisibility() {
         allowAssignedActiveSubject();
 
         ImportQuestionValidationResult result = validator.validate(
@@ -36,7 +37,7 @@ class ImportQuestionValidatorTests {
 
         assertThat(result.hasErrors()).isFalse();
         assertThat(result.getRows()).hasSize(1);
-        assertThat(result.getRows().getFirst().getStatus()).isEqualTo("PRIVATE");
+        assertThat(result.getRows().getFirst().getVisibility()).isEqualTo(QuestionVisibility.PRIVATE);
         assertThat(result.getRows().getFirst().getCorrectOptionKeys()).hasSize(2);
     }
 
@@ -73,7 +74,7 @@ class ImportQuestionValidatorTests {
     }
 
     @Test
-    void rejectsStatusOutsidePublicPrivate() {
+    void rejectsVisibilityOutsidePublicPrivate() {
         allowAssignedActiveSubject();
 
         ImportQuestionValidationResult result = validator.validate(
@@ -85,7 +86,7 @@ class ImportQuestionValidatorTests {
         assertThat(result.hasErrors()).isTrue();
         assertThat(result.getErrors())
                 .extracting("errorCode")
-                .contains("INVALID_STATUS");
+                .contains("INVALID_VISIBILITY");
     }
 
     @Test
@@ -124,7 +125,7 @@ class ImportQuestionValidatorTests {
         assertThat(result.getRows()).isEmpty();
     }
 
-    private ImportQuestionRowDTO row(String questionType, String correctOptions, String status) {
+    private ImportQuestionRowDTO row(String questionType, String correctOptions, String visibility) {
         return new ImportQuestionRowDTO(
                 2,
                 "Algebra",
@@ -142,7 +143,7 @@ class ImportQuestionValidatorTests {
                 null,
                 null,
                 null,
-                status,
+                visibility,
                 null
         );
     }

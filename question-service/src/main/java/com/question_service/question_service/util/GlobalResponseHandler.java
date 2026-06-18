@@ -11,12 +11,15 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 import java.time.LocalDateTime;
 
 @RestControllerAdvice
+/**
+ * Chuan hoa du lieu thanh cong ve cau truc ApiResponse dung chung.
+ */
 public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
 
 
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-        // Áp dụng cho tất cả các API trả về dữ liệu
+        // Ap dung cho moi du lieu tra ve tu controller.
         return true;
     }
 
@@ -26,17 +29,17 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
                                   Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                   ServerHttpRequest request, ServerHttpResponse response) {
 
-        // Nếu Controller đã trả về sẵn cấu trúc ApiResponse hoặc ErrorResponse thì bỏ qua không bọc nữa
+        // Khong boc lai du lieu da dung cau truc chuan.
         if (body instanceof ApiResponse || body instanceof ApiErrorResponse) {
             return body;
         }
 
-        //  Xử lý riêng cho kiểu String (vì StringHttpMessageConverter xử lý khác các Object thông thường)
+        // Chuoi dung bo chuyen doi rieng nen giu nguyen de tranh loi ep kieu.
         if (body instanceof String) {
             return body;
         }
 
-        // Tự động bọc mọi dữ liệu thành công khác vào ApiResponse cấu trúc chuẩn
+        // Boc cac du lieu thanh cong con lai vao cau truc chung.
         return ApiResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(200)

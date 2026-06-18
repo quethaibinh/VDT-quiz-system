@@ -12,6 +12,9 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 @Component
+/**
+ * Thay cac identity header cua client bang du lieu da xac thuc tu JWT.
+ */
 public class HeaderEnhancerFilter implements GlobalFilter, Ordered {
 
     private final JwtUtil jwtUtil;
@@ -24,7 +27,7 @@ public class HeaderEnhancerFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-        // Luon xoa header do client tu gui de tranh gia mao thong tin user.
+        // Luon xoa identity header cua client de ngan gia mao nguoi dung.
         ServerHttpRequest sanitizedRequest = exchange.getRequest().mutate()
                 .headers(headers -> {
                     headers.remove("X-User-Id");
@@ -42,7 +45,7 @@ public class HeaderEnhancerFilter implements GlobalFilter, Ordered {
                 String userRole = claims.get("userRole", String.class);
                 String username = claims.get("username", String.class);
 
-                // Gan lai header da duoc gateway xac thuc tu JWT.
+                // Service phia sau chi nhan header dinh danh duoc tao tu JWT hop le.
                 ServerHttpRequest trustedRequest = sanitizedRequest.mutate()
                         .headers(headers -> {
                             putIfPresent(headers, "X-User-Id", userId);

@@ -28,6 +28,9 @@ import static org.springframework.http.HttpMethod.POST;
 
 @Configuration
 @EnableWebSecurity
+/**
+ * Cau hinh bao mat stateless va phan quyen endpoint cua auth-service.
+ */
 public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
@@ -102,7 +105,7 @@ public class SecurityConfig {
     ) {
         FilterRegistrationBean<GatewayHeaderAuthenticationFilter> registration =
                 new FilterRegistrationBean<>(filter);
-        // Filter chi chay ben trong Spring Security, khong dang ky them o servlet container.
+        // Tranh servlet container chay filter them lan thu hai ngoai Spring Security.
         registration.setEnabled(false);
         return registration;
     }

@@ -16,6 +16,9 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/v1/api/question-service")
+/**
+ * Cung cap API de giao vien nhap cau hoi tu tep Excel theo mon hoc.
+ */
 public class ImportQuestionController {
 
     private final ImportQuestionService importQuestionService;
@@ -28,6 +31,9 @@ public class ImportQuestionController {
             value = "/teacher/subjects/{subjectId}/questions/import",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
+    /**
+     * Kiem tra quyen mon hoc, validate toan bo tep va luu cac cau hoi hop le.
+     */
     public ImportQuestionResultDTO importQuestions(
             @PathVariable UUID subjectId,
             @RequestPart("file") MultipartFile file,

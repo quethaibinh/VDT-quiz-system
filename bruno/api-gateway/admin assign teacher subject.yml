@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: "{{url}}/v1/api/admin/question-service/subjects/c0e5a9d5-4fcf-4f7e-bc50-f08077e913b9/teachers"
+  url: "{{url}}/v1/api/admin/question-service/subjects/7a9358f1-e173-4dd7-b5d0-2f589c5a4b1e/teachers"
   body:
     type: json
     data: |-

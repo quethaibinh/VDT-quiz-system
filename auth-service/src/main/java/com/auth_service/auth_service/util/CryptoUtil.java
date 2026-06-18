@@ -13,15 +13,18 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 @Component
+/**
+ * Ma hoa du lieu nhay cam va tao blind index de ho tro tra cuu.
+ */
 public class CryptoUtil {
 
-    // AES-GCM-NoPadding là tiêu chuẩn an toàn cao nhất cho AES
+    // AES-GCM cung cap ca ma hoa va kiem tra tinh toan ven du lieu.
     private final String ENCRYPTION_ALGORITHM = "AES/GCM/NoPadding";
 
-    // Kích thước IV cho GCM tiêu chuẩn là 12 bytes (96 bits)
+    // GCM thuong dung IV 12 byte.
     private final int IV_LENGTH_BYTE = 12;
 
-    // Kích thước Auth Tag cho GCM tiêu chuẩn là 16 bytes (128 bits)
+    // The xac thuc dai 128 bit.
     private final int TAG_LENGTH_BIT = 128;
 
     @Value("${app.security.aes.key}")
@@ -31,70 +34,59 @@ public class CryptoUtil {
     private String hmacKeyStr;
 
     /**
-     * Hàm mã hóa dữ liệu (CCCD/SĐT)
-     * @param plainText Dữ liệu gốc cần mã hóa
-     * @return Chuỗi mã hóa dạng Base64 (đã gộp cả IV bên trong)
+     * Ma hoa du lieu va ghep IV vao ket qua Base64 de co the giai ma sau nay.
      */
     public String encrypt(String plainText) throws Exception {
-        // 1. Chuyển đổi Secret Key từ Base64 về dạng byte[]
+        // Khoa AES duoc cau hinh o dang Base64.
         byte[] keyBytes = Base64.getDecoder().decode(this.secretKeyStr);
         SecretKey secretKey = new SecretKeySpec(keyBytes, "AES");
 
-        // 2. Tạo IV ngẫu nhiên (Bắt buộc phải ngẫu nhiên cho mỗi lần mã hóa)
+        // Moi lan ma hoa dung IV ngau nhien rieng.
         byte[] iv = new byte[IV_LENGTH_BYTE];
         SecureRandom random = new SecureRandom();
         random.nextBytes(iv);
 
-        // 3. Khởi tạo Cipher cấu hình AES/GCM
         Cipher cipher = Cipher.getInstance(ENCRYPTION_ALGORITHM);
         GCMParameterSpec parameterSpec = new GCMParameterSpec(TAG_LENGTH_BIT, iv);
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameterSpec);
 
-        // 4. Tiến hành mã hóa dữ liệu
         byte[] encryptedBytes = cipher.doFinal(plainText.getBytes("UTF-8"));
 
-        // 5. Gộp [IV] và [Dữ liệu đã mã hóa + Auth Tag] vào làm 1 gói duy nhất để dễ lưu trữ
+        // Luu IV o dau goi tin de luc giai ma co the tach ra ma khong can cot rieng.
         ByteBuffer byteBuffer = ByteBuffer.allocate(iv.length + encryptedBytes.length);
         byteBuffer.put(iv);
         byteBuffer.put(encryptedBytes);
         byte[] cipherTextWithIv = byteBuffer.array();
 
-        // 6. Trả về chuỗi Base64 để lưu vào Database
         return Base64.getEncoder().encodeToString(cipherTextWithIv);
     }
 
     /**
-     * Hàm giải mã dữ liệu
-     * @param cipherTextWithIvStr Chuỗi mã hóa dạng Base64 (đã chứa IV)
-     * @return Dữ liệu gốc ban đầu
+     * Tach IV khoi goi Base64 va giai ma ve du lieu ban dau.
      */
     public String decrypt(String cipherTextWithIvStr) throws Exception {
-        // 1. Giải mã chuỗi Base64 đầu vào
         byte[] cipherTextWithIv = Base64.getDecoder().decode(cipherTextWithIvStr);
         byte[] keyBytes = Base64.getDecoder().decode(this.secretKeyStr);
         SecretKey secretKey = new SecretKeySpec(keyBytes, "AES");
 
-        // 2. Tách IV ra khỏi gói tin (12 byte đầu tiên)
+        // IV nam trong 12 byte dau cua goi tin.
         ByteBuffer byteBuffer = ByteBuffer.wrap(cipherTextWithIv);
         byte[] iv = new byte[IV_LENGTH_BYTE];
         byteBuffer.get(iv);
 
-        // 3. Tách phần dữ liệu đã mã hóa còn lại
         byte[] encryptedBytes = new byte[byteBuffer.remaining()];
         byteBuffer.get(encryptedBytes);
 
-        // 4. Khởi tạo Cipher cấu hình AES/GCM giải mã
         Cipher cipher = Cipher.getInstance(ENCRYPTION_ALGORITHM);
         GCMParameterSpec parameterSpec = new GCMParameterSpec(TAG_LENGTH_BIT, iv);
         cipher.init(Cipher.DECRYPT_MODE, secretKey, parameterSpec);
 
-        // 5. Giải mã và trả về text gốc
         byte[] plainTextBytes = cipher.doFinal(encryptedBytes);
         return new String(plainTextBytes, "UTF-8");
     }
 
     /**
-     * Hàm tạo Blind Index bằng HMAC-SHA256 (Chuỗi trả ra luôn cố định với cùng đầu vào)
+     * Tao blind index HMAC on dinh de tim kiem ma khong luu du lieu goc.
      */
     public String generateBlindIndex(String plainText) throws Exception {
         SecretKeySpec secretKey = new SecretKeySpec(hmacKeyStr.getBytes("UTF-8"), "HmacSHA256");
@@ -103,7 +95,7 @@ public class CryptoUtil {
 
         byte[] hmacBytes = mac.doFinal(plainText.getBytes("UTF-8"));
 
-        // Trả về chuỗi dạng Hex (hoặc Base64) để lưu vào cột index trong DB
+        // Doi HMAC sang hex de luu vao cot index.
         StringBuilder hexString = new StringBuilder();
         for (byte b : hmacBytes) {
             String hex = Integer.toHexString(0xff & b);
@@ -114,11 +106,11 @@ public class CryptoUtil {
     }
 
     /**
-     * Hàm phụ trợ: Sinh ngẫu nhiên một Secret Key 256-bit chuẩn AES
+     * Sinh khoa AES 256 bit o dang Base64.
      */
     public static String generateAES256Key() throws Exception {
         SecureRandom secureRandom = new SecureRandom();
-        byte[] key = new byte[32]; // 32 bytes = 256 bits
+        byte[] key = new byte[32]; // 32 byte tuong duong 256 bit.
         secureRandom.nextBytes(key);
         return Base64.getEncoder().encodeToString(key);
     }

@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 
 @Service
+/**
+ * Chuyen mot dong import hop le thanh tai khoan va luu vao co so du lieu.
+ */
 public class ImportedUserCreationService {
 
     private final UserRepo userRepo;
@@ -28,6 +31,9 @@ public class ImportedUserCreationService {
         this.cryptoUtil = cryptoUtil;
     }
 
+    /**
+     * Tao tai khoan voi ma sinh vien hoac giao vien lam thong tin dang nhap mac dinh.
+     */
     public void createUser(ImportUserRowDTO row) throws Exception {
         // Ma sinh vien/giao vien duoc dung lam ca username va mat khau mac dinh.
         String code = !isBlank(row.getStudentCode()) ? row.getStudentCode() : row.getTeacherCode();

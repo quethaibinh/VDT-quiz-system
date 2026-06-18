@@ -37,9 +37,9 @@ class ImportQuestionServiceTests {
         ImportQuestionValidationResult validationResult = new ImportQuestionValidationResult();
         validationResult.addError(new ImportQuestionErrorDTO(
                 2,
-                "status",
-                "INVALID_STATUS",
-                "Status must be PUBLIC or PRIVATE"
+                "visibility",
+                "INVALID_VISIBILITY",
+                "Visibility must be PUBLIC or PRIVATE"
         ));
 
         when(validator.validateAccess(subjectId, teacherId)).thenReturn(new ImportQuestionValidationResult());

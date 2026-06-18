@@ -16,6 +16,9 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Service
+/**
+ * Tao, doc va kiem tra JWT do auth-service phat hanh.
+ */
 public class JwtService {
 
     private byte[] secretKey;
@@ -24,6 +27,9 @@ public class JwtService {
         this.secretKey = secret.getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * Tao token co thoi han ba gio va dua thong tin dinh danh vao claims.
+     */
     public String generateToken(UserEntity user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId());
@@ -48,7 +54,7 @@ public class JwtService {
     }
 
     public String extractUserName(String token) {
-        // extract the username from jwt token
+        // Subject cua token duoc dung lam username.
         return extractClaim(token, Claims::getSubject);
     }
 
@@ -65,6 +71,9 @@ public class JwtService {
                 .getPayload();
     }
 
+    /**
+     * Kiem tra token thuoc dung nguoi dung va chua het han.
+     */
     public boolean validateToken(String token, UserDetails userDetails) {
         final String userName = extractUserName(token);
         return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));

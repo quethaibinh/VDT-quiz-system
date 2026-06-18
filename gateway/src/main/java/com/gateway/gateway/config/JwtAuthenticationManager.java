@@ -12,16 +12,21 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 @Component
+/**
+ * Xac thuc JWT va chuyen claims thanh Authentication cua Spring Security.
+ */
 public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
 
     private final JwtUtil jwtUtil;
 
-    // Spring inject JwtUtil qua constructor.
     public JwtAuthenticationManager(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
     }
 
     @Override
+    /**
+     * Tra ve Authentication rong khi token het han, sai chu ky hoac claims khong hop le.
+     */
     public Mono<Authentication> authenticate(Authentication authentication) {
         String token = authentication.getCredentials().toString();
 
@@ -30,20 +35,19 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
                 return Mono.empty();
             }
 
-            // Lấy thông tin user từ token do auth-service tạo.
+            // Chi tin cac truong du lieu sau khi JwtUtil da xac minh chu ky token.
             Claims claims = jwtUtil.getClaims(token);
             String username = claims.getSubject();
             String role = normalizeRole(claims.get("userRole", String.class));
             List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(role));
 
-            // Tạo Authentication hợp lệ để Spring Security dùng cho phân quyền.
             return Mono.just(new UsernamePasswordAuthenticationToken(username, token, authorities));
         } catch (Exception e) {
             return Mono.empty();
         }
     }
 
-    // Spring Security cần role có tiền tố ROLE_ khi dùng hasRole().
+    // hasRole() cua Spring Security yeu cau quyen co tien to ROLE_.
     private String normalizeRole(String role) {
         if (role == null || role.isBlank()) {
             return "ROLE_USER";

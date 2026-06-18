@@ -3,6 +3,7 @@ package com.question_service.question_service.model.dto.imports;
 import com.question_service.question_service.model.entity.ContentFormat;
 import com.question_service.question_service.model.entity.Difficulty;
 import com.question_service.question_service.model.entity.OptionKey;
+import com.question_service.question_service.model.entity.QuestionVisibility;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,7 +26,7 @@ public class NormalizedImportQuestionRow {
     private Double defaultScore;
     private int estimatedSecond;
     private String explanation;
-    private String status;
+    private QuestionVisibility visibility;
     private ContentFormat contentFormat;
 
 }

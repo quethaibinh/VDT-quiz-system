@@ -6,6 +6,7 @@ import com.question_service.question_service.model.entity.ImportJob;
 import com.question_service.question_service.model.entity.ImportStatus;
 import com.question_service.question_service.model.entity.Question;
 import com.question_service.question_service.model.entity.QuestionOption;
+import com.question_service.question_service.model.entity.QuestionStatus;
 import com.question_service.question_service.model.entity.Source;
 import com.question_service.question_service.model.entity.Topic;
 import com.question_service.question_service.repository.ImportJobRepo;
@@ -24,6 +25,9 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
+/**
+ * Luu import job, topic, cau hoi va dap an trong cung mot transaction.
+ */
 public class ImportedQuestionCreationService {
 
     private final ImportJobRepo importJobRepo;
@@ -44,6 +48,9 @@ public class ImportedQuestionCreationService {
     }
 
     @Transactional
+    /**
+     * Tao topic khi chua ton tai va gan moi cau hoi vao import job hien tai.
+     */
     public ImportedQuestionCreationResult createQuestions(
             UUID subjectId,
             UUID teacherId,
@@ -96,6 +103,7 @@ public class ImportedQuestionCreationService {
         String normalizedName = topicName.trim();
         String cacheKey = normalizedName.toLowerCase(Locale.ROOT);
         Topic cachedTopic = topicCache.get(cacheKey);
+        // Bo nho tam tranh truy van hoac tao lai cung chu de trong mot tep import.
         if (cachedTopic != null) {
             return new TopicResolution(cachedTopic, false);
         }
@@ -133,7 +141,8 @@ public class ImportedQuestionCreationService {
         question.setDifficulty(row.getDifficulty());
         question.setDefaultScore(row.getDefaultScore());
         question.setEstimatedSecond(row.getEstimatedSecond());
-        question.setStatus(row.getStatus());
+        question.setVisibility(row.getVisibility());
+        question.setStatus(QuestionStatus.ACTIVE);
         question.setSource(Source.EXCEL_IMPORT);
         question.setImportJobId(importJobId);
         return questionRepo.save(question);

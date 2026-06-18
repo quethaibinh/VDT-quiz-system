@@ -16,6 +16,9 @@ import java.util.Locale;
 import java.util.Set;
 
 @Component
+/**
+ * Tao Authentication tu identity header do gateway da xac thuc.
+ */
 public class QuestionHeaderAuthenticationFilter extends OncePerRequestFilter {
 
     public static final String USER_ID_HEADER = "X-User-Id";
@@ -43,7 +46,7 @@ public class QuestionHeaderAuthenticationFilter extends OncePerRequestFilter {
         String username = trimToNull(request.getHeader(USERNAME_HEADER));
         String role = normalizeRole(request.getHeader(USER_ROLE_HEADER));
 
-        // Chi tao Authentication khi gateway gui day du identity hop le.
+        // Bo qua request neu header dinh danh thieu hoac vai tro khong duoc ho tro.
         if (userId == null || username == null || role == null) {
             return;
         }
