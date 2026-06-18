@@ -21,6 +21,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+/**
+ * Quan ly phan cong giao vien va danh sach mon hoc cua tung giao vien.
+ */
 public class SubjectTeacherService {
 
     private final SubjectRepo subjectRepo;
@@ -37,6 +40,9 @@ public class SubjectTeacherService {
         this.subjectService = subjectService;
     }
 
+    /**
+     * Tao moi hoac kich hoat lai phan cong da bi go truoc do.
+     */
     public SubjectTeacherResponseDTO assignTeacher(UUID subjectId, UUID teacherId, UUID adminId) {
         requireTeacherId(teacherId);
         requireSubjectExists(subjectId);
@@ -68,6 +74,9 @@ public class SubjectTeacherService {
                 .toList();
     }
 
+    /**
+     * Go phan cong bang cach chuyen trang thai sang INACTIVE.
+     */
     public void removeTeacher(UUID subjectId, UUID teacherId) {
         SubjectTeacher assignment = subjectTeacherRepo.findBySubjectIdAndTeacherId(subjectId, teacherId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -80,6 +89,9 @@ public class SubjectTeacherService {
         subjectTeacherRepo.save(assignment);
     }
 
+    /**
+     * Chi tra ve mon hoc dang hoat dong va co phan cong ACTIVE.
+     */
     public List<SubjectResponseDTO> listSubjectsForTeacher(UUID teacherId, String status, String keyword) {
         requireTeacherId(teacherId);
         String requestedStatus = trimToNull(status);

@@ -7,6 +7,7 @@ import com.question_service.question_service.model.dto.imports.NormalizedQuestio
 import com.question_service.question_service.model.entity.ContentFormat;
 import com.question_service.question_service.model.entity.Difficulty;
 import com.question_service.question_service.model.entity.OptionKey;
+import com.question_service.question_service.model.entity.QuestionVisibility;
 import com.question_service.question_service.model.entity.Subject;
 import com.question_service.question_service.model.entity.SubjectStatus;
 import com.question_service.question_service.model.entity.SubjectTeacherStatus;
@@ -22,12 +23,13 @@ import java.util.Set;
 import java.util.UUID;
 
 @Component
+/**
+ * Kiem tra quyen mon hoc va chuan hoa tung dong import cau hoi.
+ */
 public class ImportQuestionValidator {
 
     private static final String SINGLE_CHOICE = "SINGLE_CHOICE";
     private static final String MULTI_CHOICE = "MULTI_CHOICE";
-    private static final Set<String> QUESTION_STATUSES = Set.of("PUBLIC", "PRIVATE");
-
     private final SubjectRepo subjectRepo;
     private final SubjectTeacherRepo subjectTeacherRepo;
 
@@ -47,6 +49,9 @@ public class ImportQuestionValidator {
         return validateRows(rows);
     }
 
+    /**
+     * Xac minh giao vien duoc phan cong vao mon hoc dang hoat dong.
+     */
     public ImportQuestionValidationResult validateAccess(UUID subjectId, UUID teacherId) {
         ImportQuestionValidationResult result = new ImportQuestionValidationResult();
 
@@ -88,6 +93,9 @@ public class ImportQuestionValidator {
         return result;
     }
 
+    /**
+     * Thu thap tat ca loi de nguoi dung sua tep trong mot lan.
+     */
     public ImportQuestionValidationResult validateRows(List<ImportQuestionRowDTO> rows) {
         ImportQuestionValidationResult result = new ImportQuestionValidationResult();
 
@@ -108,7 +116,7 @@ public class ImportQuestionValidator {
         require(row, result, "optionB", row.getOptionB());
         require(row, result, "correctOptions", row.getCorrectOptions());
         require(row, result, "difficulty", row.getDifficulty());
-        require(row, result, "status", row.getStatus());
+        require(row, result, "visibility", row.getVisibility());
 
         String questionType = normalize(row.getQuestionType());
         if (!isBlank(row.getQuestionType())
@@ -156,14 +164,12 @@ public class ImportQuestionValidator {
                 "Content format must be PLAIN_TEXT, MARKDOWN, or HTML_SAFE");
         Double defaultScore = parseDefaultScore(row, result);
         Integer estimatedSecond = parseEstimatedSecond(row, result);
-        String status = normalize(row.getStatus());
-
-        if (!isBlank(row.getStatus()) && !QUESTION_STATUSES.contains(status)) {
-            addError(row, result, "status", "INVALID_STATUS",
-                    "Status must be PUBLIC or PRIVATE");
-        }
+        QuestionVisibility visibility = parseEnum(row, result, "visibility", row.getVisibility(),
+                QuestionVisibility.class, "INVALID_VISIBILITY",
+                "Visibility must be PUBLIC or PRIVATE");
 
         if (result.getErrors().size() == errorCountBefore) {
+            // Chi tao dong chuan hoa khi dong goc khong co bat ky loi nao.
             result.getRows().add(new NormalizedImportQuestionRow(
                     row.getRowNumber(),
                     row.getTopicName().trim(),
@@ -175,7 +181,7 @@ public class ImportQuestionValidator {
                     defaultScore,
                     estimatedSecond,
                     trimToNull(row.getExplanation()),
-                    status,
+                    visibility,
                     contentFormat
             ));
         }

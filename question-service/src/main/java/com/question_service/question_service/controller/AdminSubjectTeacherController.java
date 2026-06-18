@@ -20,6 +20,9 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/v1/api/admin/question-service/subjects/{subjectId}/teachers")
+/**
+ * Cung cap API gan va go giao vien khoi mon hoc.
+ */
 public class AdminSubjectTeacherController {
 
     private final SubjectTeacherService subjectTeacherService;

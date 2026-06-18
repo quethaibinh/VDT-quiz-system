@@ -13,6 +13,9 @@ import java.util.Optional;
 import java.util.Set;
 
 @Component
+/**
+ * Kiem tra quy tac du lieu va trung lap truoc khi tao nguoi dung import.
+ */
 public class ImportUserValidator {
 
     private final UserRepo userRepo;
@@ -23,6 +26,9 @@ public class ImportUserValidator {
         this.checker = checker;
     }
 
+    /**
+     * Tra ve loi dau tien cua mot dong, hoac rong khi dong hop le.
+     */
     public Optional<ImportUserErrorDTO> validate(
             ImportUserRowDTO row,
             Set<String> seenUsernames,

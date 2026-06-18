@@ -11,16 +11,21 @@ import java.security.Key;
 import java.util.Date;
 
 @Component
+/**
+ * Doc va kiem tra JWT bang cung khoa ky voi auth-service.
+ */
 public class JwtUtil {
 
     private final Key key;
 
-    // Secret này phải giống với secret mà auth-service dùng để ký token.
+    // Khoa xac minh phai trung voi khoa auth-service dung de ky token.
     public JwtUtil(@Value("${jwt.secret}") String secret) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    // Giải mã token và trả về toàn bộ claims bên trong.
+    /**
+     * Xac minh chu ky va tra ve claims cua token.
+     */
     public Claims getClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(key)
@@ -29,7 +34,9 @@ public class JwtUtil {
                 .getBody();
     }
 
-    // Token lỗi hoặc hết hạn đều được xem là không hợp lệ.
+    /**
+     * Xem token sai dinh dang, sai chu ky hoac het han la khong hop le.
+     */
     public boolean isTokenExpired(String token) {
         try {
             return getClaims(token).getExpiration().before(new Date());

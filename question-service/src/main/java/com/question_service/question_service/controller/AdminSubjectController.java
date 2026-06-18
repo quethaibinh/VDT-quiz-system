@@ -20,6 +20,9 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/v1/api/admin/question-service/subjects")
+/**
+ * Cung cap API quan tri vong doi cua mon hoc.
+ */
 public class AdminSubjectController {
 
     private final SubjectService subjectService;

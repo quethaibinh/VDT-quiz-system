@@ -25,7 +25,7 @@ public class ImportQuestionRowDTO {
     private String defaultScore;
     private String estimatedSecond;
     private String explanation;
-    private String status;
+    private String visibility;
     private String contentFormat;
 
 }

@@ -19,6 +19,9 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+/**
+ * Cau hinh trusted-header authentication va phan quyen cho question-service.
+ */
 public class SecurityConfig {
 
     private final QuestionHeaderAuthenticationFilter questionHeaderAuthenticationFilter;
@@ -73,7 +76,7 @@ public class SecurityConfig {
     ) {
         FilterRegistrationBean<QuestionHeaderAuthenticationFilter> registration =
                 new FilterRegistrationBean<>(filter);
-        // Filter chi chay ben trong Spring Security, khong dang ky them o servlet container.
+        // Tranh servlet container chay filter them lan thu hai ngoai Spring Security.
         registration.setEnabled(false);
         return registration;
     }

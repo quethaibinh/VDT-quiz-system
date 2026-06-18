@@ -12,10 +12,10 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL) // Thuộc tính nào null (như errors) sẽ không hiện ở JSON
+@JsonInclude(JsonInclude.Include.NON_NULL) // Bo qua thuoc tinh null khi tao JSON.
 public class ApiResponse<T> {
     private LocalDateTime timestamp;
     private int status;
     private String message;
-    private T data; // Dữ liệu thực tế trả về (Object, List, String...)
+    private T data; // Du lieu nghiep vu tra ve cho client.
 }

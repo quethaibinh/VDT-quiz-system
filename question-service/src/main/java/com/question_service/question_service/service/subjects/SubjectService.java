@@ -15,6 +15,9 @@ import java.util.Locale;
 import java.util.UUID;
 
 @Service
+/**
+ * Quan ly thong tin va trang thai mon hoc cho quan tri vien.
+ */
 public class SubjectService {
 
     private final SubjectRepo subjectRepo;
@@ -23,6 +26,9 @@ public class SubjectService {
         this.subjectRepo = subjectRepo;
     }
 
+    /**
+     * Tao mon hoc moi voi ma mon duoc chuan hoa va khong trung lap.
+     */
     public SubjectResponseDTO createSubject(UUID adminId, SubjectRequestDTO request) {
         String code = requireText(request.getCode(), "code");
         String name = requireText(request.getName(), "name");
@@ -79,6 +85,9 @@ public class SubjectService {
         return toResponse(subjectRepo.save(subject));
     }
 
+    /**
+     * Luu tru mon hoc theo kieu soft archive de co the khoi phuc.
+     */
     public SubjectResponseDTO archiveSubject(UUID adminId, UUID subjectId) {
         Subject subject = loadSubject(subjectId);
         subject.setStatus(SubjectStatus.ARCHIVED);

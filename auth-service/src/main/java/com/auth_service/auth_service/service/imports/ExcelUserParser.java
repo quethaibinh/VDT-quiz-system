@@ -21,11 +21,17 @@ import java.util.List;
 import java.util.Map;
 
 @Component
+/**
+ * Doc tep XLSX va chuyen cac dong co du lieu thanh DTO import nguoi dung.
+ */
 public class ExcelUserParser {
 
     private final DataFormatter formatter = new DataFormatter();
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE;
 
+    /**
+     * Doc sheet dau tien va giu so dong Excel de tra loi chinh xac.
+     */
     public List<ImportUserRowDTO> parse(MultipartFile file) throws Exception {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Excel file is required");

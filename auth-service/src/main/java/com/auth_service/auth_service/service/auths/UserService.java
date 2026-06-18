@@ -18,6 +18,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+/**
+ * Xu ly dang nhap, dang ky va luu thong tin tai khoan.
+ */
 public class UserService {
 
     @Autowired
@@ -33,6 +36,9 @@ public class UserService {
     @Autowired
     private Checker checker;
 
+    /**
+     * Xac thuc tai khoan dang hoat dong va phat JWT khi thong tin hop le.
+     */
     public String login(LoginDTO userLogin) {
 
         UserEntity userEntity = userRepo.findByUsername(userLogin.getUsername());
@@ -52,6 +58,9 @@ public class UserService {
         throw new UnauthorizedException("Invalid username or password");
     }
 
+    /**
+     * Kiem tra du lieu dang ky, ma hoa thong tin nhay cam va tao tai khoan.
+     */
     public void register(RegisterDTO register) throws Exception {
         if (userRepo.existsByUsername(register.getUsername())) {
             throw new ConflictException("Username already exists");

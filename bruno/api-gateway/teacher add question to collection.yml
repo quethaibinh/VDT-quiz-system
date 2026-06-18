@@ -1,0 +1,25 @@
+info:
+  name: teacher add question to collection
+  type: http
+  seq: 10
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/question-service/teacher/subjects/{{subjectId}}/question-collections/{{collectionId}}/questions"
+  body:
+    type: json
+    data: |-
+      {
+        "questionIds": [
+          "{{questionId}}"
+        ]
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
