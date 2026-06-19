@@ -8,11 +8,14 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "exam",
+@Table(name = "exams",
+        uniqueConstraints = {
+            @UniqueConstraint(name = "uk_exam_code", columnNames = "code")
+        },
         indexes = {
             @Index(name="idx_teacher_status_start_at", columnList = "created_by_teacher_id,status,start_at"),
             @Index(name="idx_status_start_at", columnList = "status,start_at")
@@ -20,30 +23,55 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+/**
+ * Luu cau hinh va blueprint cua mot ca thi.
+ * Khi con DRAFT, entity chi giu collection va quota, chua sinh ExamQuestion.
+ */
 public class Exam extends BaseEntity{
 
+    @Column(nullable = false, length = 64)
     private String code;
+    @Column(nullable = false)
     private String title;
+    @Column(columnDefinition = "text")
     private String description;
+    @Column(nullable = false)
     private UUID subjectId;
+    // Snapshot phuc vu lich su va bao cao neu ten mon hoc thay doi.
     private String subjectNameSnapshot;
+    @Column(nullable = false)
     private UUID createdByTeacherId;
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
     private ExamStatus status;
-    private LocalDateTime startAt;
+    @Column(nullable = false)
+    private OffsetDateTime startAt;
+    private OffsetDateTime endAt;
+    @Column(nullable = false)
     private int durationMinutes;
-    private int joinBeforeMinutes; // thoi gian cho vao truoc
-    private int joinAfterMinutes; // thoi gian cho phep vao muon
-    private boolean shuffleQuestions; // cho phep xao cau
-    private boolean shuffleOptions; // cho phep xao dap an
+    private int joinBeforeMinutes = 10;
+    private int joinAfterMinutes;
+    @Column(nullable = false)
+    private UUID collectionId;
+    // Snapshot ten bo cau hoi; collection goc van la source of truth cho quota khi sua.
+    private String collectionNameSnapshot;
+    private int easyCount;
+    private int mediumCount;
+    private int hardCount;
+    private boolean shuffleQuestions;
+    private boolean shuffleOptions;
     @Enumerated(EnumType.STRING)
     private ShowResultPolicy showResultPolicy = ShowResultPolicy.AFTER_CLOSED;
-    private boolean autoSubmit;
-    private boolean requireFullscreen = true; // lua chon giam sat cua giao vien
-    private int maxViolationAllowed = 5; // nguong canh bao vi pham
+    private boolean autoSubmit = true;
+    private boolean requireFullscreen = true;
+    private int maxViolationAllowed = 5; // Nguong ap dung chinh sach xu ly vi pham.
     @Enumerated(EnumType.STRING)
     private HandleViolation handleViolation = HandleViolation.LOCK;
-    private LocalDateTime activedAt;
-    private LocalDateTime closedAt;
+    private OffsetDateTime activatedAt;
+    private OffsetDateTime closedAt;
+
+    @Version
+    // Ngan hai request sua ca thi cung luc ghi de len nhau.
+    private long version;
 
 }

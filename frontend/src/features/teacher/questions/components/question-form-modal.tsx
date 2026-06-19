@@ -3,7 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Trash2, X } from "lucide-react";
 import { useEffect } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,8 @@ const questionSchema = z.object({
   options: z.array(optionSchema).min(2, "Phải có ít nhất 2 đáp án."),
 });
 
-type FormValues = z.infer<typeof questionSchema>;
+type FormInput = z.input<typeof questionSchema>;
+type FormValues = z.output<typeof questionSchema>;
 
 export function QuestionFormModal({
   open,
@@ -57,12 +58,11 @@ export function QuestionFormModal({
     register,
     handleSubmit,
     control,
-    watch,
     setValue,
     reset,
     formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(questionSchema) as any,
+  } = useForm<FormInput, unknown, FormValues>({
+    resolver: zodResolver(questionSchema),
     defaultValues: {
       topicId: "",
       questionType: "SINGLE_CHOICE",
@@ -84,8 +84,8 @@ export function QuestionFormModal({
     name: "options",
   });
 
-  const questionType = watch("questionType");
-  const optionsValues = watch("options");
+  const questionType = useWatch({ control, name: "questionType" });
+  const optionsValues = useWatch({ control, name: "options" }) ?? [];
 
   // Reset form khi question thay đổi (ví dụ khi mở modal sửa)
   useEffect(() => {

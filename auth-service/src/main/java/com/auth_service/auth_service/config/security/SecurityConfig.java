@@ -35,13 +35,16 @@ public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final GatewayHeaderAuthenticationFilter gatewayHeaderAuthenticationFilter;
+    private final InternalApiKeyAuthenticationFilter internalApiKeyAuthenticationFilter;
 
     public SecurityConfig(
             UserDetailsService userDetailsService,
-            GatewayHeaderAuthenticationFilter gatewayHeaderAuthenticationFilter
+            GatewayHeaderAuthenticationFilter gatewayHeaderAuthenticationFilter,
+            InternalApiKeyAuthenticationFilter internalApiKeyAuthenticationFilter
     ) {
         this.userDetailsService = userDetailsService;
         this.gatewayHeaderAuthenticationFilter = gatewayHeaderAuthenticationFilter;
+        this.internalApiKeyAuthenticationFilter = internalApiKeyAuthenticationFilter;
     }
 
     @Bean
@@ -59,6 +62,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(request -> request
                         .requestMatchers(POST, "/v1/api/auth-service/login").permitAll()
                         .requestMatchers(POST, "/v1/api/auth-service/register").permitAll()
+                        .requestMatchers("/v1/internal/auth-service/**").hasRole("INTERNAL")
+                        .requestMatchers("/v1/api/auth-service/teacher/**").hasRole("TEACHER")
                         .requestMatchers("/v1/api/admin/auth-service/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
@@ -67,6 +72,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler())
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(internalApiKeyAuthenticationFilter, AnonymousAuthenticationFilter.class)
                 .addFilterBefore(gatewayHeaderAuthenticationFilter, AnonymousAuthenticationFilter.class);
 
         return http.build();
@@ -106,6 +112,16 @@ public class SecurityConfig {
         FilterRegistrationBean<GatewayHeaderAuthenticationFilter> registration =
                 new FilterRegistrationBean<>(filter);
         // Tranh servlet container chay filter them lan thu hai ngoai Spring Security.
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<InternalApiKeyAuthenticationFilter> internalApiKeyFilterRegistration(
+            InternalApiKeyAuthenticationFilter filter
+    ) {
+        FilterRegistrationBean<InternalApiKeyAuthenticationFilter> registration =
+                new FilterRegistrationBean<>(filter);
         registration.setEnabled(false);
         return registration;
     }

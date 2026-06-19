@@ -4,3 +4,11 @@ variables:
     value: ""
   - name: url
     value: http://localhost:8080
+  - name: subjectId
+    value: ""
+  - name: collectionId
+    value: ""
+  - name: examId
+    value: ""
+  - name: studentId
+    value: ""

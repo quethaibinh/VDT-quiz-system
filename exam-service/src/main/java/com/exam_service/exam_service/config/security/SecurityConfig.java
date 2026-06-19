@@ -20,7 +20,7 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 /**
- * Cau hinh trusted-header authentication va phan quyen cho question-service.
+ * Cau hinh trusted-header authentication va phan quyen cho exam-service.
  */
 public class SecurityConfig {
 

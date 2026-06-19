@@ -13,10 +13,15 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.time.Instant;
 
 @RestControllerAdvice
+/**
+ * Chuyen exception noi bo thanh cau truc loi HTTP on dinh cho frontend.
+ */
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)
@@ -59,6 +64,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException exception, HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST, exception.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler({
+            DataIntegrityViolationException.class,
+            ObjectOptimisticLockingFailureException.class
+    })
+    /**
+     * Gom loi trung du lieu va optimistic locking thanh conflict de client co the tai lai.
+     */
+    public ResponseEntity<ApiErrorResponse> handlePersistenceConflict(
+            Exception exception,
+            HttpServletRequest request
+    ) {
+        return error(HttpStatus.CONFLICT, "CONCURRENT_OR_DUPLICATE_UPDATE", request.getRequestURI());
     }
 
     @ExceptionHandler(ResponseStatusException.class)

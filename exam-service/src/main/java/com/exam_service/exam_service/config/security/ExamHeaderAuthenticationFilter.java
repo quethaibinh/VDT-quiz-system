@@ -17,7 +17,8 @@ import java.util.Set;
 
 @Component
 /**
- * Tao Authentication tu identity header do gateway da xac thuc.
+ * Tao Authentication tu identity header cua request noi bo.
+ * Chi duoc tin cac header nay khi moi truong chan truy cap truc tiep vao service.
  */
 public class ExamHeaderAuthenticationFilter extends OncePerRequestFilter {
 

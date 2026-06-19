@@ -106,6 +106,32 @@ public class QuestionCollectionService {
         return toResponse(loadReadable(subjectId, collectionId, teacherId), teacherId);
     }
 
+    @Transactional(readOnly = true)
+    public ExamCollectionMetadataDTO getExamMetadata(
+            UUID subjectId,
+            UUID collectionId,
+            UUID teacherId
+    ) {
+        Subject subject = subjectAccessService.requireActiveAssignment(subjectId, teacherId);
+        QuestionCollection collection = loadReadable(subjectId, collectionId, teacherId);
+        if (collection.getStatus() != CollectionStatus.ACTIVE) {
+            throw error(HttpStatus.BAD_REQUEST, "COLLECTION_ARCHIVED");
+        }
+
+        CollectionStatsDTO usableCounts = difficultyCounts(
+                itemRepo.countExamUsableByDifficulty(collectionId, teacherId)
+        );
+        return new ExamCollectionMetadataDTO(
+                collection.getId(),
+                collection.getSubjectId(),
+                subject.getName(),
+                collection.getName(),
+                usableCounts.easy(),
+                usableCounts.medium(),
+                usableCounts.hard()
+        );
+    }
+
     @Transactional
     public CollectionResponseDTO update(
             UUID subjectId,
@@ -205,10 +231,20 @@ public class QuestionCollectionService {
     }
 
     public CollectionStatsDTO stats(UUID collectionId) {
+        List<CollectionDifficultyCount> counts = itemRepo.countByDifficulty(collectionId);
+        CollectionStatsDTO difficultyCounts = difficultyCounts(counts);
+        return new CollectionStatsDTO(
+                itemRepo.countByCollectionId(collectionId),
+                difficultyCounts.easy(),
+                difficultyCounts.medium(),
+                difficultyCounts.hard()
+        );
+    }
+
+    private CollectionStatsDTO difficultyCounts(List<CollectionDifficultyCount> counts) {
         long easy = 0;
         long medium = 0;
         long hard = 0;
-        List<CollectionDifficultyCount> counts = itemRepo.countByDifficulty(collectionId);
         for (CollectionDifficultyCount count : counts) {
             switch (count.getDifficulty()) {
                 case EASY -> easy = count.getCount();
@@ -216,7 +252,7 @@ public class QuestionCollectionService {
                 case HARD -> hard = count.getCount();
             }
         }
-        return new CollectionStatsDTO(itemRepo.countByCollectionId(collectionId), easy, medium, hard);
+        return new CollectionStatsDTO(easy + medium + hard, easy, medium, hard);
     }
 
     private org.springframework.data.domain.Pageable pageable(int page, int size, String sortValue) {

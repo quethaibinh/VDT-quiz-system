@@ -1,48 +1,156 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataState } from "@/components/shared/data-state";
+import { FilterBar } from "@/components/shared/filter-bar";
 import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
-import { activateExam, listExams } from "@/features/teacher/exams/api/exam-repository";
+import { Pagination } from "@/components/shared/pagination";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import {
+  cancelExam,
+  examKeys,
+  listExams,
+} from "@/features/teacher/exams/api/exam-repository";
 import { ExamListItem } from "@/features/teacher/exams/components/exam-list-item";
+import type { ExamStatus, ExamSummary } from "@/features/teacher/exams/model/exam-contracts";
 import { subjectDetailQuery } from "@/features/teacher/subjects";
 import { getApiErrorMessage } from "@/lib/http/api-error";
 
+const PAGE_SIZE = 10;
+
 export function SubjectExamListPage() {
   const { subjectId = "" } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [cancelTarget, setCancelTarget] = useState<ExamSummary | null>(null);
   const queryClient = useQueryClient();
+  const page = Math.max(0, Number(searchParams.get("page") ?? 0) || 0);
+  const keyword = searchParams.get("keyword") ?? "";
+  const status = (searchParams.get("status") ?? "") as ExamStatus | "";
   const subject = useQuery(subjectDetailQuery(subjectId));
+  const params = {
+    page,
+    size: PAGE_SIZE,
+    keyword: keyword || undefined,
+    status: status || undefined,
+  };
   const exams = useQuery({
-    queryKey: ["teacher", "exams", subjectId],
-    queryFn: () => listExams({ subjectId }),
+    queryKey: examKeys.list(subjectId, params),
+    queryFn: () => listExams(subjectId, params),
     enabled: Boolean(subjectId) && subject.isSuccess,
   });
-  const activate = useMutation({
-    mutationFn: activateExam,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teacher", "exams", subjectId] }),
+  const cancel = useMutation({
+    mutationFn: (examId: string) => cancelExam(subjectId, examId),
+    onSuccess: async () => {
+      setCancelTarget(null);
+      await queryClient.invalidateQueries({ queryKey: examKeys.subject(subjectId) });
+    },
   });
 
+  const updateSearchParam = (key: string, value: string, resetPage = false) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    if (resetPage) next.delete("page");
+    setSearchParams(next);
+  };
+
   const error = subject.error ?? exams.error;
+  const noFilterResult = Boolean(keyword || status);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={subject.data ? `Ca thi · ${subject.data.name}` : "Ca thi"}
-        description="Các ca thi của môn đã chọn. Dữ liệu hiện dùng contract mô phỏng."
-        action={<div className="flex gap-2"><Link to="/teacher/exams"><Button variant="secondary">Đổi môn</Button></Link><Link to="new"><Button><Plus className="h-4 w-4" />Tạo ca thi</Button></Link></div>}
+        description="Quản lý bản nháp, lịch thi và học sinh được phân công trong môn đã chọn."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Link to="/teacher/exams" className="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold">
+              Đổi môn
+            </Link>
+            <Link to="new" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">
+              <Plus className="h-4 w-4" />
+              Tạo ca thi
+            </Link>
+          </div>
+        }
       />
-      <p className="rounded-lg bg-warning/10 p-3 text-sm text-warning">Chế độ demo: Exam Service chưa được triển khai trong backend.</p>
+
+      <FilterBar>
+        <label className="flex flex-col min-w-60 flex-1 text-sm font-semibold">
+          Tìm kiếm
+          <Input
+            className="mt-2"
+            value={keyword}
+            placeholder="Tên hoặc mã ca thi"
+            onChange={(event) => updateSearchParam("keyword", event.target.value, true)}
+          />
+        </label>
+        <label className="flex flex-col text-sm font-semibold">
+          Trạng thái
+          <Select
+            className="mt-2 min-w-44"
+            value={status}
+            onChange={(event) => updateSearchParam("status", event.target.value, true)}
+          >
+            <option value="">Tất cả</option>
+            <option value="DRAFT">Bản nháp</option>
+            <option value="SCHEDULED">Chờ bắt đầu</option>
+            <option value="ACTIVE">Đang diễn ra</option>
+            <option value="CLOSED">Đã kết thúc</option>
+            <option value="CANCELLED">Đã hủy</option>
+          </Select>
+        </label>
+      </FilterBar>
+
+      {cancel.error && <p role="alert" className="rounded-lg bg-danger/10 p-3 text-sm text-danger">{getApiErrorMessage(cancel.error)}</p>}
+
       <DataState
         loading={subject.isLoading || exams.isLoading}
         error={error ? getApiErrorMessage(error) : null}
-        empty={subject.isSuccess && !exams.data?.length}
-        emptyMessage="Môn học này chưa có ca thi."
-        onRetry={() => { void subject.refetch(); void exams.refetch(); }}
+        empty={subject.isSuccess && exams.data?.content.length === 0}
+        emptyMessage={noFilterResult ? "Không có ca thi phù hợp bộ lọc." : "Môn học này chưa có ca thi."}
+        onRetry={() => {
+          void subject.refetch();
+          void exams.refetch();
+        }}
       >
         <div className="space-y-3">
-          {exams.data?.map((exam) => <ExamListItem key={exam.id} exam={exam} activating={activate.isPending && activate.variables === exam.id} onActivate={(id) => activate.mutate(id)} />)}
+          {exams.data?.content.map((exam) => (
+            <ExamListItem
+              key={exam.id}
+              exam={exam}
+              cancelling={cancel.isPending && cancel.variables === exam.id}
+              onCancel={() => setCancelTarget(exam)}
+            />
+          ))}
         </div>
       </DataState>
+
+      {exams.data && (
+        <Pagination
+          page={exams.data.page}
+          totalPages={exams.data.totalPages}
+          onChange={(nextPage) => updateSearchParam("page", String(nextPage))}
+        />
+      )}
+
+      <ConfirmDialog
+        open={Boolean(cancelTarget)}
+        title="Hủy ca thi?"
+        description={cancelTarget ? `Ca thi “${cancelTarget.title}” sẽ chuyển sang trạng thái đã hủy và không thể tiếp tục chỉnh sửa.` : ""}
+        confirmLabel="Hủy ca thi"
+        tone="danger"
+        loading={cancel.isPending}
+        onOpenChange={(open) => {
+          if (!open && !cancel.isPending) setCancelTarget(null);
+        }}
+        onConfirm={() => {
+          if (cancelTarget) cancel.mutate(cancelTarget.id);
+        }}
+      />
     </div>
   );
 }

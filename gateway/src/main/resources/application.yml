@@ -37,5 +37,10 @@ spring:
               predicates:
                 - Path=/v1/api/question-service/**,/v1/api/admin/question-service/**
 
+            - id: exam-service-route
+              uri: ${EXAM_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/v1/api/exam-service/**,/v1/api/admin/exam-service/**
+
 jwt:
   secret: ${JWT_SECRET}

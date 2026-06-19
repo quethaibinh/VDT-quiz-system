@@ -1,0 +1,17 @@
+info:
+  name: teacher list exam drafts
+  type: http
+  seq: 22
+
+http:
+  method: GET
+  url: "{{url}}/v1/api/exam-service/teacher/subjects/{{subjectId}}/exams?status=DRAFT&page=0&size=20"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
