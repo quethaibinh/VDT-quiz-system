@@ -169,6 +169,9 @@ export const handlers = [
   http.put("*/v1/api/exam-service/teacher/subjects/:subjectId/exams/:examId", async ({ params, request }) => {
     const index = exams.findIndex((item) => item.id === params.examId && item.subjectId === params.subjectId);
     if (index < 0) return HttpResponse.json({ message: "Không tìm thấy ca thi." }, { status: 404 });
+    if (exams[index].status !== "DRAFT") {
+      return HttpResponse.json({ message: "Ca thi không còn có thể chỉnh sửa." }, { status: 409 });
+    }
     const input = await request.json() as ExamDraftRequest;
     exams[index] = { ...makeExam(String(params.subjectId), String(params.examId), input.title, "DRAFT", input), version: exams[index].version + 1 };
     return HttpResponse.json(envelope(exams[index]));
@@ -177,7 +180,34 @@ export const handlers = [
   http.patch("*/v1/api/exam-service/teacher/subjects/:subjectId/exams/:examId/cancel", ({ params }) => {
     const exam = findExam(params.subjectId, params.examId);
     if (!exam) return HttpResponse.json({ message: "Không tìm thấy ca thi." }, { status: 404 });
+    if (exam.status !== "DRAFT") {
+      return HttpResponse.json({ message: "Ca thi không còn có thể hủy." }, { status: 409 });
+    }
     exam.status = "CANCELLED";
+    exam.version += 1;
+    return HttpResponse.json(envelope(exam));
+  }),
+
+  http.patch("*/v1/api/exam-service/teacher/subjects/:subjectId/exams/:examId/schedule", ({ params }) => {
+    const exam = findExam(params.subjectId, params.examId);
+    if (!exam) {
+      return HttpResponse.json({ message: "Không tìm thấy ca thi." }, { status: 404 });
+    }
+    if (exam.status === "SCHEDULED") {
+      return HttpResponse.json(envelope(exam));
+    }
+    if (exam.status !== "DRAFT") {
+      return HttpResponse.json({ message: "Ca thi không còn ở trạng thái bản nháp." }, { status: 409 });
+    }
+    const assignedCount = assignments.get(exam.id)?.length ?? exam.assignedCount;
+    if (assignedCount < 1) {
+      return HttpResponse.json({ message: "Cần phân công ít nhất 1 học sinh." }, { status: 409 });
+    }
+    if (new Date(exam.startAt).getTime() <= Date.now()) {
+      return HttpResponse.json({ message: "Thời gian bắt đầu phải ở tương lai." }, { status: 409 });
+    }
+    exam.status = "SCHEDULED";
+    exam.assignedCount = assignedCount;
     exam.version += 1;
     return HttpResponse.json(envelope(exam));
   }),
@@ -188,6 +218,11 @@ export const handlers = [
   }),
 
   http.post("*/v1/api/exam-service/teacher/subjects/:subjectId/exams/:examId/assignments", async ({ params, request }) => {
+    const exam = findExam(params.subjectId, params.examId);
+    if (!exam) return HttpResponse.json({ message: "Không tìm thấy ca thi." }, { status: 404 });
+    if (exam.status !== "DRAFT") {
+      return HttpResponse.json({ message: "Không thể thay đổi học sinh của ca thi này." }, { status: 409 });
+    }
     const { studentIds } = await request.json() as { studentIds: string[] };
     const current = assignments.get(String(params.examId)) ?? [];
     const existing = new Set(current.map((assignment) => assignment.studentId));
@@ -195,6 +230,7 @@ export const handlers = [
       .filter((id) => !existing.has(id))
       .map(createAssignment);
     assignments.set(String(params.examId), [...current, ...added]);
+    exam.assignedCount = current.length + added.length;
     return HttpResponse.json(envelope({
       requestedCount: studentIds.length,
       assignedCount: added.length,
@@ -204,9 +240,15 @@ export const handlers = [
   }),
 
   http.delete("*/v1/api/exam-service/teacher/subjects/:subjectId/exams/:examId/assignments/:studentId", ({ params }) => {
+    const exam = findExam(params.subjectId, params.examId);
+    if (!exam) return HttpResponse.json({ message: "Không tìm thấy ca thi." }, { status: 404 });
+    if (exam.status !== "DRAFT") {
+      return HttpResponse.json({ message: "Không thể thay đổi học sinh của ca thi này." }, { status: 409 });
+    }
     const current = assignments.get(String(params.examId)) ?? [];
     const removed = current.find((item) => item.studentId === params.studentId);
     assignments.set(String(params.examId), current.filter((item) => item.studentId !== params.studentId));
+    exam.assignedCount = Math.max(0, current.length - (removed ? 1 : 0));
     return HttpResponse.json(envelope({
       requestedCount: 1,
       assignedCount: removed ? 1 : 0,

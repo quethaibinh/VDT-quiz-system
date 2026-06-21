@@ -6,6 +6,7 @@ import com.exam_service.exam_service.model.dto.exams.ExamDetailDTO;
 import com.exam_service.exam_service.model.dto.exams.ExamDraftRequestDTO;
 import com.exam_service.exam_service.model.dto.exams.ExamSummaryDTO;
 import com.exam_service.exam_service.service.exams.TeacherExamDraftService;
+import com.exam_service.exam_service.service.exams.TeacherExamSchedulingService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -21,9 +22,14 @@ import java.util.UUID;
 public class TeacherExamController {
 
     private final TeacherExamDraftService examService;
+    private final TeacherExamSchedulingService schedulingService;
 
-    public TeacherExamController(TeacherExamDraftService examService) {
+    public TeacherExamController(
+            TeacherExamDraftService examService,
+            TeacherExamSchedulingService schedulingService
+    ) {
         this.examService = examService;
+        this.schedulingService = schedulingService;
     }
 
     @PostMapping
@@ -97,6 +103,19 @@ public class TeacherExamController {
             @AuthenticationPrincipal ExamUserPrincipal principal
     ) {
         return examService.cancel(subjectId, examId, teacherId(principal));
+    }
+
+    @PatchMapping("/{examId}/schedule")
+    /**
+     * Dong bang candidate pool va chuyen ca thi sang SCHEDULED.
+     * Redis duoc cap nhat bat dong bo qua transactional outbox.
+     */
+    public ExamDetailDTO schedule(
+            @PathVariable UUID subjectId,
+            @PathVariable UUID examId,
+            @AuthenticationPrincipal ExamUserPrincipal principal
+    ) {
+        return schedulingService.schedule(subjectId, examId, teacherId(principal));
     }
 
     private UUID teacherId(ExamUserPrincipal principal) {

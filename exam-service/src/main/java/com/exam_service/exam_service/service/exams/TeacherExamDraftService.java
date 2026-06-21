@@ -248,7 +248,7 @@ public class TeacherExamDraftService {
         );
     }
 
-    private ExamDetailDTO toDetail(Exam exam) {
+    ExamDetailDTO toDetail(Exam exam) {
         return new ExamDetailDTO(
                 exam.getId(),
                 exam.getCode(),

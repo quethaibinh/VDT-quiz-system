@@ -71,3 +71,10 @@ export async function cancelExam(subjectId: string, examId: string): Promise<Exa
   );
   return unwrap(response.data);
 }
+
+export async function scheduleExam(subjectId: string, examId: string): Promise<ExamDetail> {
+  const response = await apiClient.patch<ApiResponse<ExamDetail>>(
+    `${root(subjectId)}/${examId}/schedule`,
+  );
+  return unwrap(response.data);
+}

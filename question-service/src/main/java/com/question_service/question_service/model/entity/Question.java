@@ -42,5 +42,9 @@ public class Question extends BaseEntity {
     private UUID importJobId;
     private String metadata;
 
+    @Version
+    // Version giup Exam Service ghi lai dung phien ban cau hoi luc chot lich.
+    @Column(nullable = false, columnDefinition = "bigint default 0")
+    private long version;
 
 }

@@ -7,6 +7,7 @@ import {
   examKeys,
   getExam,
   listExams,
+  scheduleExam,
   updateExam,
 } from "@/features/teacher/exams/api/exam-repository";
 import type { ExamDraftRequest } from "@/features/teacher/exams/model/exam-contracts";
@@ -28,7 +29,7 @@ const detail = {
   version: 1, endAt: "2026-06-20T09:00:00+07:00", ...draft,
 };
 
-let captured: { path?: string; query?: string; body?: unknown } = {};
+let captured: { path?: string; query?: string; body?: unknown; method?: string } = {};
 const server = setupServer(
   http.get("*/v1/api/exam-service/teacher/subjects/:subjectId/exams", ({ request }) => {
     const url = new URL(request.url);
@@ -49,6 +50,14 @@ const server = setupServer(
   http.patch("*/v1/api/exam-service/teacher/subjects/:subjectId/exams/:examId/cancel", ({ request }) => {
     captured = { path: new URL(request.url).pathname };
     return HttpResponse.json(apiResponse({ ...detail, status: "CANCELLED" }));
+  }),
+  http.patch("*/v1/api/exam-service/teacher/subjects/:subjectId/exams/:examId/schedule", async ({ request }) => {
+    captured = {
+      path: new URL(request.url).pathname,
+      method: request.method,
+      body: await request.text(),
+    };
+    return HttpResponse.json(apiResponse({ ...detail, status: "SCHEDULED" }));
   }),
 );
 
@@ -86,4 +95,15 @@ test("provides stable subject-scoped query keys", () => {
   expect(examKeys.detail("subject-1", "exam-1")).toEqual([
     "teacher", "subjects", "subject-1", "exams", "detail", "exam-1",
   ]);
+});
+
+test("schedules an exam with a bodyless subject-scoped PATCH", async () => {
+  await expect(scheduleExam("subject-1", "exam-1")).resolves.toMatchObject({
+    status: "SCHEDULED",
+  });
+  expect(captured).toEqual({
+    path: "/v1/api/exam-service/teacher/subjects/subject-1/exams/exam-1/schedule",
+    method: "PATCH",
+    body: "",
+  });
 });

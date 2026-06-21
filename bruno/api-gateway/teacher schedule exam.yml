@@ -1,0 +1,17 @@
+info:
+  name: teacher schedule exam
+  type: http
+  seq: 24
+
+http:
+  method: PATCH
+  url: "{{url}}/v1/api/exam-service/teacher/subjects/{{subjectId}}/exams/{{examId}}/schedule"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

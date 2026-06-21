@@ -1,9 +1,11 @@
 package com.exam_service.exam_service.model.entity;
 
+import com.exam_service.exam_service.model.entity.enums.QuestionDifficulty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,10 +20,6 @@ import java.util.UUID;
             @UniqueConstraint(
                     name = "uk_exam_question_exam_question",
                     columnNames = {"exam_id", "question_id"}
-            ),
-            @UniqueConstraint(
-                    name = "uk_exam_question_exam_order",
-                    columnNames = {"exam_id", "sort_order"}
             )
         })
 @Data
@@ -36,7 +34,10 @@ public class ExamQuestion extends BaseEntity{
     private UUID examId;
     private UUID questionId;
     private Integer questionVersion;
+    @Enumerated(jakarta.persistence.EnumType.STRING)
+    private QuestionDifficulty difficulty;
     private Float score; // diem mac dinh cua 1 cau
+    // Chi la thu tu dong bang ky thuat, khong phai thu tu de cua hoc sinh.
     private int sortOrder;
     private boolean required = true;
     @JdbcTypeCode(SqlTypes.JSON)

@@ -1,9 +1,11 @@
 package com.exam_service.exam_service.controller;
 
 import com.exam_service.exam_service.config.security.ExamHeaderAuthenticationFilter;
+import com.exam_service.exam_service.config.security.InternalApiKeyAuthenticationFilter;
 import com.exam_service.exam_service.config.security.SecurityConfig;
 import com.exam_service.exam_service.service.assignments.ExamAssignmentService;
 import com.exam_service.exam_service.service.exams.TeacherExamDraftService;
+import com.exam_service.exam_service.service.exams.TeacherExamSchedulingService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -30,7 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @Import({
         SecurityConfig.class,
-        ExamHeaderAuthenticationFilter.class
+        ExamHeaderAuthenticationFilter.class,
+        InternalApiKeyAuthenticationFilter.class
 })
 class TeacherExamControllerAcceptanceTests {
 
@@ -42,6 +45,9 @@ class TeacherExamControllerAcceptanceTests {
 
     @MockitoBean
     private TeacherExamDraftService examService;
+
+    @MockitoBean
+    private TeacherExamSchedulingService schedulingService;
 
     @MockitoBean
     private ExamAssignmentService assignmentService;
@@ -73,6 +79,12 @@ class TeacherExamControllerAcceptanceTests {
                         examId
                 ).headers(teacherHeaders()))
                 .andExpect(status().isOk());
+        mockMvc.perform(patch(
+                        "/v1/api/exam-service/teacher/subjects/{subjectId}/exams/{examId}/schedule",
+                        subjectId,
+                        examId
+                ).headers(teacherHeaders()))
+                .andExpect(status().isOk());
         mockMvc.perform(delete(
                         "/v1/api/exam-service/teacher/subjects/{subjectId}/exams/{examId}/assignments/{studentId}",
                         subjectId,
@@ -82,6 +94,7 @@ class TeacherExamControllerAcceptanceTests {
                 .andExpect(status().isOk());
 
         verify(examService).cancel(subjectId, examId, TEACHER_ID);
+        verify(schedulingService).schedule(subjectId, examId, TEACHER_ID);
         verify(assignmentService).remove(subjectId, examId, TEACHER_ID, studentId);
     }
 

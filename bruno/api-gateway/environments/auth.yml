@@ -5,10 +5,10 @@ variables:
   - name: url
     value: http://localhost:8080
   - name: subjectId
-    value: ""
+    value: 7a9358f1-e173-4dd7-b5d0-2f589c5a4b1e
   - name: collectionId
     value: ""
   - name: examId
-    value: ""
+    value: 474a683e-7a8c-4f75-a8c9-c19b1532c0f5
   - name: studentId
     value: ""

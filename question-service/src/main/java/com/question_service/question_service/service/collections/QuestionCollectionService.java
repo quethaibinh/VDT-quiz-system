@@ -19,8 +19,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
 
 @Service
@@ -33,15 +37,18 @@ public class QuestionCollectionService {
 
     private final QuestionCollectionRepo collectionRepo;
     private final QuestionCollectionItemRepo itemRepo;
+    private final com.question_service.question_service.repository.QuestionOptionRepo optionRepo;
     private final TeacherSubjectAccessService subjectAccessService;
 
     public QuestionCollectionService(
             QuestionCollectionRepo collectionRepo,
             QuestionCollectionItemRepo itemRepo,
+            com.question_service.question_service.repository.QuestionOptionRepo optionRepo,
             TeacherSubjectAccessService subjectAccessService
     ) {
         this.collectionRepo = collectionRepo;
         this.itemRepo = itemRepo;
+        this.optionRepo = optionRepo;
         this.subjectAccessService = subjectAccessService;
     }
 
@@ -129,6 +136,42 @@ public class QuestionCollectionService {
                 usableCounts.easy(),
                 usableCounts.medium(),
                 usableCounts.hard()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public ExamCollectionSnapshotDTO getExamSnapshot(
+            UUID subjectId,
+            UUID collectionId,
+            UUID teacherId
+    ) {
+        Subject subject = subjectAccessService.requireActiveAssignment(subjectId, teacherId);
+        QuestionCollection collection = loadReadable(subjectId, collectionId, teacherId);
+        if (collection.getStatus() != CollectionStatus.ACTIVE) {
+            throw error(HttpStatus.BAD_REQUEST, "COLLECTION_ARCHIVED");
+        }
+
+        List<Question> questions = itemRepo.findExamUsableQuestions(collectionId, teacherId);
+        Map<UUID, List<QuestionOption>> optionsByQuestion = new LinkedHashMap<>();
+        if (!questions.isEmpty()) {
+            optionRepo.findAllByQuestionIdInOrderByQuestionIdAscOptionKeyAsc(
+                    questions.stream().map(Question::getId).toList()
+            ).forEach(option -> optionsByQuestion
+                    .computeIfAbsent(option.getQuestionId(), ignored -> new ArrayList<>())
+                    .add(option));
+        }
+
+        List<ExamQuestionSnapshotDTO> snapshots = questions.stream()
+                .map(question -> toExamSnapshot(question, optionsByQuestion.getOrDefault(
+                        question.getId(), List.of()
+                )))
+                .toList();
+        return new ExamCollectionSnapshotDTO(
+                collection.getId(),
+                collection.getSubjectId(),
+                subject.getName(),
+                collection.getName(),
+                snapshots
         );
     }
 
@@ -282,6 +325,56 @@ public class QuestionCollectionService {
             throw error(HttpStatus.BAD_REQUEST, "REQUIRED_FIELD:name");
         }
         return value;
+    }
+
+    private ExamQuestionSnapshotDTO toExamSnapshot(
+            Question question,
+            List<QuestionOption> options
+    ) {
+        if (question.getContent() == null || question.getContent().isBlank() || options.size() < 2) {
+            throw error(HttpStatus.BAD_REQUEST, "INVALID_EXAM_QUESTION");
+        }
+        Set<UUID> optionIds = new HashSet<>();
+        Set<com.question_service.question_service.model.entity.enums.OptionKey> optionKeys =
+                new HashSet<>();
+        for (QuestionOption option : options) {
+            if (option.getContent() == null
+                    || option.getContent().isBlank()
+                    || !optionIds.add(option.getId())
+                    || !optionKeys.add(option.getOptionKey())) {
+                throw error(HttpStatus.BAD_REQUEST, "INVALID_EXAM_QUESTION_OPTIONS");
+            }
+        }
+        long correctCount = options.stream().filter(QuestionOption::isCorrect).count();
+        boolean singleChoice = "SINGLE_CHOICE".equalsIgnoreCase(question.getQuestionType());
+        boolean multiChoice = "MULTI_CHOICE".equalsIgnoreCase(question.getQuestionType());
+        if ((!singleChoice && !multiChoice)
+                || (singleChoice && correctCount != 1)
+                || (multiChoice && correctCount < 1)) {
+            throw error(HttpStatus.BAD_REQUEST, "INVALID_EXAM_QUESTION_OPTIONS");
+        }
+        if (question.getDefaultScore() == null || question.getDefaultScore() <= 0) {
+            throw error(HttpStatus.BAD_REQUEST, "INVALID_EXAM_QUESTION_SCORE");
+        }
+
+        return new ExamQuestionSnapshotDTO(
+                question.getId(),
+                question.getVersion(),
+                question.getDifficulty(),
+                question.getQuestionType(),
+                question.getContent(),
+                question.getContentFormat(),
+                question.getDefaultScore(),
+                options.stream()
+                        .map(option -> new ExamOptionSnapshotDTO(
+                                option.getId(),
+                                option.getOptionKey(),
+                                option.getContent(),
+                                option.getContentFormat(),
+                                option.isCorrect()
+                        ))
+                        .toList()
+        );
     }
 
     private CollectionVisibility parseVisibility(String value) {

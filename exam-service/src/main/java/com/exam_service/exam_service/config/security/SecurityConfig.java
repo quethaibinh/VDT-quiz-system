@@ -25,11 +25,14 @@ import java.util.List;
 public class SecurityConfig {
 
     private final ExamHeaderAuthenticationFilter questionHeaderAuthenticationFilter;
+    private final InternalApiKeyAuthenticationFilter internalApiKeyAuthenticationFilter;
 
     public SecurityConfig(
-            ExamHeaderAuthenticationFilter questionHeaderAuthenticationFilter
+            ExamHeaderAuthenticationFilter questionHeaderAuthenticationFilter,
+            InternalApiKeyAuthenticationFilter internalApiKeyAuthenticationFilter
     ) {
         this.questionHeaderAuthenticationFilter = questionHeaderAuthenticationFilter;
+        this.internalApiKeyAuthenticationFilter = internalApiKeyAuthenticationFilter;
     }
 
     @Bean
@@ -46,6 +49,7 @@ public class SecurityConfig {
                 .csrf(customizer -> customizer.disable())
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/v1/api/exam-service/public/**").permitAll()
+                        .requestMatchers("/v1/internal/**").permitAll()
                         .requestMatchers("/v1/api/exam-service/teacher/**").hasRole("TEACHER")
                         .requestMatchers("/v1/api/admin/exam-service/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
@@ -55,6 +59,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler())
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(internalApiKeyAuthenticationFilter, AnonymousAuthenticationFilter.class)
                 .addFilterBefore(questionHeaderAuthenticationFilter, AnonymousAuthenticationFilter.class);
 
         return http.build();
@@ -77,6 +82,16 @@ public class SecurityConfig {
         FilterRegistrationBean<ExamHeaderAuthenticationFilter> registration =
                 new FilterRegistrationBean<>(filter);
         // Tranh servlet container chay filter them lan thu hai ngoai Spring Security.
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<InternalApiKeyAuthenticationFilter> internalApiKeyFilterRegistration(
+            InternalApiKeyAuthenticationFilter filter
+    ) {
+        FilterRegistrationBean<InternalApiKeyAuthenticationFilter> registration =
+                new FilterRegistrationBean<>(filter);
         registration.setEnabled(false);
         return registration;
     }

@@ -59,4 +59,28 @@ describe("ExamListItem", () => {
     expect(screen.queryByRole("button", { name: "Hủy ca thi" })).not.toBeInTheDocument();
     expect(screen.queryByText(/kích hoạt|giám sát|kết quả/i)).not.toBeInTheDocument();
   });
+
+  it("keeps action clicks isolated from the accordion trigger", async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    const onCancel = vi.fn();
+    const onSchedule = vi.fn();
+    render(
+      <MemoryRouter>
+        <ExamListItem
+          exam={makeExam("DRAFT")}
+          onToggle={onToggle}
+          onCancel={onCancel}
+          onSchedule={onSchedule}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Lên lịch" }));
+    await user.click(screen.getByRole("button", { name: "Hủy ca thi" }));
+
+    expect(onSchedule).toHaveBeenCalledTimes(1);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
 });

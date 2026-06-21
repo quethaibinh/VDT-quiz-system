@@ -131,6 +131,8 @@ services:
       AUTH_SERVICE_URL: http://auth-service:8081
       QUESTION_SERVICE_URL: http://question-service:8082
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local-internal-key}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "8083:8083"
     healthcheck:
@@ -150,6 +152,14 @@ services:
         condition: service_healthy
       question-service:
         condition: service_healthy
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
 
   gateway:
     build:

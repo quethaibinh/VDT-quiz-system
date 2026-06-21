@@ -4,6 +4,7 @@ export {
   examKeys,
   getExam,
   listExams,
+  scheduleExam,
   updateExam,
 } from "@/features/teacher/exams/api/exam-repository";
 export type { ExamListParams } from "@/features/teacher/exams/api/exam-repository";

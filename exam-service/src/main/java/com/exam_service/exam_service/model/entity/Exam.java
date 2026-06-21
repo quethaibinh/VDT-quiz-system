@@ -68,6 +68,10 @@ public class Exam extends BaseEntity{
     @Enumerated(EnumType.STRING)
     private HandleViolation handleViolation = HandleViolation.LOCK;
     private OffsetDateTime activatedAt;
+    // Thoi diem giao vien chot lich; khac voi activatedAt cua runtime sau nay.
+    private OffsetDateTime scheduledAt;
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private int snapshotVersion;
     private OffsetDateTime closedAt;
 
     @Version

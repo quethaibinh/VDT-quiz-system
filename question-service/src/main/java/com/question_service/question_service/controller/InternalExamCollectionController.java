@@ -1,6 +1,7 @@
 package com.question_service.question_service.controller;
 
 import com.question_service.question_service.model.dto.collections.ExamCollectionMetadataDTO;
+import com.question_service.question_service.model.dto.collections.ExamCollectionSnapshotDTO;
 import com.question_service.question_service.service.collections.QuestionCollectionService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,5 +28,14 @@ public class InternalExamCollectionController {
             @RequestParam UUID teacherId
     ) {
         return collectionService.getExamMetadata(subjectId, collectionId, teacherId);
+    }
+
+    @GetMapping("/{collectionId}/exam-snapshot")
+    public ExamCollectionSnapshotDTO getExamSnapshot(
+            @PathVariable UUID subjectId,
+            @PathVariable UUID collectionId,
+            @RequestParam UUID teacherId
+    ) {
+        return collectionService.getExamSnapshot(subjectId, collectionId, teacherId);
     }
 }

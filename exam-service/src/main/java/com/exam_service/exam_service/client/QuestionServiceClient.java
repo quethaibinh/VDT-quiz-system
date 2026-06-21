@@ -67,4 +67,38 @@ public class QuestionServiceClient {
             throw new IllegalStateException("INVALID_QUESTION_SERVICE_RESPONSE");
         }
     }
+
+    /**
+     * Lay candidate pool day du de Exam Service dong bang khi chot lich.
+     */
+    public QuestionCollectionSnapshot getExamSnapshot(
+            UUID subjectId,
+            UUID collectionId,
+            UUID teacherId
+    ) {
+        try {
+            String body = client.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/v1/internal/question-service/subjects/{subjectId}/collections/{collectionId}/exam-snapshot")
+                            .queryParam("teacherId", teacherId)
+                            .build(subjectId, collectionId))
+                    .header("X-Internal-Api-Key", internalApiKey)
+                    .retrieve()
+                    .body(String.class);
+            JsonNode data = objectMapper.readTree(body).path("data");
+            return objectMapper.treeToValue(data, QuestionCollectionSnapshot.class);
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 404) {
+                throw new NotFoundException("COLLECTION_NOT_FOUND");
+            }
+            if (exception.getStatusCode().is4xxClientError()) {
+                throw new IllegalArgumentException("INVALID_COLLECTION_SNAPSHOT");
+            }
+            throw new IllegalStateException("QUESTION_SERVICE_UNAVAILABLE");
+        } catch (ResourceAccessException exception) {
+            throw new IllegalStateException("QUESTION_SERVICE_UNAVAILABLE");
+        } catch (Exception exception) {
+            throw new IllegalStateException("INVALID_QUESTION_SERVICE_RESPONSE");
+        }
+    }
 }
