@@ -1,5 +1,7 @@
 package com.question_service.question_service.model.entity;
 
+import com.question_service.question_service.model.entity.enums.CollectionStatus;
+import com.question_service.question_service.model.entity.enums.CollectionVisibility;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -22,7 +22,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {AuthController.class, AdminUserImportController.class})
-@Import({SecurityConfig.class, GatewayHeaderAuthenticationFilter.class})
+@Import({
+        SecurityConfig.class,
+        GatewayHeaderAuthenticationFilter.class,
+        InternalApiKeyAuthenticationFilter.class
+})
 class ServiceSecurityIntegrationTests {
 
     @Autowired
@@ -100,6 +104,6 @@ class ServiceSecurityIntegrationTests {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 new byte[]{1}
         );
-        return multipart("/v1/api/auth-service/admin/users/import").file(file);
+        return multipart("/v1/api/admin/auth-service/users/import").file(file);
     }
 }

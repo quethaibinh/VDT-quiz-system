@@ -9,8 +9,10 @@ repository:
 - Teacher Frontend: `http://localhost:3000`
 - Auth Service: `http://localhost:8081`
 - Question Service: `http://localhost:8082`
+- Exam Service: `http://localhost:8083`
 - Auth PostgreSQL: `localhost:5433`
 - Question PostgreSQL: `localhost:5434`
+- Exam PostgreSQL: `localhost:5435`
 
 ### Prerequisites
 
@@ -66,5 +68,6 @@ Stop containers and delete the PostgreSQL volume:
 docker compose down -v
 ```
 
-The `question-service` gateway route is included in Docker Compose. It uses a
-separate PostgreSQL container and publishes that database on local port `5434`.
+Question and Exam services each use a separate PostgreSQL container. Exam draft
+APIs are routed through Gateway; internal Auth/Question validation endpoints are
+service-network only. See `docs/EXAM_DRAFT_MANAGEMENT.md`.

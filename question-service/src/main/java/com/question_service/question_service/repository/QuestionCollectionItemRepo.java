@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import com.question_service.question_service.model.entity.Question;
 
 public interface QuestionCollectionItemRepo extends JpaRepository<QuestionCollectionItem, UUID> {
 
@@ -34,7 +35,7 @@ public interface QuestionCollectionItemRepo extends JpaRepository<QuestionCollec
             from QuestionCollectionItem i
             join Question q on q.id = i.questionId
             where i.collectionId = :collectionId
-              and q.visibility = com.question_service.question_service.model.entity.QuestionVisibility.PRIVATE
+              and q.visibility = com.question_service.question_service.model.entity.enums.QuestionVisibility.PRIVATE
             """)
     long countPrivateQuestions(@Param("collectionId") UUID collectionId);
 
@@ -46,5 +47,59 @@ public interface QuestionCollectionItemRepo extends JpaRepository<QuestionCollec
             group by q.difficulty
             """)
     List<CollectionDifficultyCount> countByDifficulty(@Param("collectionId") UUID collectionId);
+
+    @Query("""
+            select q.difficulty as difficulty, count(q) as count
+            from QuestionCollectionItem i
+            join Question q on q.id = i.questionId
+            join QuestionCollection c on c.id = i.collectionId
+            where i.collectionId = :collectionId
+              and q.status = com.question_service.question_service.model.entity.enums.QuestionStatus.ACTIVE
+              and (
+                    (
+                        c.visibility = com.question_service.question_service.model.entity.enums.CollectionVisibility.PUBLIC
+                        and q.visibility = com.question_service.question_service.model.entity.enums.QuestionVisibility.PUBLIC
+                    )
+                    or (
+                        c.visibility = com.question_service.question_service.model.entity.enums.CollectionVisibility.PRIVATE
+                        and (
+                            q.visibility = com.question_service.question_service.model.entity.enums.QuestionVisibility.PUBLIC
+                            or q.ownerTeacherId = :teacherId
+                        )
+                    )
+              )
+            group by q.difficulty
+            """)
+    List<CollectionDifficultyCount> countExamUsableByDifficulty(
+            @Param("collectionId") UUID collectionId,
+            @Param("teacherId") UUID teacherId
+    );
+
+    @Query("""
+            select q
+            from QuestionCollectionItem i
+            join Question q on q.id = i.questionId
+            join QuestionCollection c on c.id = i.collectionId
+            where i.collectionId = :collectionId
+              and q.status = com.question_service.question_service.model.entity.enums.QuestionStatus.ACTIVE
+              and (
+                    (
+                        c.visibility = com.question_service.question_service.model.entity.enums.CollectionVisibility.PUBLIC
+                        and q.visibility = com.question_service.question_service.model.entity.enums.QuestionVisibility.PUBLIC
+                    )
+                    or (
+                        c.visibility = com.question_service.question_service.model.entity.enums.CollectionVisibility.PRIVATE
+                        and (
+                            q.visibility = com.question_service.question_service.model.entity.enums.QuestionVisibility.PUBLIC
+                            or q.ownerTeacherId = :teacherId
+                        )
+                    )
+              )
+            order by q.difficulty asc, q.id asc
+            """)
+    List<Question> findExamUsableQuestions(
+            @Param("collectionId") UUID collectionId,
+            @Param("teacherId") UUID teacherId
+    );
 
 }

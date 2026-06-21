@@ -2,10 +2,10 @@ package com.question_service.question_service.service.questions;
 
 import com.question_service.question_service.model.dto.questions.QuestionOptionRequestDTO;
 import com.question_service.question_service.model.dto.questions.QuestionUpsertRequestDTO;
-import com.question_service.question_service.model.entity.ContentFormat;
-import com.question_service.question_service.model.entity.Difficulty;
-import com.question_service.question_service.model.entity.OptionKey;
-import com.question_service.question_service.model.entity.QuestionVisibility;
+import com.question_service.question_service.model.entity.enums.ContentFormat;
+import com.question_service.question_service.model.entity.enums.Difficulty;
+import com.question_service.question_service.model.entity.enums.OptionKey;
+import com.question_service.question_service.model.entity.enums.QuestionVisibility;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;

@@ -5,9 +5,9 @@ import com.question_service.question_service.model.dto.questions.QuestionOptionR
 import com.question_service.question_service.model.dto.questions.QuestionUpsertRequestDTO;
 import com.question_service.question_service.model.entity.Question;
 import com.question_service.question_service.model.entity.QuestionOption;
-import com.question_service.question_service.model.entity.QuestionStatus;
-import com.question_service.question_service.model.entity.QuestionVisibility;
-import com.question_service.question_service.model.entity.Source;
+import com.question_service.question_service.model.entity.enums.QuestionStatus;
+import com.question_service.question_service.model.entity.enums.QuestionVisibility;
+import com.question_service.question_service.model.entity.enums.Source;
 import com.question_service.question_service.repository.QuestionOptionRepo;
 import com.question_service.question_service.repository.QuestionRepo;
 import com.question_service.question_service.repository.TopicRepo;

@@ -13,7 +13,7 @@ export function SubjectResultListPage() {
   const subject = useQuery(subjectDetailQuery(subjectId));
   const exams = useQuery({
     queryKey: ["teacher", "results", subjectId, "closed-exams"],
-    queryFn: () => listExams({ subjectId, status: "CLOSED" }),
+    queryFn: () => listExams(subjectId, { status: "CLOSED", size: 100 }),
     enabled: Boolean(subjectId) && subject.isSuccess,
   });
   const backTo = `/teacher/subjects/${subjectId}/results`;
@@ -30,11 +30,11 @@ export function SubjectResultListPage() {
       <DataState
         loading={subject.isLoading || exams.isLoading}
         error={error ? getApiErrorMessage(error) : null}
-        empty={subject.isSuccess && !exams.data?.length}
+        empty={subject.isSuccess && !exams.data?.content.length}
         emptyMessage="Môn học này chưa có ca thi đã kết thúc."
         onRetry={() => { void subject.refetch(); void exams.refetch(); }}
       >
-        <div className="space-y-3">{exams.data?.map((exam) => <ResultExamRow key={exam.id} exam={exam} backTo={backTo} />)}</div>
+        <div className="space-y-3">{exams.data?.content.map((exam) => <ResultExamRow key={exam.id} exam={exam} backTo={backTo} />)}</div>
       </DataState>
     </div>
   );

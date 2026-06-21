@@ -1,6 +1,10 @@
 package com.question_service.question_service.service.questions;
 
 import com.question_service.question_service.model.entity.*;
+import com.question_service.question_service.model.entity.enums.CollectionMembership;
+import com.question_service.question_service.model.entity.enums.OwnershipScope;
+import com.question_service.question_service.model.entity.enums.QuestionStatus;
+import com.question_service.question_service.model.entity.enums.QuestionVisibility;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;

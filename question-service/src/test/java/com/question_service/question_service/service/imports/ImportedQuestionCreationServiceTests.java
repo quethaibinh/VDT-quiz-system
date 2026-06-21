@@ -1,12 +1,12 @@
 package com.question_service.question_service.service.imports;
 
 import com.question_service.question_service.model.dto.imports.NormalizedImportQuestionRow;
-import com.question_service.question_service.model.entity.ContentFormat;
-import com.question_service.question_service.model.entity.Difficulty;
+import com.question_service.question_service.model.entity.enums.ContentFormat;
+import com.question_service.question_service.model.entity.enums.Difficulty;
 import com.question_service.question_service.model.entity.ImportJob;
 import com.question_service.question_service.model.entity.Question;
-import com.question_service.question_service.model.entity.QuestionStatus;
-import com.question_service.question_service.model.entity.QuestionVisibility;
+import com.question_service.question_service.model.entity.enums.QuestionStatus;
+import com.question_service.question_service.model.entity.enums.QuestionVisibility;
 import com.question_service.question_service.model.entity.Topic;
 import com.question_service.question_service.repository.ImportJobRepo;
 import com.question_service.question_service.repository.QuestionOptionRepo;

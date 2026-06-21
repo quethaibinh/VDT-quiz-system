@@ -21,12 +21,16 @@ runtime:
   scripts:
     - type: after-response
       code: |-
-        const token = res.data || res.getBody();
-        console.log("hello");
-        console.log(token);
-        if (token) {
+        const body = res.getBody();
+        const token = typeof body === "string"
+          ? body.trim().replace(/^"|"$/g, "")
+          : body?.token ?? body?.data;
+
+        if (typeof token === "string" && token.split(".").length === 3) {
           bru.setEnvVar("token", token);
-          console.log("JWT Token đã được cập nhật tự động!");
+          console.log("JWT token updated.");
+        } else {
+          throw new Error("Login response does not contain a valid JWT.");
         }
 
 settings:

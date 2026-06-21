@@ -2,6 +2,10 @@ package com.question_service.question_service.service.collections;
 
 import com.question_service.question_service.model.dto.collections.*;
 import com.question_service.question_service.model.entity.*;
+import com.question_service.question_service.model.entity.enums.CollectionStatus;
+import com.question_service.question_service.model.entity.enums.Difficulty;
+import com.question_service.question_service.model.entity.enums.QuestionStatus;
+import com.question_service.question_service.model.entity.enums.QuestionVisibility;
 import com.question_service.question_service.repository.*;
 import com.question_service.question_service.service.questions.TeacherQuestionSearchService;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +39,8 @@ class QuestionCollectionIntegrationTests {
     private TopicRepo topicRepo;
     @Autowired
     private QuestionRepo questionRepo;
+    @Autowired
+    private QuestionCollectionItemRepo collectionItemRepo;
 
     private UUID subjectId;
     private UUID teacherId;
@@ -197,6 +203,70 @@ class QuestionCollectionIntegrationTests {
                 .isEqualTo(CollectionStatus.ACTIVE);
     }
 
+    @Test
+    void examMetadataReturnsOnlyActiveQuestionsUsableByTeacher() {
+        CollectionResponseDTO collection = create("Exam pool", "PRIVATE");
+        Question activeEasy = question(teacherId, QuestionVisibility.PRIVATE, Difficulty.EASY);
+        Question activeMedium = question(otherTeacherId, QuestionVisibility.PUBLIC, Difficulty.MEDIUM);
+        Question archivedHard = question(teacherId, QuestionVisibility.PRIVATE, Difficulty.HARD);
+        archivedHard.setStatus(QuestionStatus.ARCHIVED);
+        questionRepo.save(archivedHard);
+        itemService.add(
+                subjectId,
+                collection.id(),
+                teacherId,
+                List.of(activeEasy.getId(), activeMedium.getId())
+        );
+        QuestionCollectionItem archivedItem = new QuestionCollectionItem();
+        archivedItem.setCollectionId(collection.id());
+        archivedItem.setQuestionId(archivedHard.getId());
+        collectionItemRepo.save(archivedItem);
+
+        ExamCollectionMetadataDTO metadata = collectionService.getExamMetadata(
+                subjectId, collection.id(), teacherId
+        );
+
+        assertThat(metadata.collectionId()).isEqualTo(collection.id());
+        assertThat(metadata.subjectId()).isEqualTo(subjectId);
+        assertThat(metadata.name()).isEqualTo(collection.name());
+        assertThat(metadata.easy()).isEqualTo(1);
+        assertThat(metadata.medium()).isEqualTo(1);
+        assertThat(metadata.hard()).isZero();
+    }
+
+    @Test
+    void examMetadataAllowsPublicCollectionButHidesPrivateCollectionFromOtherTeacher() {
+        CollectionResponseDTO privateCollection = create("Private exam pool", "PRIVATE");
+        CollectionResponseDTO publicCollection = create("Public exam pool", "PUBLIC");
+
+        assertThat(collectionService.getExamMetadata(
+                subjectId, publicCollection.id(), otherTeacherId
+        ).collectionId()).isEqualTo(publicCollection.id());
+
+        assertThatThrownBy(() -> collectionService.getExamMetadata(
+                subjectId, privateCollection.id(), otherTeacherId
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("COLLECTION_NOT_FOUND");
+    }
+
+    @Test
+    void examMetadataRejectsWrongSubjectAndArchivedCollection() {
+        CollectionResponseDTO collection = create("Invalid exam pool", "PRIVATE");
+        collectionService.archive(subjectId, collection.id(), teacherId);
+
+        assertThatThrownBy(() -> collectionService.getExamMetadata(
+                UUID.randomUUID(), collection.id(), teacherId
+        ))
+                .isInstanceOf(ResponseStatusException.class);
+
+        assertThatThrownBy(() -> collectionService.getExamMetadata(
+                subjectId, collection.id(), teacherId
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("COLLECTION_ARCHIVED");
+    }
+
     private CollectionResponseDTO create(String name, String visibility) {
         return collectionService.create(
                 subjectId,
@@ -226,4 +296,5 @@ class QuestionCollectionIntegrationTests {
         assignment.setStatus(SubjectTeacherStatus.ACTIVE);
         subjectTeacherRepo.save(assignment);
     }
+
 }

@@ -2,7 +2,7 @@ package com.question_service.question_service.service.questions;
 
 import com.question_service.question_service.model.dto.questions.QuestionOptionRequestDTO;
 import com.question_service.question_service.model.dto.questions.QuestionUpsertRequestDTO;
-import com.question_service.question_service.model.entity.QuestionVisibility;
+import com.question_service.question_service.model.entity.enums.QuestionVisibility;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 

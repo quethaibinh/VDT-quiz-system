@@ -6,14 +6,18 @@ import type { ExamSummary } from "@/features/teacher/exams";
 
 const exam: ExamSummary = {
   id: "exam-1",
+  code: "EXAM-001",
   title: "Thi cuối kỳ",
   subjectId: "subject-1",
   subjectName: "Toán cao cấp",
+  collectionId: "collection-1",
+  collectionName: "Bộ câu hỏi 1",
   startAt: "2026-06-05T09:00:00+07:00",
   durationMinutes: 60,
   questionCount: 50,
   assignedCount: 100,
   status: "CLOSED",
+  version: 0,
 };
 
 describe("ResultExamRow", () => {

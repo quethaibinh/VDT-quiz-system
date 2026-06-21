@@ -1,0 +1,39 @@
+info:
+  name: teacher create exam draft
+  type: http
+  seq: 21
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/exam-service/teacher/subjects/{{subjectId}}/exams"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Midterm Mathematics",
+        "description": "Semester 1",
+        "collectionId": "{{collectionId}}",
+        "easyCount": 20,
+        "mediumCount": 20,
+        "hardCount": 10,
+        "startAt": "2026-07-01T08:00:00+07:00",
+        "durationMinutes": 60,
+        "joinBeforeMinutes": 10,
+        "joinAfterMinutes": 0,
+        "shuffleQuestions": true,
+        "shuffleOptions": true,
+        "showResultPolicy": "AFTER_CLOSED",
+        "autoSubmit": true,
+        "requireFullscreen": true,
+        "maxViolationAllowed": 5,
+        "handleViolation": "LOCK"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

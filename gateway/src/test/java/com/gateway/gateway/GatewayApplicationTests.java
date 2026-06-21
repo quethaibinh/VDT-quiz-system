@@ -33,6 +33,9 @@ class GatewayApplicationTests {
 		assertRoutePaths(routes, "question-service-route",
 				"/v1/api/question-service/**",
 				"/v1/api/admin/question-service/**");
+		assertRoutePaths(routes, "exam-service-route",
+				"/v1/api/exam-service/**",
+				"/v1/api/admin/exam-service/**");
 	}
 
 	private void assertRoutePaths(List<RouteDefinition> routes, String routeId, String... expectedPaths) {

@@ -7,6 +7,7 @@ import { LoginPage } from "@/features/auth/pages/login-page";
 import { CollectionDetailPage } from "@/features/teacher/collections/pages/collection-detail-page";
 import { CollectionListPage } from "@/features/teacher/collections/pages/collection-list-page";
 import { ExamBuilderPage } from "@/features/teacher/exams/pages/exam-builder-page";
+import { ExamEditPage } from "@/features/teacher/exams/pages/exam-edit-page";
 import { SubjectExamListPage } from "@/features/teacher/exams/pages/exam-list-page";
 import { ExamSubjectPickerPage } from "@/features/teacher/exams/pages/exam-subject-picker-page";
 import { QuestionImportPage } from "@/features/teacher/imports/pages/question-import-page";
@@ -47,6 +48,7 @@ export const router = createBrowserRouter([
             { path: "exams/new", element: <Navigate to="/teacher/exams" replace /> },
             { path: "subjects/:subjectId/exams", element: <SubjectExamListPage /> },
             { path: "subjects/:subjectId/exams/new", element: <ExamBuilderPage /> },
+            { path: "subjects/:subjectId/exams/:examId/edit", element: <ExamEditPage /> },
             { path: "exams/:examId/monitor", element: <ExamMonitorPage /> },
             { path: "results", element: <ResultSubjectPickerPage /> },
             { path: "subjects/:subjectId/results", element: <SubjectResultListPage /> },

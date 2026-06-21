@@ -1,10 +1,10 @@
 package com.question_service.question_service.model.dto.questions;
 
-import com.question_service.question_service.model.entity.ContentFormat;
-import com.question_service.question_service.model.entity.Difficulty;
-import com.question_service.question_service.model.entity.QuestionStatus;
-import com.question_service.question_service.model.entity.QuestionVisibility;
-import com.question_service.question_service.model.entity.Source;
+import com.question_service.question_service.model.entity.enums.ContentFormat;
+import com.question_service.question_service.model.entity.enums.Difficulty;
+import com.question_service.question_service.model.entity.enums.QuestionStatus;
+import com.question_service.question_service.model.entity.enums.QuestionVisibility;
+import com.question_service.question_service.model.entity.enums.Source;
 
 import java.time.LocalDateTime;
 import java.util.List;

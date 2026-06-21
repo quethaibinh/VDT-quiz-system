@@ -21,10 +21,10 @@ npm run dev
 
 Default Gateway: `http://localhost:8080`.
 
-Set `VITE_ENABLE_MOCKS=true` in development to enable planned Exam, Monitoring,
-and Result APIs. Subject, question, import, and collection requests still pass
-through to the real Gateway because unhandled MSW requests are bypassed. The
-MSW worker is versioned at `public/mockServiceWorker.js`.
+Set `VITE_ENABLE_MOCKS=true` in development to enable local API fixtures.
+Subject, question, import, collection, and implemented Exam requests can still
+pass through to the real Gateway because unhandled MSW requests are bypassed.
+The MSW worker is versioned at `public/mockServiceWorker.js`.
 
 ## Run with Docker Compose
 
@@ -50,11 +50,12 @@ npm run build
 
 ## Backend prerequisites
 
-- Auth Service and Question Service must be reachable through Gateway.
+- Auth Service, Question Service, and Exam Service must be reachable through Gateway.
 - Login returns a plain JWT string.
 - Collection restore needs Gateway CORS to allow `PATCH`.
-- Question detail/options, topic listing, student search, Exam, Runtime, and
-  Result contracts are not implemented in the current backend.
+- Exam list, detail, draft, assignment, cancellation, and scheduling use the
+  implemented subject-scoped APIs.
+- Exam Runtime and Result contracts remain planned and may be exercised through MSW.
 
 ## Architecture
 

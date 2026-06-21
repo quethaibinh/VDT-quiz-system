@@ -14,15 +14,6 @@ config:
         password: ""
       bypassProxy: ""
 
-request:
-  scripts:
-    - type: after-response
-      code: |-
-        const token = bru.getEnvVar("token");
-
-        if (token) {
-          req.setHeader("Authorization", `Bearer ${token}`);
-        }
 bundled: false
 extensions:
   bruno:
