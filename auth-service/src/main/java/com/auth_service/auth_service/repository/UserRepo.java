@@ -42,4 +42,34 @@ public interface UserRepo extends JpaRepository<UserEntity, UUID> {
     );
 
     List<UserEntity> findAllByIdIn(Collection<UUID> ids);
+
+    @Query("""
+            select user
+            from UserEntity user
+            where user.userType <> com.auth_service.auth_service.model.entity.UserType.ADMIN
+              and upper(user.status) in ('ACTIVE', 'INACTIVE')
+              and (:userType is null or user.userType = :userType)
+              and (:status is null or upper(user.status) = :status)
+              and (
+                    :keyword = ''
+                    or lower(user.username) like concat('%', :keyword, '%')
+                    or lower(coalesce(user.studentCode, '')) like concat('%', :keyword, '%')
+                    or lower(coalesce(user.teacherCode, '')) like concat('%', :keyword, '%')
+                    or lower(user.fullName) like concat('%', :keyword, '%')
+                    or lower(coalesce(user.displayName, '')) like concat('%', :keyword, '%')
+                    or lower(coalesce(user.email, '')) like concat('%', :keyword, '%')
+              )
+            """)
+    Page<UserEntity> searchAdminUsers(
+            @Param("userType") UserType userType,
+            @Param("status") String status,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    long countByStatusIgnoreCase(String status);
+
+    long countByUserTypeAndStatusIgnoreCase(UserType userType, String status);
+
+    long countByUserTypeInAndStatusIgnoreCase(Collection<UserType> userTypes, String status);
 }

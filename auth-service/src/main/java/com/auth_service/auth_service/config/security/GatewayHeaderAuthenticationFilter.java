@@ -9,6 +9,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
 import java.util.List;
@@ -24,9 +25,17 @@ public class GatewayHeaderAuthenticationFilter extends OncePerRequestFilter {
     public static final String USER_ID_HEADER = "X-User-Id";
     public static final String USERNAME_HEADER = "X-Username";
     public static final String USER_ROLE_HEADER = "X-User-Role";
+    public static final String GATEWAY_SECRET_HEADER = "X-Gateway-Secret";
 
     private static final String ROLE_PREFIX = "ROLE_";
     private static final Set<String> SUPPORTED_ROLES = Set.of("ADMIN", "TEACHER", "STUDENT");
+    private final String trustedGatewaySecret;
+
+    public GatewayHeaderAuthenticationFilter(
+            @Value("${gateway.trusted-secret}") String trustedGatewaySecret
+    ) {
+        this.trustedGatewaySecret = trustedGatewaySecret;
+    }
 
     @Override
     protected void doFilterInternal(
@@ -45,9 +54,11 @@ public class GatewayHeaderAuthenticationFilter extends OncePerRequestFilter {
         String userId = trimToNull(request.getHeader(USER_ID_HEADER));
         String username = trimToNull(request.getHeader(USERNAME_HEADER));
         String role = normalizeRole(request.getHeader(USER_ROLE_HEADER));
+        String gatewaySecret = trimToNull(request.getHeader(GATEWAY_SECRET_HEADER));
 
-        // Bo qua request neu header dinh danh thieu hoac vai tro khong duoc ho tro.
-        if (userId == null || username == null || role == null) {
+        // Chi tin identity header khi request mang shared secret cua gateway.
+        if (userId == null || username == null || role == null
+                || !trustedGatewaySecret.equals(gatewaySecret)) {
             return;
         }
 

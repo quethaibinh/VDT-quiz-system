@@ -18,5 +18,11 @@ public class SubjectTeacherResponseDTO {
     private String status;
     private UUID assignedByAdminId;
     private LocalDateTime assignedAt;
+    private String teacherCode;
+    private String fullName;
+    private String displayName;
+    private String email;
+    private String teacherStatus;
+    private String identityState;
 
 }

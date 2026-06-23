@@ -6,10 +6,7 @@ The Docker Compose stack runs every service currently available in this
 repository:
 
 - API Gateway: `http://localhost:8080`
-- Teacher Frontend: `http://localhost:3000`
-- Auth Service: `http://localhost:8081`
-- Question Service: `http://localhost:8082`
-- Exam Service: `http://localhost:8083`
+- Role-based Frontend: `http://localhost:3000`
 - Auth PostgreSQL: `localhost:5433`
 - Question PostgreSQL: `localhost:5434`
 - Exam PostgreSQL: `localhost:5435`
@@ -28,10 +25,13 @@ Copy-Item .env.example .env
 ```
 
 Replace every example password and secret in `.env` before starting the stack.
-The existing Spring configuration still supports running services directly on
-the host, while Compose overrides database and service URLs for its internal
-network. The auth database uses `postgres:5432` inside Docker and publishes
-`5433` on the host so each service database can have its own local port.
+Compose keeps Auth, Question, and Exam Service ports private because these
+services trust identity headers created by Gateway. Only Gateway is published
+as the backend entry point. Gateway signs those forwarded headers with
+`GATEWAY_TRUSTED_SECRET`; internal service calls use the separate required
+`INTERNAL_API_KEY`. The existing Spring configuration still supports running a
+service directly from the IDE for local debugging when the same environment
+variables are available.
 
 ### Start
 
@@ -40,9 +40,25 @@ docker compose up --build -d
 docker compose ps
 ```
 
-Open the Teacher frontend at `http://localhost:3000`. Override the published
+Open the frontend at `http://localhost:3000`. Override the published
 port with `FRONTEND_PORT` in `.env`. Nginx forwards frontend `/v1/api` requests
 to the Gateway over the Compose network.
+
+### Admin workspace
+
+Administrators sign in through the same frontend and are routed to
+`/admin/dashboard`. The released Admin workspace includes:
+
+- Real dashboard counts from Auth Service and Question Service.
+- Teacher/student search, profile updates, and activation/deactivation.
+- Partial-success `.xlsx` account import.
+- Subject create, edit, archive, restore, and verified teacher assignment.
+
+All Admin browser requests use Gateway routes under `/v1/api/admin/**`. The
+frontend never calls Auth Service, Question Service, or internal endpoints
+directly. Admin business data is not supplied by MSW or other runtime fixtures.
+Teacher assignment is selected by teacher name/code from real Auth data; users
+never enter teacher UUIDs manually.
 
 Follow logs with:
 

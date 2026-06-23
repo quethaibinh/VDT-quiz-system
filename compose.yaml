@@ -56,9 +56,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       AES_KEY: ${AES_KEY:?AES_KEY must be set}
       HMAC_KEY: ${HMAC_KEY:?HMAC_KEY must be set}
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local-internal-key}
-    ports:
-      - "8081:8081"
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
+      GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
     healthcheck:
       test:
         [
@@ -81,9 +80,9 @@ services:
       DB_QUESTION_URL: jdbc:postgresql://question-postgres:5432/${DB_QUESTION_NAME:-question-service-db}
       DB_QUESTION_USERNAME: ${DB_QUESTION_USERNAME:-postgres}
       DB_QUESTION_PASSWORD: ${DB_QUESTION_PASSWORD:?DB_QUESTION_PASSWORD must be set}
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local-internal-key}
-    ports:
-      - "8082:8082"
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
+      GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
     healthcheck:
       test:
         [
@@ -96,6 +95,8 @@ services:
       start_period: 20s
     depends_on:
       question-postgres:
+        condition: service_healthy
+      auth-service:
         condition: service_healthy
 
   exam-postgres:
@@ -128,13 +129,14 @@ services:
       DB_EXAM_URL: jdbc:postgresql://exam-postgres:5432/${DB_EXAM_NAME:-exam-service-db}
       DB_EXAM_USERNAME: ${DB_EXAM_USERNAME:-postgres}
       DB_EXAM_PASSWORD: ${DB_EXAM_PASSWORD:-postgres}
-      AUTH_SERVICE_URL: http://auth-service:8081
-      QUESTION_SERVICE_URL: http://question-service:8082
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local-internal-key}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      QUESTION_SERVICE_URL: ${QUESTION_SERVICE_URL}
+      EXAM_SERVICE_URL: ${EXAM_SERVICE_URL}
+      EXAMRUNTIME_SERVICE_URL: ${EXAMRUNTIME_SERVICE_URL}
+      RESULT_SERVICE_URL: ${RESULT_SERVICE_URL}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-    ports:
-      - "8083:8083"
     healthcheck:
       test:
         [
@@ -166,10 +168,13 @@ services:
       context: ./gateway
     restart: unless-stopped
     environment:
-      AUTH_SERVICE_URL: http://auth-service:8081
-      QUESTION_SERVICE_URL: http://question-service:8082
-      EXAM_SERVICE_URL: http://exam-service:8083
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      QUESTION_SERVICE_URL: ${QUESTION_SERVICE_URL}
+      EXAM_SERVICE_URL: ${EXAM_SERVICE_URL}
+      EXAMRUNTIME_SERVICE_URL: ${EXAMRUNTIME_SERVICE_URL}
+      RESULT_SERVICE_URL: ${RESULT_SERVICE_URL}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
     ports:
       - "8080:8080"
     healthcheck:

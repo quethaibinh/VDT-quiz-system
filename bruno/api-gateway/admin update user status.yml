@@ -1,0 +1,23 @@
+info:
+  name: admin update user status
+  type: http
+  seq: 8
+
+http:
+  method: PATCH
+  url: "{{url}}/v1/api/admin/auth-service/users/00000000-0000-0000-0000-000000000001/status"
+  body:
+    type: json
+    data: |-
+      {
+        "status": "INACTIVE"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

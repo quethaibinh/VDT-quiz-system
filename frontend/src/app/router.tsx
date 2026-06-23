@@ -2,8 +2,16 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { ForbiddenPage, NotFoundPage } from "@/app/error-pages";
 import { AuthProvider } from "@/features/auth/auth-context";
+import { AdminGuard } from "@/features/auth/components/admin-guard";
 import { TeacherGuard } from "@/features/auth/components/teacher-guard";
 import { LoginPage } from "@/features/auth/pages/login-page";
+import { AdminDashboardPage } from "@/features/admin/dashboard/pages/admin-dashboard-page";
+import { UserImportPage } from "@/features/admin/imports/pages/user-import-page";
+import { AdminLayout } from "@/features/admin/layout/admin-layout";
+import { AdminSubjectDetailPage } from "@/features/admin/subjects/pages/admin-subject-detail-page";
+import { AdminSubjectListPage } from "@/features/admin/subjects/pages/admin-subject-list-page";
+import { AdminUserDetailPage } from "@/features/admin/users/pages/admin-user-detail-page";
+import { AdminUserListPage } from "@/features/admin/users/pages/admin-user-list-page";
 import { CollectionDetailPage } from "@/features/teacher/collections/pages/collection-detail-page";
 import { CollectionListPage } from "@/features/teacher/collections/pages/collection-list-page";
 import { ExamBuilderPage } from "@/features/teacher/exams/pages/exam-builder-page";
@@ -28,7 +36,7 @@ export const router = createBrowserRouter([
   {
     element: <RootProviders />,
     children: [
-      { path: "/", element: <Navigate to="/teacher/subjects" replace /> },
+      { path: "/", element: <Navigate to="/login" replace /> },
       { path: "/login", element: <LoginPage /> },
       { path: "/forbidden", element: <ForbiddenPage /> },
       {
@@ -53,6 +61,22 @@ export const router = createBrowserRouter([
             { path: "results", element: <ResultSubjectPickerPage /> },
             { path: "subjects/:subjectId/results", element: <SubjectResultListPage /> },
             { path: "exams/:examId/results", element: <ExamResultsPage /> },
+          ],
+        }],
+      },
+      {
+        element: <AdminGuard />,
+        children: [{
+          path: "/admin",
+          element: <AdminLayout />,
+          children: [
+            { index: true, element: <Navigate to="dashboard" replace /> },
+            { path: "dashboard", element: <AdminDashboardPage /> },
+            { path: "users", element: <AdminUserListPage /> },
+            { path: "users/import", element: <UserImportPage /> },
+            { path: "users/:userId", element: <AdminUserDetailPage /> },
+            { path: "subjects", element: <AdminSubjectListPage /> },
+            { path: "subjects/:subjectId", element: <AdminSubjectDetailPage /> },
           ],
         }],
       },

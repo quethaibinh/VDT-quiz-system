@@ -1,6 +1,6 @@
 # Sahara Quiz Frontend
 
-Teacher-first React frontend for the Quiz Platform.
+Role-based React frontend for the Quiz Platform.
 
 ## Stack
 
@@ -25,6 +25,9 @@ Set `VITE_ENABLE_MOCKS=true` in development to enable local API fixtures.
 Subject, question, import, collection, and implemented Exam requests can still
 pass through to the real Gateway because unhandled MSW requests are bypassed.
 The MSW worker is versioned at `public/mockServiceWorker.js`.
+
+Admin routes are always real-data routes. Enabling MSW does not register Admin
+user, dashboard, import, subject, or teacher-directory handlers.
 
 ## Run with Docker Compose
 
@@ -51,6 +54,11 @@ npm run build
 ## Backend prerequisites
 
 - Auth Service, Question Service, and Exam Service must be reachable through Gateway.
+- Admin pages use real Auth and Question Service data; there are no Admin MSW
+  business handlers.
+- Docker Compose exposes only Gateway and frontend to the host. Auth and
+  Question Service ports stay internal because those services trust identity
+  headers created by Gateway.
 - Login returns a plain JWT string.
 - Collection restore needs Gateway CORS to allow `PATCH`.
 - Exam list, detail, draft, assignment, cancellation, and scheduling use the
@@ -81,3 +89,21 @@ The Teacher sidebar has three stable journeys:
   result detail.
 
 The Sahara logo always returns to `/teacher/subjects`.
+
+## Admin navigation
+
+An `ADMIN` session is routed to `/admin/dashboard`; a `TEACHER` session remains
+in the Teacher workspace. Cross-role access goes to `/forbidden`, and
+unauthenticated navigation preserves the requested pathname and query string.
+
+- `/admin/dashboard`: real Auth user statistics and real-derived subject counts.
+- `/admin/users`: URL-backed keyword, role, status, page, and sort filters.
+- `/admin/users/:userId`: safe profile fields and confirmed status changes.
+- `/admin/users/import`: `.xlsx` upload with partial-success row errors.
+- `/admin/subjects`: subject search, status filter, create, and edit.
+- `/admin/subjects/:subjectId`: archive/restore and teacher assignment.
+
+Teacher assignment searches active teachers through the Admin Auth user API.
+The UI sends the selected record's real ID; it has no UUID input or fallback
+teacher directory. Inactive and broken existing assignments remain visible and
+removable.

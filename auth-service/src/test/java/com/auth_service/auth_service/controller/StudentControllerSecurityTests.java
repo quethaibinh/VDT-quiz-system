@@ -7,6 +7,7 @@ import com.auth_service.auth_service.model.dto.students.ResolveStudentsResponseD
 import com.auth_service.auth_service.model.dto.students.StudentPageResponseDTO;
 import com.auth_service.auth_service.model.dto.students.StudentSummaryDTO;
 import com.auth_service.auth_service.service.students.StudentDiscoveryService;
+import com.auth_service.auth_service.service.teachers.TeacherResolutionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -29,7 +30,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = {TeacherStudentController.class, InternalStudentController.class})
+@WebMvcTest(controllers = {
+        TeacherStudentController.class,
+        InternalStudentController.class,
+        InternalTeacherController.class
+})
 @Import({
         SecurityConfig.class,
         GatewayHeaderAuthenticationFilter.class,
@@ -43,6 +48,9 @@ class StudentControllerSecurityTests {
 
     @MockitoBean
     private StudentDiscoveryService studentDiscoveryService;
+
+    @MockitoBean
+    private TeacherResolutionService teacherResolutionService;
 
     @MockitoBean
     private UserDetailsService userDetailsService;
@@ -60,7 +68,8 @@ class StudentControllerSecurityTests {
                         .param("keyword", "student")
                         .header(GatewayHeaderAuthenticationFilter.USER_ID_HEADER, "teacher-id")
                         .header(GatewayHeaderAuthenticationFilter.USERNAME_HEADER, "teacher01")
-                        .header(GatewayHeaderAuthenticationFilter.USER_ROLE_HEADER, "TEACHER"))
+                        .header(GatewayHeaderAuthenticationFilter.USER_ROLE_HEADER, "TEACHER")
+                        .header(GatewayHeaderAuthenticationFilter.GATEWAY_SECRET_HEADER, "test-gateway-secret"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content[0].id").value(id.toString()))
                 .andExpect(jsonPath("$.data.content[0].studentCode").value("SV001"))
@@ -80,7 +89,8 @@ class StudentControllerSecurityTests {
         mockMvc.perform(get("/v1/api/auth-service/teacher/students")
                         .header(GatewayHeaderAuthenticationFilter.USER_ID_HEADER, "student-id")
                         .header(GatewayHeaderAuthenticationFilter.USERNAME_HEADER, "student01")
-                        .header(GatewayHeaderAuthenticationFilter.USER_ROLE_HEADER, "STUDENT"))
+                        .header(GatewayHeaderAuthenticationFilter.USER_ROLE_HEADER, "STUDENT")
+                        .header(GatewayHeaderAuthenticationFilter.GATEWAY_SECRET_HEADER, "test-gateway-secret"))
                 .andExpect(status().isForbidden());
     }
 
@@ -117,5 +127,15 @@ class StudentControllerSecurityTests {
                 .andExpect(status().isOk());
 
         verify(studentDiscoveryService).resolve(any());
+    }
+
+    @Test
+    void internalTeacherResolveRequiresInternalApiKey() throws Exception {
+        mockMvc.perform(post("/v1/internal/auth-service/teachers/resolve")
+                        .contentType("application/json")
+                        .content("""
+                                {"teacherIds":["00000000-0000-0000-0000-000000000001"]}
+                                """))
+                .andExpect(status().isUnauthorized());
     }
 }
