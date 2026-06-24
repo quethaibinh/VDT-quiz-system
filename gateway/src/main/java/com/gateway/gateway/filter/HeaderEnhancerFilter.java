@@ -7,6 +7,7 @@ import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -18,9 +19,14 @@ import reactor.core.publisher.Mono;
 public class HeaderEnhancerFilter implements GlobalFilter, Ordered {
 
     private final JwtUtil jwtUtil;
+    private final String trustedGatewaySecret;
 
-    public HeaderEnhancerFilter(JwtUtil jwtUtil) {
+    public HeaderEnhancerFilter(
+            JwtUtil jwtUtil,
+            @Value("${gateway.trusted-secret}") String trustedGatewaySecret
+    ) {
         this.jwtUtil = jwtUtil;
+        this.trustedGatewaySecret = trustedGatewaySecret;
     }
 
     @Override
@@ -33,6 +39,7 @@ public class HeaderEnhancerFilter implements GlobalFilter, Ordered {
                     headers.remove("X-User-Id");
                     headers.remove("X-User-Role");
                     headers.remove("X-Username");
+                    headers.remove("X-Gateway-Secret");
                 })
                 .build();
         ServerWebExchange sanitizedExchange = exchange.mutate().request(sanitizedRequest).build();
@@ -51,6 +58,7 @@ public class HeaderEnhancerFilter implements GlobalFilter, Ordered {
                             putIfPresent(headers, "X-User-Id", userId);
                             putIfPresent(headers, "X-User-Role", userRole);
                             putIfPresent(headers, "X-Username", username);
+                            headers.set("X-Gateway-Secret", trustedGatewaySecret);
                         })
                         .build();
 

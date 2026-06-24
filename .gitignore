@@ -2,3 +2,12 @@
 .env
 plans/**
 docs/**
+!plans/20260622-admin-workspace-real-data/
+!plans/20260622-admin-workspace-real-data/**
+!docs/ADMIN_USER_MANAGEMENT.md
+!docs/ADMIN_USER_EXCEL_IMPORT.md
+!docs/SUBJECT_MANAGEMENT.md
+!docs/frontend/
+docs/frontend/**
+!docs/frontend/FRONTEND_PRODUCT_DESIGN.md
+!docs/frontend/WIREFRAMES.md

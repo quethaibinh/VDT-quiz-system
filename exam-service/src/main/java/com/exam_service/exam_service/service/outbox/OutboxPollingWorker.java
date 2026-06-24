@@ -35,21 +35,18 @@ public class OutboxPollingWorker {
     );
     private final OutboxEventRepo outboxRepo;
     private final OutboxStateService stateService;
-    private final ExamSnapshotCachePublisher publisher;
-    private final ObjectMapper objectMapper;
+    private final OutboxEventDispatcher dispatcher;
     private final int batchSize;
 
     public OutboxPollingWorker(
             OutboxEventRepo outboxRepo,
             OutboxStateService stateService,
-            ExamSnapshotCachePublisher publisher,
-            ObjectMapper objectMapper,
+            OutboxEventDispatcher dispatcher,
             @Value("${exam.outbox.batch-size:20}") int batchSize
     ) {
         this.outboxRepo = outboxRepo;
         this.stateService = stateService;
-        this.publisher = publisher;
-        this.objectMapper = objectMapper;
+        this.dispatcher = dispatcher;
         this.batchSize = batchSize;
     }
 
@@ -71,19 +68,8 @@ public class OutboxPollingWorker {
             return;
         }
         try {
-            if (!ExamSchedulingTransactionService.CACHE_EVENT.equals(event.getEventType())) {
-                throw new IllegalArgumentException("UNSUPPORTED_OUTBOX_EVENT");
-            }
-            ExamSnapshotCacheRequested request = objectMapper.readValue( // mapping
-                    event.getPayload(), ExamSnapshotCacheRequested.class
-            );
-            // neu ca thi da het han thi khong can xu ly ban ghi nay trong bang outbox
-            if (!request.expiresAt().isAfter(OffsetDateTime.now())) {
-                stateService.expired(event.getId());
-                return;
-            }
-            publisher.publish(request); // neu co ban ghi trong outbox chu xu ly va chua het han thi xu ly
-            stateService.published(event.getId());
+            // goi den ham xu ly phan loai xem la cache -> redis hay event -> kafka
+            dispatcher.dispatch(event);
         } catch (Exception exception) {
             long delaySeconds = Math.min(300, 5L << Math.min(event.getRetryCount(), 6));
             stateService.failed(

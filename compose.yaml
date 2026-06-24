@@ -56,9 +56,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       AES_KEY: ${AES_KEY:?AES_KEY must be set}
       HMAC_KEY: ${HMAC_KEY:?HMAC_KEY must be set}
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local-internal-key}
-    ports:
-      - "8081:8081"
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
+      GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
     healthcheck:
       test:
         [
@@ -81,9 +80,9 @@ services:
       DB_QUESTION_URL: jdbc:postgresql://question-postgres:5432/${DB_QUESTION_NAME:-question-service-db}
       DB_QUESTION_USERNAME: ${DB_QUESTION_USERNAME:-postgres}
       DB_QUESTION_PASSWORD: ${DB_QUESTION_PASSWORD:?DB_QUESTION_PASSWORD must be set}
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local-internal-key}
-    ports:
-      - "8082:8082"
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
+      GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
     healthcheck:
       test:
         [
@@ -96,6 +95,8 @@ services:
       start_period: 20s
     depends_on:
       question-postgres:
+        condition: service_healthy
+      auth-service:
         condition: service_healthy
 
   exam-postgres:
@@ -128,13 +129,16 @@ services:
       DB_EXAM_URL: jdbc:postgresql://exam-postgres:5432/${DB_EXAM_NAME:-exam-service-db}
       DB_EXAM_USERNAME: ${DB_EXAM_USERNAME:-postgres}
       DB_EXAM_PASSWORD: ${DB_EXAM_PASSWORD:-postgres}
-      AUTH_SERVICE_URL: http://auth-service:8081
-      QUESTION_SERVICE_URL: http://question-service:8082
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local-internal-key}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      QUESTION_SERVICE_URL: ${QUESTION_SERVICE_URL}
+      EXAM_SERVICE_URL: ${EXAM_SERVICE_URL}
+      EXAMRUNTIME_SERVICE_URL: ${EXAMRUNTIME_SERVICE_URL}
+      RESULT_SERVICE_URL: ${RESULT_SERVICE_URL}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-    ports:
-      - "8083:8083"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EXAM_KAFKA_TOPIC_EXAM_LIFECYCLE: ${EXAM_KAFKA_TOPIC_EXAM_LIFECYCLE:-exam-lifecycle-events}
     healthcheck:
       test:
         [
@@ -154,6 +158,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      kafka:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
@@ -161,15 +167,47 @@ services:
     ports:
       - "${REDIS_PORT:-6379}:6379"
 
+  kafka:
+    image: bitnami/kafka:3.7
+    restart: unless-stopped
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:${KAFKA_HOST_PORT:-9092}
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "false"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports:
+      - "${KAFKA_HOST_PORT:-9092}:9094"
+    volumes:
+      - kafka-data:/bitnami/kafka
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 25s
+
   gateway:
     build:
       context: ./gateway
     restart: unless-stopped
     environment:
-      AUTH_SERVICE_URL: http://auth-service:8081
-      QUESTION_SERVICE_URL: http://question-service:8082
-      EXAM_SERVICE_URL: http://exam-service:8083
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      QUESTION_SERVICE_URL: ${QUESTION_SERVICE_URL}
+      EXAM_SERVICE_URL: ${EXAM_SERVICE_URL}
+      EXAMRUNTIME_SERVICE_URL: ${EXAMRUNTIME_SERVICE_URL}
+      RESULT_SERVICE_URL: ${RESULT_SERVICE_URL}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
     ports:
       - "8080:8080"
     healthcheck:
@@ -207,3 +245,4 @@ volumes:
   auth-postgres-data:
   question-postgres-data:
   exam-postgres-data:
+  kafka-data:

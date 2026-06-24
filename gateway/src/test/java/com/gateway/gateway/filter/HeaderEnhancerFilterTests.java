@@ -20,7 +20,7 @@ class HeaderEnhancerFilterTests {
     @Test
     void removesSpoofedUserHeadersWhenRequestHasNoToken() {
         JwtUtil jwtUtil = mock(JwtUtil.class);
-        HeaderEnhancerFilter filter = new HeaderEnhancerFilter(jwtUtil);
+        HeaderEnhancerFilter filter = new HeaderEnhancerFilter(jwtUtil, "test-gateway-secret");
         ServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/public")
                         .header("X-User-Id", "fake-user")
@@ -40,6 +40,7 @@ class HeaderEnhancerFilterTests {
         assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-User-Id")).isNull();
         assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-User-Role")).isNull();
         assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-Username")).isNull();
+        assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-Gateway-Secret")).isNull();
     }
 
     @Test
@@ -51,7 +52,7 @@ class HeaderEnhancerFilterTests {
         when(claims.get("userRole", String.class)).thenReturn("STUDENT");
         when(claims.get("username", String.class)).thenReturn("student01");
 
-        HeaderEnhancerFilter filter = new HeaderEnhancerFilter(jwtUtil);
+        HeaderEnhancerFilter filter = new HeaderEnhancerFilter(jwtUtil, "test-gateway-secret");
         ServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/protected")
                         .header("Authorization", "Bearer valid-token")
@@ -74,5 +75,7 @@ class HeaderEnhancerFilterTests {
                 .isEqualTo("STUDENT");
         assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-Username"))
                 .isEqualTo("student01");
+        assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-Gateway-Secret"))
+                .isEqualTo("test-gateway-secret");
     }
 }

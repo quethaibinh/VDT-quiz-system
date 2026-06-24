@@ -80,7 +80,8 @@ class ServiceSecurityIntegrationTests {
         mockMvc.perform(importRequest()
                         .header(GatewayHeaderAuthenticationFilter.USER_ID_HEADER, "user-1")
                         .header(GatewayHeaderAuthenticationFilter.USERNAME_HEADER, "student01")
-                        .header(GatewayHeaderAuthenticationFilter.USER_ROLE_HEADER, "STUDENT"))
+                        .header(GatewayHeaderAuthenticationFilter.USER_ROLE_HEADER, "STUDENT")
+                        .header(GatewayHeaderAuthenticationFilter.GATEWAY_SECRET_HEADER, "test-gateway-secret"))
                 .andExpect(status().isForbidden());
     }
 
@@ -91,7 +92,8 @@ class ServiceSecurityIntegrationTests {
         mockMvc.perform(importRequest()
                         .header(GatewayHeaderAuthenticationFilter.USER_ID_HEADER, "user-2")
                         .header(GatewayHeaderAuthenticationFilter.USERNAME_HEADER, "admin01")
-                        .header(GatewayHeaderAuthenticationFilter.USER_ROLE_HEADER, "ADMIN"))
+                        .header(GatewayHeaderAuthenticationFilter.USER_ROLE_HEADER, "ADMIN")
+                        .header(GatewayHeaderAuthenticationFilter.GATEWAY_SECRET_HEADER, "test-gateway-secret"))
                 .andExpect(status().isOk());
 
         verify(userImportService).importUsers(any());

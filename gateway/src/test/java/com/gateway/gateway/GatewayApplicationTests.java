@@ -11,7 +11,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = "gateway.trusted-secret=test-gateway-secret")
 class GatewayApplicationTests {
 
 	@Autowired

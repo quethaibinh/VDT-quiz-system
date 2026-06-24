@@ -24,14 +24,14 @@ import java.util.List;
  */
 public class SecurityConfig {
 
-    private final ExamHeaderAuthenticationFilter questionHeaderAuthenticationFilter;
+    private final ExamHeaderAuthenticationFilter examHeaderAuthenticationFilter;
     private final InternalApiKeyAuthenticationFilter internalApiKeyAuthenticationFilter;
 
     public SecurityConfig(
-            ExamHeaderAuthenticationFilter questionHeaderAuthenticationFilter,
+            ExamHeaderAuthenticationFilter examHeaderAuthenticationFilter,
             InternalApiKeyAuthenticationFilter internalApiKeyAuthenticationFilter
     ) {
-        this.questionHeaderAuthenticationFilter = questionHeaderAuthenticationFilter;
+        this.examHeaderAuthenticationFilter = examHeaderAuthenticationFilter;
         this.internalApiKeyAuthenticationFilter = internalApiKeyAuthenticationFilter;
     }
 
@@ -60,7 +60,7 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(internalApiKeyAuthenticationFilter, AnonymousAuthenticationFilter.class)
-                .addFilterBefore(questionHeaderAuthenticationFilter, AnonymousAuthenticationFilter.class);
+                .addFilterBefore(examHeaderAuthenticationFilter, AnonymousAuthenticationFilter.class);
 
         return http.build();
     }

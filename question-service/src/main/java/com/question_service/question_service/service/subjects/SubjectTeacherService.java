@@ -1,5 +1,8 @@
 package com.question_service.question_service.service.subjects;
 
+import com.question_service.question_service.client.AuthServiceClient;
+import com.question_service.question_service.client.ResolveTeachersResponse;
+import com.question_service.question_service.client.TeacherSummary;
 import com.question_service.question_service.model.dto.subjects.SubjectResponseDTO;
 import com.question_service.question_service.model.dto.subjects.SubjectTeacherResponseDTO;
 import com.question_service.question_service.model.entity.Subject;
@@ -29,15 +32,18 @@ public class SubjectTeacherService {
     private final SubjectRepo subjectRepo;
     private final SubjectTeacherRepo subjectTeacherRepo;
     private final SubjectService subjectService;
+    private final AuthServiceClient authServiceClient;
 
     public SubjectTeacherService(
             SubjectRepo subjectRepo,
             SubjectTeacherRepo subjectTeacherRepo,
-            SubjectService subjectService
+            SubjectService subjectService,
+            AuthServiceClient authServiceClient
     ) {
         this.subjectRepo = subjectRepo;
         this.subjectTeacherRepo = subjectTeacherRepo;
         this.subjectService = subjectService;
+        this.authServiceClient = authServiceClient;
     }
 
     /**
@@ -45,7 +51,8 @@ public class SubjectTeacherService {
      */
     public SubjectTeacherResponseDTO assignTeacher(UUID subjectId, UUID teacherId, UUID adminId) {
         requireTeacherId(teacherId);
-        requireSubjectExists(subjectId);
+        requireActiveSubject(subjectId);
+        TeacherSummary teacher = requireActiveTeacher(teacherId);
 
         SubjectTeacher assignment = subjectTeacherRepo.findBySubjectIdAndTeacherId(subjectId, teacherId)
                 .orElseGet(SubjectTeacher::new);
@@ -61,16 +68,37 @@ public class SubjectTeacherService {
         assignment.setAssignedAt(LocalDateTime.now());
         assignment.setDeletedAt(null);
 
-        return toResponse(subjectTeacherRepo.save(assignment));
+        return toResponse(subjectTeacherRepo.save(assignment), teacher, "RESOLVED");
     }
 
+    // lay danh sach giao vien duoc phan cong vao cac mon hoc => subjectId
     public List<SubjectTeacherResponseDTO> listTeachers(UUID subjectId) {
         requireSubjectExists(subjectId);
-        return subjectTeacherRepo.findBySubjectIdAndStatus(subjectId, SubjectTeacherStatus.ACTIVE)
+        List<SubjectTeacher> assignments = subjectTeacherRepo
+                .findBySubjectIdAndStatus(subjectId, SubjectTeacherStatus.ACTIVE)
                 .stream()
                 .sorted(Comparator.comparing(SubjectTeacher::getAssignedAt,
                         Comparator.nullsLast(Comparator.naturalOrder())))
-                .map(this::toResponse)
+                .toList();
+        if (assignments.isEmpty()) {
+            return List.of();
+        }
+        // lay danh sach giao vien tu auth-service
+        ResolveTeachersResponse resolved = authServiceClient.resolveTeachers(
+                assignments.stream().map(SubjectTeacher::getTeacherId).toList()
+        );
+        Map<UUID, TeacherSummary> teachers = resolved.teachers().stream()
+                .collect(Collectors.toMap(TeacherSummary::id, teacher -> teacher));
+        // tra ra danh sach cac mon hoc duoc phan cong cho cac giao vien
+        return assignments.stream()
+                .map(assignment -> {
+                    UUID teacherId = assignment.getTeacherId();
+                    TeacherSummary teacher = teachers.get(teacherId);
+                    String identityState = teacher != null
+                            ? "RESOLVED"
+                            : resolved.nonTeacherIds().contains(teacherId) ? "NON_TEACHER" : "MISSING";
+                    return toResponse(assignment, teacher, identityState);
+                })
                 .toList();
     }
 
@@ -134,6 +162,14 @@ public class SubjectTeacherService {
         return toTeacherSubjectResponse(subject, assignment);
     }
 
+    private void requireActiveSubject(UUID subjectId) {
+        Subject subject = subjectRepo.findById(subjectId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SUBJECT_NOT_FOUND"));
+        if (!SubjectStatus.ACTIVE.equals(subject.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SUBJECT_NOT_ACTIVE");
+        }
+    }
+
     private void requireSubjectExists(UUID subjectId) {
         if (!subjectRepo.existsById(subjectId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "SUBJECT_NOT_FOUND");
@@ -146,14 +182,45 @@ public class SubjectTeacherService {
         }
     }
 
-    private SubjectTeacherResponseDTO toResponse(SubjectTeacher assignment) {
+    private TeacherSummary requireActiveTeacher(UUID teacherId) {
+        ResolveTeachersResponse resolved = authServiceClient.resolveTeachers(List.of(teacherId));
+        if (resolved.missingTeacherIds().contains(teacherId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "TEACHER_NOT_FOUND");
+        }
+        if (resolved.nonTeacherIds().contains(teacherId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "USER_NOT_TEACHER");
+        }
+        TeacherSummary teacher = resolved.teachers().stream()
+                .filter(value -> teacherId.equals(value.id()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_GATEWAY,
+                        "INVALID_AUTH_SERVICE_RESPONSE"
+                ));
+        if (!"ACTIVE".equalsIgnoreCase(teacher.status())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "TEACHER_NOT_ACTIVE");
+        }
+        return teacher;
+    }
+
+    private SubjectTeacherResponseDTO toResponse(
+            SubjectTeacher assignment,
+            TeacherSummary teacher,
+            String identityState
+    ) {
         return new SubjectTeacherResponseDTO(
                 assignment.getId(),
                 assignment.getSubjectId(),
                 assignment.getTeacherId(),
                 assignment.getStatus(),
                 assignment.getAssignedByAdminId(),
-                assignment.getAssignedAt()
+                assignment.getAssignedAt(),
+                teacher == null ? null : teacher.teacherCode(),
+                teacher == null ? null : teacher.fullName(),
+                teacher == null ? null : teacher.displayName(),
+                teacher == null ? null : teacher.email(),
+                teacher == null ? null : teacher.status(),
+                identityState
         );
     }
 

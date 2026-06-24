@@ -17,7 +17,8 @@ import static org.mockito.Mockito.mock;
 
 class GatewayHeaderAuthenticationFilterTests {
 
-    private final GatewayHeaderAuthenticationFilter filter = new GatewayHeaderAuthenticationFilter();
+    private final GatewayHeaderAuthenticationFilter filter =
+            new GatewayHeaderAuthenticationFilter("test-gateway-secret");
 
     @AfterEach
     void clearSecurityContext() {
@@ -80,6 +81,16 @@ class GatewayHeaderAuthenticationFilterTests {
     }
 
     @Test
+    void doesNotAuthenticateSpoofedIdentityHeadersWithoutGatewaySecret() throws Exception {
+        MockHttpServletRequest request = trustedRequest("user-1", "admin01", "ADMIN");
+        request.removeHeader(GatewayHeaderAuthenticationFilter.GATEWAY_SECRET_HEADER);
+
+        filter.doFilter(request, new MockHttpServletResponse(), mock(FilterChain.class));
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
     void doesNotAuthenticateBlankOrUnsupportedRole() throws Exception {
         MockHttpServletRequest blankRole = trustedRequest("user-1", "admin01", " ");
 
@@ -114,6 +125,7 @@ class GatewayHeaderAuthenticationFilterTests {
         request.addHeader(GatewayHeaderAuthenticationFilter.USER_ID_HEADER, userId);
         request.addHeader(GatewayHeaderAuthenticationFilter.USERNAME_HEADER, username);
         request.addHeader(GatewayHeaderAuthenticationFilter.USER_ROLE_HEADER, role);
+        request.addHeader(GatewayHeaderAuthenticationFilter.GATEWAY_SECRET_HEADER, "test-gateway-secret");
         return request;
     }
 }

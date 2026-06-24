@@ -2,6 +2,7 @@ package com.gateway.gateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -37,6 +38,8 @@ public class SecurityConfig {
                 .authenticationManager(authenticationManager)
                 .securityContextRepository(securityContextRepository)
                 .authorizeExchange(exchanges -> exchanges
+                        // Browser CORS preflight must complete before JWT authorization.
+                        .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Login va register la hai endpoint cong khai.
                         .pathMatchers("/v1/api/auth-service/login").permitAll()
                         .pathMatchers("/v1/api/auth-service/register").permitAll()

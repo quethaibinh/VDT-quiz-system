@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { login } from "@/features/auth/api/auth-api";
 import { useAuth } from "@/features/auth/auth-context";
+import { decodeAuthToken } from "@/features/auth/lib/jwt";
+import { getRoleHome } from "@/features/auth/lib/role-home";
 import { getApiErrorMessage } from "@/lib/http/api-error";
 
 const schema = z.object({
@@ -23,15 +25,16 @@ export function LoginPage() {
   const [serverError, setServerError] = useState("");
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValue>({ resolver: zodResolver(schema) });
 
-  if (session?.claims.userRole === "TEACHER") return <Navigate to="/teacher/subjects" replace />;
+  if (session) return <Navigate to={getRoleHome(session.claims.userRole)} replace />;
 
   async function submit(values: FormValue) {
     setServerError("");
     try {
       const token = await login(values);
+      const claims = decodeAuthToken(token);
       signIn(token);
       const returnTo = search.get("returnTo");
-      navigate(returnTo?.startsWith("/") ? returnTo : "/teacher/subjects", { replace: true });
+      navigate(returnTo?.startsWith("/") ? returnTo : getRoleHome(claims.userRole), { replace: true });
     } catch (error) {
       setServerError(getApiErrorMessage(error));
     }
@@ -50,7 +53,7 @@ export function LoginPage() {
       <section className="grid place-items-center p-6">
         <form onSubmit={handleSubmit(submit)} className="w-full max-w-md rounded-2xl border border-line bg-surface p-7 shadow-soft md:p-10">
           <h2 className="m-0 text-4xl">Chào mừng trở lại</h2>
-          <p className="mt-2 text-sm text-muted">Đăng nhập bằng tài khoản giáo viên.</p>
+          <p className="mt-2 text-sm text-muted">Đăng nhập bằng tài khoản được cấp trên hệ thống.</p>
           <label className="mt-8 block text-sm font-semibold">Tên đăng nhập</label>
           <div className="relative mt-2"><UserRound className="absolute left-3 top-3 h-5 w-5 text-muted" /><Input className="pl-10" autoComplete="username" {...register("username")} /></div>
           {errors.username && <p className="text-sm text-danger">{errors.username.message}</p>}
