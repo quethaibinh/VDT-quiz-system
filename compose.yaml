@@ -137,6 +137,8 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EXAM_KAFKA_TOPIC_EXAM_LIFECYCLE: ${EXAM_KAFKA_TOPIC_EXAM_LIFECYCLE:-exam-lifecycle-events}
     healthcheck:
       test:
         [
@@ -156,12 +158,43 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      kafka:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
+
+  kafka:
+    image: bitnami/kafka:3.7
+    restart: unless-stopped
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:${KAFKA_HOST_PORT:-9092}
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "false"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports:
+      - "${KAFKA_HOST_PORT:-9092}:9094"
+    volumes:
+      - kafka-data:/bitnami/kafka
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 25s
 
   gateway:
     build:
@@ -212,3 +245,4 @@ volumes:
   auth-postgres-data:
   question-postgres-data:
   exam-postgres-data:
+  kafka-data:

@@ -27,7 +27,10 @@ import java.util.UUID;
  * Cong viec ben vung de day snapshot tu PostgreSQL sang Redis.
  * Payload chi giu ID va version, khong sao chep noi dung de thi.
  */
-public class OutboxEvent extends BaseEntity {
+public class OutboxEvent {
+
+    @jakarta.persistence.Id
+    private UUID id;
 
     @Column(nullable = false, length = 64)
     private String aggregateType;
@@ -46,4 +49,21 @@ public class OutboxEvent extends BaseEntity {
     private LocalDateTime publishedAt;
     @Column(columnDefinition = "text")
     private String lastError;
+
+    @jakarta.persistence.Version
+    private Long version;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    @jakarta.persistence.PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @jakarta.persistence.PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

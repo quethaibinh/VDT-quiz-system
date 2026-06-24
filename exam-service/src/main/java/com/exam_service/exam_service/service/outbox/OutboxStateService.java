@@ -50,7 +50,7 @@ public class OutboxStateService {
         event.setStatus(OutboxStatus.FAILED);
         event.setRetryCount(event.getRetryCount() + 1);
         event.setNextRetryAt(nextRetryAt);
-        event.setLastError(error == null ? "UNKNOWN_REDIS_ERROR" : error.substring(
+        event.setLastError(error == null ? "UNKNOWN_DELIVERY_ERROR" : error.substring(
                 0, Math.min(error.length(), 1000)
         ));
     }
@@ -61,6 +61,6 @@ public class OutboxStateService {
         OutboxEvent event = outboxRepo.findById(eventId).orElseThrow();
         event.setStatus(OutboxStatus.EXPIRED);
         event.setNextRetryAt(null);
-        event.setLastError("EXAM_SNAPSHOT_CACHE_EXPIRED");
+        event.setLastError("OUTBOX_EVENT_EXPIRED");
     }
 }

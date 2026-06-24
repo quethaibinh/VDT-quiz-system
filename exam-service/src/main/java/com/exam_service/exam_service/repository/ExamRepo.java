@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -49,4 +50,15 @@ public interface ExamRepo extends JpaRepository<Exam, UUID>, JpaSpecificationExe
             @Param("subjectId") UUID subjectId,
             @Param("teacherId") UUID teacherId
     );
+
+    @Query("select e.id from Exam e where e.status = :status and e.startAt <= :windowEnd")
+    Page<UUID> findCandidateIdsForActivation(
+            @Param("status") ExamStatus status,
+            @Param("windowEnd") OffsetDateTime windowEnd,
+            Pageable pageable
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select e from Exam e where e.id = :id")
+    Optional<Exam> findByIdForUpdate(@Param("id") UUID id);
 }
