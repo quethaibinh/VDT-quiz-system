@@ -1,10 +1,11 @@
-package com.exam_service.exam_service.model.dto.outbox;
+package com.examruntime_service.examruntime_service.model.dto.events;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Event gui sang Kafka khi ca thi duoc kich hoat de runtime bat dau chuan bi.
+ * Consumer-side copy cua contract producer Exam Service phat len Kafka.
+ * Field name can giu trung de JSON tu producer round-trip duoc.
  */
 public record ExamActivatedEvent(
         UUID eventId,

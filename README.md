@@ -10,6 +10,7 @@ repository:
 - Auth PostgreSQL: `localhost:5433`
 - Question PostgreSQL: `localhost:5434`
 - Exam PostgreSQL: `localhost:5435`
+- Exam Runtime PostgreSQL: `localhost:5436`
 
 ### Prerequisites
 
@@ -84,6 +85,10 @@ Stop containers and delete the PostgreSQL volume:
 docker compose down -v
 ```
 
-Question and Exam services each use a separate PostgreSQL container. Exam draft
-APIs are routed through Gateway; internal Auth/Question validation endpoints are
-service-network only. See `docs/EXAM_DRAFT_MANAGEMENT.md`.
+Question, Exam, and Exam Runtime services each use a separate PostgreSQL
+container. Exam Runtime consumes `ExamActivated` from Kafka and stores
+readiness metadata in Redis under `runtime:exam:{examId}:activation`; it does
+not create student sessions until a student joins. Exam draft APIs are routed
+through Gateway; internal validation and snapshot fallback endpoints are
+service-network only. See `docs/EXAM_DRAFT_MANAGEMENT.md` and
+`docs/EXAM_ACTIVATION_RUNTIME_READINESS.md`.

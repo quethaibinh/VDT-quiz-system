@@ -121,6 +121,28 @@ services:
       retries: 10
       start_period: 10s
 
+  examruntime-postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_EXAMRUNTIME_NAME:-examruntime-service-db}
+      POSTGRES_USER: ${DB_EXAMRUNTIME_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_EXAMRUNTIME_PASSWORD:-postgres}
+    ports:
+      - "${DB_EXAMRUNTIME_PORT:-5436}:5432"
+    volumes:
+      - examruntime-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   exam-service:
     build:
       context: ./exam-service
@@ -161,6 +183,44 @@ services:
       kafka:
         condition: service_healthy
 
+  examruntime-service:
+    build:
+      context: ./examruntime-service
+    restart: unless-stopped
+    environment:
+      DB_EXAMRUNTIME_URL: jdbc:postgresql://examruntime-postgres:5432/${DB_EXAMRUNTIME_NAME:-examruntime-service-db}
+      DB_EXAMRUNTIME_USERNAME: ${DB_EXAMRUNTIME_USERNAME:-postgres}
+      DB_EXAMRUNTIME_PASSWORD: ${DB_EXAMRUNTIME_PASSWORD:-postgres}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      QUESTION_SERVICE_URL: ${QUESTION_SERVICE_URL}
+      EXAM_SERVICE_URL: ${EXAM_SERVICE_URL}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
+      GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EXAMRUNTIME_KAFKA_GROUP_ID: ${EXAMRUNTIME_KAFKA_GROUP_ID:-examruntime-service}
+      EXAM_KAFKA_TOPIC_EXAM_LIFECYCLE: ${EXAM_KAFKA_TOPIC_EXAM_LIFECYCLE:-exam-lifecycle-events}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "bash -c '</dev/tcp/127.0.0.1/8084'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    depends_on:
+      examruntime-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      exam-service:
+        condition: service_healthy
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -168,28 +228,25 @@ services:
       - "${REDIS_PORT:-6379}:6379"
 
   kafka:
-    image: bitnami/kafka:3.7
+    image: apache/kafka:3.7.0
     restart: unless-stopped
     environment:
-      KAFKA_CFG_NODE_ID: 1
-      KAFKA_CFG_PROCESS_ROLES: broker,controller
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
-      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:${KAFKA_HOST_PORT:-9092}
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "false"
-      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:${KAFKA_HOST_PORT:-9092}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
     ports:
       - "${KAFKA_HOST_PORT:-9092}:9094"
-    volumes:
-      - kafka-data:/bitnami/kafka
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1",
+          "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1",
         ]
       interval: 10s
       timeout: 5s
@@ -227,6 +284,8 @@ services:
         condition: service_healthy
       exam-service:
         condition: service_healthy
+      examruntime-service:
+        condition: service_healthy
 
   frontend:
     build:
@@ -245,4 +304,4 @@ volumes:
   auth-postgres-data:
   question-postgres-data:
   exam-postgres-data:
-  kafka-data:
+  examruntime-postgres-data:

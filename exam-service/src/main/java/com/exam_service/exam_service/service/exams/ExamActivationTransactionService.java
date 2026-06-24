@@ -36,9 +36,8 @@ public class ExamActivationTransactionService {
     }
 
     /**
-     * Re-checks the activation threshold under a pessimistic lock.
-     * If due, transitions the exam to ACTIVE and inserts an outbox event.
-     * This requires a new transaction so a failure in one exam does not fail the batch.
+     * Kiem tra lai nguong kich hoat trong pessimistic lock.
+     * Moi ca thi dung giao dich rieng de loi mot ca khong lam hong ca batch.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean activateIfDue(UUID examId) {

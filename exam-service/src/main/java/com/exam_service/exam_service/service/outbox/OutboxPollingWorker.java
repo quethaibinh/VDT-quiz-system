@@ -1,20 +1,16 @@
 package com.exam_service.exam_service.service.outbox;
 
-import com.exam_service.exam_service.model.dto.outbox.ExamSnapshotCacheRequested;
 import com.exam_service.exam_service.model.entity.OutboxEvent;
 import com.exam_service.exam_service.model.entity.enums.OutboxStatus;
 import com.exam_service.exam_service.repository.OutboxEventRepo;
-import com.exam_service.exam_service.service.exams.ExamSchedulingTransactionService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.List;
 
 @Component
