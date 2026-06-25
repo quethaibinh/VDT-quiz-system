@@ -3,6 +3,7 @@ package com.exam_service.exam_service.service.outbox;
 import com.exam_service.exam_service.model.dto.cache.ExamAnswerKeyDTO;
 import com.exam_service.exam_service.model.dto.cache.ExamPaperPoolDTO;
 import com.exam_service.exam_service.model.dto.outbox.ExamSnapshotCacheRequested;
+import com.exam_service.exam_service.service.exams.ExamAssignmentSnapshotService;
 import com.exam_service.exam_service.service.exams.ExamSnapshotReadService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.Duration;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 /**
@@ -21,15 +23,18 @@ public class ExamSnapshotCachePublisher {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final ExamSnapshotReadService snapshotReadService;
+    private final ExamAssignmentSnapshotService assignmentSnapshotService;
 
     public ExamSnapshotCachePublisher(
             StringRedisTemplate redisTemplate,
             ObjectMapper objectMapper,
-            ExamSnapshotReadService snapshotReadService
+            ExamSnapshotReadService snapshotReadService,
+            ExamAssignmentSnapshotService assignmentSnapshotService
     ) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.snapshotReadService = snapshotReadService;
+        this.assignmentSnapshotService = assignmentSnapshotService;
     }
 
     // ham xu ly tien trinh day snapshot len redis
@@ -51,6 +56,34 @@ public class ExamSnapshotCachePublisher {
         // SET kem TTL la mot lenh atomic, tranh de lai answer-key khong het han.
         redisTemplate.opsForValue().set(paperKey, json(paper), ttl);
         redisTemplate.opsForValue().set(answerKey, json(answers), ttl);
+
+        // Ghi thong tin phan cong vao Redis
+        String setKey = "exam:%s:students".formatted(request.examId());
+        String hashKey = "exam:%s:student-assignments".formatted(request.examId());
+
+        // Xoa phan cong cu de dam bao tinh idempotent khi chay lai
+        redisTemplate.delete(setKey);
+        redisTemplate.delete(hashKey);
+
+        var assignmentSnapshot = assignmentSnapshotService.getAssignmentsSnapshot(request.examId());
+        if (assignmentSnapshot != null && assignmentSnapshot.getAssignments() != null && !assignmentSnapshot.getAssignments().isEmpty()) {
+            String[] studentIds = assignmentSnapshot.getAssignments().stream()
+                    .map(detail -> detail.getStudentId().toString())
+                    .toArray(String[]::new);
+
+            redisTemplate.opsForSet().add(setKey, studentIds);
+
+            var map = assignmentSnapshot.getAssignments().stream()
+                    .collect(Collectors.toMap(
+                            detail -> detail.getStudentId().toString(),
+                            detail -> detail.getAssignmentId().toString()
+                    ));
+            redisTemplate.opsForHash().putAll(hashKey, map);
+
+            // Thiet lap thoi gian het han cho set va hash
+            redisTemplate.expire(setKey, ttl);
+            redisTemplate.expire(hashKey, ttl);
+        }
     }
 
     public static String paperKey(UUID examId, int version) {

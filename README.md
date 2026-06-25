@@ -90,5 +90,7 @@ container. Exam Runtime consumes `ExamActivated` from Kafka and stores
 readiness metadata in Redis under `runtime:exam:{examId}:activation`; it does
 not create student sessions until a student joins. Exam draft APIs are routed
 through Gateway; internal validation and snapshot fallback endpoints are
-service-network only. See `docs/EXAM_DRAFT_MANAGEMENT.md` and
-`docs/EXAM_ACTIVATION_RUNTIME_READINESS.md`.
+service-network only. See `docs/EXAM_DRAFT_MANAGEMENT.md`,
+`docs/EXAM_ACTIVATION_RUNTIME_READINESS.md`, and the new
+`docs/EXAM_STUDENT_RUNTIME_BACKEND.md` for student runtime APIs (join, start,
+resume, autosave).
