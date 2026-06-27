@@ -19,5 +19,6 @@ public class AutosaveResponseDTO {
     private long serverSeq;
     private int savedCount;
     private int skippedCount;
+    private String storeMode;
     private OffsetDateTime lastAutosaveAt;
 }

@@ -355,17 +355,21 @@ POST /v1/api/exam-service/teacher/exams/{examId}/activate
 POST /v1/api/exam-service/teacher/exams/{examId}/close
 
 GET  /v1/api/exam-service/student/exams
-POST /v1/api/exam-runtime-service/exams/{examId}/sessions
-GET  /v1/api/exam-runtime-service/sessions/{sessionId}
-PUT  /v1/api/exam-runtime-service/sessions/{sessionId}/answers
-POST /v1/api/exam-runtime-service/sessions/{sessionId}/submit
+GET  /v1/api/exam-service/student/exams/{examId}
+POST /v1/api/examruntime-service/student/exams/{examId}/join
+POST /v1/api/examruntime-service/student/exams/{examId}/start
+GET  /v1/api/examruntime-service/student/sessions/{sessionId}
+PUT  /v1/api/examruntime-service/student/sessions/{sessionId}/answers
+POST /v1/api/examruntime-service/student/sessions/{sessionId}/submit (Chua ho tro)
 
 GET  /v1/api/result-service/teacher/exams/{examId}/results
 GET  /v1/api/result-service/teacher/exams/{examId}/statistics
 GET  /v1/api/result-service/student/results/{resultId}
 ```
 
-Submit va auto-save can co `clientSeq`, server timestamp va idempotency key.
+Submit can co idempotency key khi duoc thiet ke sau. Auto-save hien dung
+`clientSeq`, server timestamp va dirty-answer batch; frontend khong gui toan bo
+de sau resume/start.
 
 ## 14. Accessibility
 

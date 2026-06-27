@@ -51,7 +51,6 @@ class JsonPersistenceTests {
         ExamQuestion savedQuestion = questionRepo.saveAndFlush(question);
 
         OutboxEvent event = new OutboxEvent();
-        event.setId(UUID.randomUUID());
         event.setAggregateType("EXAM");
         event.setAggregateId(question.getExamId());
         event.setEventType("EXAM_SNAPSHOT_CACHE_REQUESTED");
@@ -69,7 +68,6 @@ class JsonPersistenceTests {
     @Test
     void persistsExamActivatedOutboxJson() {
         OutboxEvent event = new OutboxEvent();
-        event.setId(UUID.randomUUID());
         event.setAggregateType("EXAM");
         event.setAggregateId(UUID.randomUUID());
         event.setEventType("EXAM_ACTIVATED");

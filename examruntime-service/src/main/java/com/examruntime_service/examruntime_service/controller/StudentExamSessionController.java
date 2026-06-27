@@ -6,9 +6,9 @@ import com.examruntime_service.examruntime_service.service.session.StudentExamJo
 import com.examruntime_service.examruntime_service.model.dto.session.AutosaveRequestDTO;
 import com.examruntime_service.examruntime_service.model.dto.session.AutosaveResponseDTO;
 import com.examruntime_service.examruntime_service.model.dto.session.StudentPaperResponseDTO;
-import com.examruntime_service.examruntime_service.service.session.StudentAutosaveService;
+import com.examruntime_service.examruntime_service.service.session.autoSave.StudentAutosaveService;
 import com.examruntime_service.examruntime_service.service.session.StudentExamStartService;
-import com.examruntime_service.examruntime_service.service.session.StudentSessionResumeService;
+import com.examruntime_service.examruntime_service.service.session.resume.StudentSessionResumeService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

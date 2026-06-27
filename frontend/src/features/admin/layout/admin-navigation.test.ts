@@ -6,7 +6,7 @@ describe("Admin navigation", () => {
   it("maps supported roles to isolated workspaces", () => {
     expect(getRoleHome("ADMIN")).toBe("/admin/dashboard");
     expect(getRoleHome("TEACHER")).toBe("/teacher/subjects");
-    expect(getRoleHome("STUDENT")).toBe("/forbidden");
+    expect(getRoleHome("STUDENT")).toBe("/student/dashboard");
   });
 
   it("keeps import separate from the user detail active state", () => {

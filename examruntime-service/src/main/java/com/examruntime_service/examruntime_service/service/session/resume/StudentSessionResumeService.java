@@ -1,12 +1,10 @@
-package com.examruntime_service.examruntime_service.service.session;
+package com.examruntime_service.examruntime_service.service.session.resume;
 
 import com.examruntime_service.examruntime_service.model.dto.cache.ExamPaperPoolDTO;
 import com.examruntime_service.examruntime_service.model.dto.session.StudentPaperResponseDTO;
 import com.examruntime_service.examruntime_service.model.entity.ExamSession;
-import com.examruntime_service.examruntime_service.model.entity.SessionAnswer;
 import com.examruntime_service.examruntime_service.model.entity.enums.ExamSessionStatus;
 import com.examruntime_service.examruntime_service.repository.ExamSessionRepo;
-import com.examruntime_service.examruntime_service.repository.SessionAnswerRepo;
 import com.examruntime_service.examruntime_service.service.paper.RuntimePaperPoolLoader;
 import com.examruntime_service.examruntime_service.service.paper.StudentPaperMapper;
 import com.examruntime_service.examruntime_service.util.exception.NotFoundException;
@@ -25,11 +23,11 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-// Service phuc hoi (resume) trang thai lam bai cua hoc sinh khi mat ket noi hoac F5 trang web
+// Service phuc hoi de thi va dap an, uu tien Redis draft truoc DB checkpoint.
 public class StudentSessionResumeService {
 
     private final ExamSessionRepo examSessionRepo;
-    private final SessionAnswerRepo sessionAnswerRepo;
+    private final AnswerSnapshotReader answerSnapshotReader;
     private final RuntimePaperPoolLoader paperPoolLoader;
     private final StudentPaperMapper paperMapper;
     private final ObjectMapper objectMapper;
@@ -37,14 +35,14 @@ public class StudentSessionResumeService {
 
     public StudentSessionResumeService(
             ExamSessionRepo examSessionRepo,
-            SessionAnswerRepo sessionAnswerRepo,
+            AnswerSnapshotReader answerSnapshotReader,
             RuntimePaperPoolLoader paperPoolLoader,
             StudentPaperMapper paperMapper,
             ObjectMapper objectMapper,
             Clock clock
     ) {
         this.examSessionRepo = examSessionRepo;
-        this.sessionAnswerRepo = sessionAnswerRepo;
+        this.answerSnapshotReader = answerSnapshotReader;
         this.paperPoolLoader = paperPoolLoader;
         this.paperMapper = paperMapper;
         this.objectMapper = objectMapper;
@@ -52,12 +50,10 @@ public class StudentSessionResumeService {
     }
 
     @Transactional(readOnly = true)
-    // Phuc hoi ca thi dua tren sessionId
     public StudentPaperResponseDTO resumeSession(UUID sessionId, UUID studentId) {
         ExamSession session = examSessionRepo.findById(sessionId)
                 .orElseThrow(() -> new NotFoundException("SESSION_NOT_FOUND"));
 
-        // Kiem tra chu so huu phien lam bai
         if (!session.getStudentId().equals(studentId)) {
             throw new UnauthorizedException("UNAUTHORIZED_SESSION");
         }
@@ -72,7 +68,6 @@ public class StudentSessionResumeService {
         }
 
         if (session.getStatus() != ExamSessionStatus.IN_PROGRESS) {
-            // Cac trang thai da nop bai hoac bi khoa thi khong tra ve de/cau tra loi nua
             return StudentPaperResponseDTO.builder()
                     .sessionId(session.getId())
                     .status(session.getStatus())
@@ -83,11 +78,12 @@ public class StudentSessionResumeService {
                     .build();
         }
 
+        // lay ra bo cau hoi tu redis
         OffsetDateTime now = OffsetDateTime.now(clock);
         Duration ttl = resolveResumeTtl(session, now);
-
         ExamPaperPoolDTO pool = paperPoolLoader.load(session.getExamId(), session.getSnapshotVersion(), ttl);
 
+        // lay chi tiet de cua sinh vien tuong ung voi nhung cau hoi nao
         List<UUID> qOrder;
         Map<UUID, List<UUID>> optOrders;
         try {
@@ -97,15 +93,13 @@ public class StudentSessionResumeService {
             throw new IllegalStateException("DESERIALIZATION_FAILED", e);
         }
 
-        List<SessionAnswer> savedAnswers = sessionAnswerRepo.findAllBySessionId(session.getId());
-
         return StudentPaperResponseDTO.builder()
                 .sessionId(session.getId())
                 .status(session.getStatus())
                 .serverStartedAt(session.getServerStartedAt())
                 .serverDeadlineAt(session.getServerDeadlineAt())
-                .questions(paperMapper.mapToStudentQuestions(pool, qOrder, optOrders))
-                .answers(paperMapper.mapToStudentAnswers(savedAnswers))
+                .questions(paperMapper.mapToStudentQuestions(pool, qOrder, optOrders)) // lay ra de cu sinh vien
+                .answers(answerSnapshotReader.readForResume(session, ttl)) // lay ra nhung dap an ma sinh vien da chon
                 .build();
     }
 

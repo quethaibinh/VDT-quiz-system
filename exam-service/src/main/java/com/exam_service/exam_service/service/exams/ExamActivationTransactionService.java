@@ -87,7 +87,6 @@ public class ExamActivationTransactionService {
         }
 
         OutboxEvent outboxEvent = new OutboxEvent();
-        outboxEvent.setId(outboxRowId);
         outboxEvent.setAggregateType("EXAM");
         outboxEvent.setAggregateId(exam.getId());
         outboxEvent.setEventType(ExamActivatedEvent.EVENT_TYPE);

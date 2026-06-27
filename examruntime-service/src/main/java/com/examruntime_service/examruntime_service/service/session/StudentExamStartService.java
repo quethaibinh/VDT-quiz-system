@@ -88,8 +88,10 @@ public class StudentExamStartService {
             ttl = Duration.ofHours(24);
         }
 
+        // lay ra bo cau hoi, bo de de sinh de thi cho sinh vien
         ExamPaperPoolDTO pool = paperPoolLoader.load(examId, metadata.snapshotVersion(), ttl);
 
+        // danh sach cau hoi va option cua de sinh vien
         List<UUID> qOrder;
         Map<UUID, List<UUID>> optOrders;
 

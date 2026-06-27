@@ -27,6 +27,13 @@ import { ResultSubjectPickerPage } from "@/features/teacher/results/pages/result
 import { SubjectResultListPage } from "@/features/teacher/results/pages/subject-result-list-page";
 import { SubjectDashboardPage } from "@/features/teacher/subjects/pages/subject-dashboard-page";
 import { SubjectListPage } from "@/features/teacher/subjects/pages/subject-list-page";
+import { StudentGuard } from "@/features/auth/components/student-guard";
+import { StudentLayout } from "@/features/student/layout/student-layout";
+import { StudentDashboardPage } from "@/features/student/dashboard/pages/student-dashboard-page";
+import { StudentExamListPage } from "@/features/student/exams/pages/student-exam-list-page";
+import { StudentExamLobbyPage } from "@/features/student/exams/pages/student-exam-lobby-page";
+import { StudentExamRuntimePage } from "@/features/student/exams/pages/student-exam-runtime-page";
+import { StudentResultsPlaceholderPage } from "@/features/student/results/pages/student-results-placeholder-page";
 
 function RootProviders() {
   return <AuthProvider><Outlet /></AuthProvider>;
@@ -77,6 +84,21 @@ export const router = createBrowserRouter([
             { path: "users/:userId", element: <AdminUserDetailPage /> },
             { path: "subjects", element: <AdminSubjectListPage /> },
             { path: "subjects/:subjectId", element: <AdminSubjectDetailPage /> },
+          ],
+        }],
+      },
+      {
+        element: <StudentGuard />,
+        children: [{
+          path: "/student",
+          element: <StudentLayout />,
+          children: [
+            { index: true, element: <Navigate to="dashboard" replace /> },
+            { path: "dashboard", element: <StudentDashboardPage /> },
+            { path: "exams", element: <StudentExamListPage /> },
+            { path: "exams/:examId/lobby", element: <StudentExamLobbyPage /> },
+            { path: "exams/:examId/session", element: <StudentExamRuntimePage /> },
+            { path: "results", element: <StudentResultsPlaceholderPage /> },
           ],
         }],
       },
