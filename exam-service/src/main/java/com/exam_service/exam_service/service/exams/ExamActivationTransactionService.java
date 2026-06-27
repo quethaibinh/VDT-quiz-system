@@ -72,10 +72,16 @@ public class ExamActivationTransactionService {
                 ExamActivatedEvent.EVENT_VERSION,
                 exam.getId(),
                 exam.getSnapshotVersion(),
+                exam.getCode(),
+                exam.getTitle(),
+                exam.getSubjectId(),
+                exam.getSubjectNameSnapshot(),
+                exam.getCreatedByTeacherId(),
                 exam.getStartAt(),
                 exam.getEndAt(),
                 exam.getJoinBeforeMinutes(),
                 exam.getJoinAfterMinutes(),
+                exam.getShowResultPolicy() != null ? exam.getShowResultPolicy().name() : null,
                 now
         );
 

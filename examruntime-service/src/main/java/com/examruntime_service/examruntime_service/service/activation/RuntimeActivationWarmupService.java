@@ -57,10 +57,16 @@ public class RuntimeActivationWarmupService {
             RuntimeActivationMetadata metadata = new RuntimeActivationMetadata(
                     event.examId(),
                     event.snapshotVersion(),
+                    event.code(),
+                    event.title(),
+                    event.subjectId(),
+                    event.subjectName(),
+                    event.ownerTeacherId(),
                     event.startAt(),
                     event.endAt(),
                     event.joinBeforeMinutes(),
                     event.joinAfterMinutes(),
+                    event.showResultPolicy(),
                     RuntimeActivationMetadata.STATUS_READY,
                     OffsetDateTime.now(clock),
                     snapshot.source()

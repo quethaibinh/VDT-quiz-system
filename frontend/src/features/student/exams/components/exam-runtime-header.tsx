@@ -1,6 +1,6 @@
 import { GraduationCap } from "lucide-react";
 import { SaveIndicator, type SaveState } from "./save-indicator";
-import { UnsupportedSubmitButton } from "./unsupported-submit-button";
+import { SubmitButton } from "./unsupported-submit-button";
 
 // Format thoi gian dang HH:MM:SS
 function formatDuration(totalSeconds: number) {
@@ -15,10 +15,23 @@ interface ExamRuntimeHeaderProps {
   remainingSeconds: number;
   saveState: SaveState;
   lastSavedAt?: string | null;
+  submitPending?: boolean;
+  submitted?: boolean;
+  submitDisabled?: boolean;
+  onSubmit: () => void;
 }
 
 // Header co dinh cua man hinh lam bai thi
-export function ExamRuntimeHeader({ title, remainingSeconds, saveState, lastSavedAt }: ExamRuntimeHeaderProps) {
+export function ExamRuntimeHeader({
+  title,
+  remainingSeconds,
+  saveState,
+  lastSavedAt,
+  submitPending,
+  submitted,
+  submitDisabled,
+  onSubmit,
+}: ExamRuntimeHeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3 shadow-sm md:px-6">
       <div className="flex min-w-0 items-center gap-3">
@@ -38,7 +51,12 @@ export function ExamRuntimeHeader({ title, remainingSeconds, saveState, lastSave
         }`}>
           {formatDuration(remainingSeconds)}
         </div>
-        <UnsupportedSubmitButton />
+        <SubmitButton
+          pending={submitPending}
+          submitted={submitted}
+          disabled={submitDisabled}
+          onSubmit={onSubmit}
+        />
       </div>
     </header>
   );

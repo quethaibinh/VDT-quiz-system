@@ -86,10 +86,16 @@ public class RuntimeActivationResolver {
         return new RuntimeActivationMetadata(
                 dto.examId(),
                 dto.snapshotVersion(),
+                dto.code(),
+                dto.title(),
+                dto.subjectId(),
+                dto.subjectName(),
+                dto.ownerTeacherId(),
                 dto.startAt(),
                 dto.endAt(),
                 dto.joinBeforeMinutes(),
                 dto.joinAfterMinutes(),
+                dto.showResultPolicy(),
                 RuntimeActivationMetadata.STATUS_READY,
                 OffsetDateTime.now(clock),
                 RuntimeActivationMetadata.SOURCE_EXAM_SERVICE_FALLBACK

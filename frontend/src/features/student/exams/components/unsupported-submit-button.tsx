@@ -1,15 +1,25 @@
 import { Button } from "@/components/ui/button";
 
-// Hien thi nut nop bai chua duoc ho tro trong phien ban nay
-export function UnsupportedSubmitButton() {
-  return (
-    <div className="group relative">
-      <Button variant="primary" disabled className="bg-primary/50 text-white/70">
-        Nộp bài
+interface SubmitButtonProps {
+  disabled?: boolean;
+  pending?: boolean;
+  submitted?: boolean;
+  onSubmit: () => void;
+}
+
+// Nut nop bai cua hoc sinh voi trang thai dang gui/da nhan.
+export function SubmitButton({ disabled, pending, submitted, onSubmit }: SubmitButtonProps) {
+  if (submitted) {
+    return (
+      <Button type="button" variant="secondary" disabled className="text-success">
+        Đã nộp bài
       </Button>
-      <div className="absolute right-0 top-full z-10 mt-2 hidden whitespace-nowrap rounded bg-ink p-2 text-xs text-white shadow-md group-hover:block">
-        Tính năng nộp bài tự động/thủ công chưa được hỗ trợ.
-      </div>
-    </div>
+    );
+  }
+
+  return (
+    <Button type="button" variant="primary" loading={pending} disabled={disabled} onClick={onSubmit}>
+      Nộp bài
+    </Button>
   );
 }

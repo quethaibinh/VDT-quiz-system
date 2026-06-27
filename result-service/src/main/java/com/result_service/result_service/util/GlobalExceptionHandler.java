@@ -1,8 +1,8 @@
 package com.result_service.result_service.util;
 
-import com.examruntime_service.examruntime_service.util.exception.ConflictException;
-import com.examruntime_service.examruntime_service.util.exception.NotFoundException;
-import com.examruntime_service.examruntime_service.util.exception.UnauthorizedException;
+import com.result_service.result_service.util.exception.ConflictException;
+import com.result_service.result_service.util.exception.NotFoundException;
+import com.result_service.result_service.util.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;

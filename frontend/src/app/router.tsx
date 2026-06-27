@@ -33,7 +33,8 @@ import { StudentDashboardPage } from "@/features/student/dashboard/pages/student
 import { StudentExamListPage } from "@/features/student/exams/pages/student-exam-list-page";
 import { StudentExamLobbyPage } from "@/features/student/exams/pages/student-exam-lobby-page";
 import { StudentExamRuntimePage } from "@/features/student/exams/pages/student-exam-runtime-page";
-import { StudentResultsPlaceholderPage } from "@/features/student/results/pages/student-results-placeholder-page";
+import { StudentResultDetailPage } from "@/features/student/results/pages/student-result-detail-page";
+import { StudentResultsPage } from "@/features/student/results/pages/student-results-page";
 
 function RootProviders() {
   return <AuthProvider><Outlet /></AuthProvider>;
@@ -98,7 +99,8 @@ export const router = createBrowserRouter([
             { path: "exams", element: <StudentExamListPage /> },
             { path: "exams/:examId/lobby", element: <StudentExamLobbyPage /> },
             { path: "exams/:examId/session", element: <StudentExamRuntimePage /> },
-            { path: "results", element: <StudentResultsPlaceholderPage /> },
+            { path: "results", element: <StudentResultsPage /> },
+            { path: "results/:examId", element: <StudentResultDetailPage /> },
           ],
         }],
       },

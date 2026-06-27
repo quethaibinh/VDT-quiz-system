@@ -143,6 +143,28 @@ services:
       retries: 10
       start_period: 10s
 
+  result-postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_RESULT_NAME:-result-service-db}
+      POSTGRES_USER: ${DB_RESULT_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_RESULT_PASSWORD:-postgres}
+    ports:
+      - "${DB_RESULT_PORT:-5437}:5432"
+    volumes:
+      - result-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   exam-service:
     build:
       context: ./exam-service
@@ -221,6 +243,37 @@ services:
       exam-service:
         condition: service_healthy
 
+  result-service:
+    build:
+      context: ./result-service
+    restart: unless-stopped
+    environment:
+      RESULT_SERVICE_DATASOURCE_URL: jdbc:postgresql://result-postgres:5432/${DB_RESULT_NAME:-result-service-db}
+      RESULT_SERVICE_DATASOURCE_USERNAME: ${DB_RESULT_USERNAME:-postgres}
+      RESULT_SERVICE_DATASOURCE_PASSWORD: ${DB_RESULT_PASSWORD:-postgres}
+      RESULT_SERVICE_JPA_DDL_AUTO: ${RESULT_SERVICE_JPA_DDL_AUTO:-update}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      RESULT_SERVICE_KAFKA_GROUP_ID: ${RESULT_SERVICE_KAFKA_GROUP_ID:-result-service}
+      RESULT_KAFKA_ENABLED: ${RESULT_KAFKA_ENABLED:-true}
+      RESULT_RUNTIME_SUBMISSIONS_TOPIC: ${RESULT_RUNTIME_SUBMISSIONS_TOPIC:-runtime-submission-events}
+      GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "bash -c '</dev/tcp/127.0.0.1/8085'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    depends_on:
+      result-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -252,6 +305,19 @@ services:
       timeout: 5s
       retries: 12
       start_period: 25s
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_UI_PORT:-8086}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka:
+        condition: service_healthy
 
   gateway:
     build:
@@ -286,6 +352,8 @@ services:
         condition: service_healthy
       examruntime-service:
         condition: service_healthy
+      result-service:
+        condition: service_healthy
 
   frontend:
     build:
@@ -305,3 +373,4 @@ volumes:
   question-postgres-data:
   exam-postgres-data:
   examruntime-postgres-data:
+  result-postgres-data:

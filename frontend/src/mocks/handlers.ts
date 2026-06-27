@@ -276,17 +276,6 @@ export const handlers = [
     ],
     events: [],
   })),
-  http.get("*/v1/api/result-service/teacher/exams/:id/results", ({ params }) => HttpResponse.json({
-    examId: params.id,
-    participantCount: 120,
-    gradedCount: 118,
-    average: 7.2,
-    highest: 9.8,
-    lowest: 2.5,
-    distribution: [],
-    students: [],
-  })),
-
   // Lay danh sach ca thi cua hoc sinh
   http.get("*/v1/api/exam-service/student/exams", ({ request }) => {
     const { searchParams, page, size } = getPageParams(request);

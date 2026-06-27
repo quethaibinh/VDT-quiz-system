@@ -10,10 +10,16 @@ import java.util.UUID;
 public record RuntimeActivationMetadata(
         UUID examId,
         int snapshotVersion,
+        String code,
+        String title,
+        UUID subjectId,
+        String subjectName,
+        UUID ownerTeacherId,
         OffsetDateTime startAt,
         OffsetDateTime endAt,
         int joinBeforeMinutes,
         int joinAfterMinutes,
+        String showResultPolicy,
         String status,
         OffsetDateTime readyAt,
         String snapshotSource
@@ -21,4 +27,20 @@ public record RuntimeActivationMetadata(
     public static final String STATUS_READY = "READY";
     public static final String SOURCE_REDIS = "REDIS";
     public static final String SOURCE_EXAM_SERVICE_FALLBACK = "EXAM_SERVICE_FALLBACK";
+
+    public RuntimeActivationMetadata(
+            UUID examId,
+            int snapshotVersion,
+            OffsetDateTime startAt,
+            OffsetDateTime endAt,
+            int joinBeforeMinutes,
+            int joinAfterMinutes,
+            String status,
+            OffsetDateTime readyAt,
+            String snapshotSource
+    ) {
+        this(examId, snapshotVersion, null, null, null, null, null,
+                startAt, endAt, joinBeforeMinutes, joinAfterMinutes, null,
+                status, readyAt, snapshotSource);
+    }
 }

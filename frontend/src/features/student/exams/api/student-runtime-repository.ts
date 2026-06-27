@@ -5,6 +5,8 @@ import type {
   AutosaveResponse,
   StudentJoinResponse,
   StudentPaperResponse,
+  SubmitRequest,
+  SubmitResponse,
 } from "../model/student-exam-contracts";
 
 // Repository ket noi den examruntime-service de xu ly thi thoi gian thuc (runtime)
@@ -31,6 +33,15 @@ export const studentRuntimeRepository = {
   async autosaveStudentAnswers(sessionId: string, request: AutosaveRequest): Promise<AutosaveResponse> {
     const response = await apiClient.put(
       `/v1/api/examruntime-service/student/sessions/${sessionId}/answers`,
+      request
+    );
+    return unwrap(response.data);
+  },
+
+  // Nop bai thi, backend dam bao idempotent theo idempotencyKey cua client
+  async submitStudentSession(sessionId: string, request: SubmitRequest): Promise<SubmitResponse> {
+    const response = await apiClient.post(
+      `/v1/api/examruntime-service/student/sessions/${sessionId}/submit`,
       request
     );
     return unwrap(response.data);

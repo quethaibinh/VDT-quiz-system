@@ -95,3 +95,17 @@ export interface AutosaveResponse {
   storeMode: "REDIS" | "DB_FALLBACK";
   lastAutosaveAt: string;
 }
+
+export interface SubmitRequest {
+  idempotencyKey: string;
+  clientSeq: number;
+  finalAnswers: StudentAnswer[];
+}
+
+export interface SubmitResponse {
+  submissionId: string;
+  sessionId: string;
+  status: "RECEIVED" | "ACCEPTED" | "SUBMITTED" | "AUTO_SUBMITTED";
+  submitReason: "STUDENT" | "TIME_UP" | "AUTO";
+  submittedAt: string;
+}

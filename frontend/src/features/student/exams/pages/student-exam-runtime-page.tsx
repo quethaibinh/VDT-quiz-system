@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertCircle, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataState } from "@/components/shared/data-state";
@@ -11,7 +11,26 @@ import { RuntimeClock } from "../lib/runtime-clock";
 import { ExamRuntimeHeader } from "../components/exam-runtime-header";
 import { QuestionView } from "../components/question-view";
 import { QuestionNavigator } from "../components/question-navigator";
-import type { StudentAnswer, StudentPaperResponse } from "../model/student-exam-contracts";
+import type { StudentAnswer, StudentPaperResponse, SubmitResponse } from "../model/student-exam-contracts";
+
+const submitKeyPrefix = "student-exam-submit-idempotency";
+
+function createIdempotencyKey() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getSessionSubmitIdempotencyKey(sessionId: string) {
+  const storageKey = `${submitKeyPrefix}:${sessionId}`;
+  const existing = window.sessionStorage.getItem(storageKey);
+  if (existing) return existing;
+
+  const next = createIdempotencyKey();
+  window.sessionStorage.setItem(storageKey, next);
+  return next;
+}
 
 // Man hinh lam bai thi tap trung cua hoc sinh
 export function StudentExamRuntimePage() {
@@ -25,8 +44,10 @@ export function StudentExamRuntimePage() {
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [submittedResponse, setSubmittedResponse] = useState<SubmitResponse | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const clientSeqRef = useRef(Date.now());
+  const clientSeqRef = useRef(1);
   const serverTimeRef = useRef("");
   const answerVersionsRef = useRef<Record<string, number>>({});
   const answersRef = useRef(answers);
@@ -37,6 +58,18 @@ export function StudentExamRuntimePage() {
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveInFlightRef = useRef(false);
   const flushAfterCurrentRef = useRef(false);
+  const submitInFlightRef = useRef(false);
+  const submittedRef = useRef(false);
+  const timeUpSubmitStartedRef = useRef(false);
+
+  const submitMutation = useMutation({
+    mutationFn: (input: { sessionId: string; idempotencyKey: string; clientSeq: number; finalAnswers: StudentAnswer[] }) =>
+      studentRuntimeRepository.submitStudentSession(input.sessionId, {
+        idempotencyKey: input.idempotencyKey,
+        clientSeq: input.clientSeq,
+        finalAnswers: input.finalAnswers,
+      }),
+  });
 
   const examQuery = useQuery({
     queryKey: ["student", "exam-runtime-detail", examId],
@@ -85,6 +118,10 @@ export function StudentExamRuntimePage() {
   }, [isTimeUp]);
 
   useEffect(() => {
+    submittedRef.current = Boolean(submittedResponse);
+  }, [submittedResponse]);
+
+  useEffect(() => {
     paperDataRef.current = paperQuery.data;
   }, [paperQuery.data]);
 
@@ -103,10 +140,17 @@ export function StudentExamRuntimePage() {
   useEffect(() => {
     if (!paperQuery.data) return;
 
+    // Existing page state is derived from the loaded runtime paper.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAnswers(initializeAnswers(paperQuery.data.questions, paperQuery.data.answers));
     setDirtyQuestionIds(new Set());
     setAnswerVersions({});
     setSaveState("idle");
+    setSubmittedResponse(null);
+    setSubmitError(null);
+    submitInFlightRef.current = false;
+    submittedRef.current = false;
+    timeUpSubmitStartedRef.current = false;
     flushAfterCurrentRef.current = false;
     saveInFlightRef.current = false;
     if (flushTimerRef.current) {
@@ -145,7 +189,7 @@ export function StudentExamRuntimePage() {
   };
 
   const scheduleAutosaveFlush = (delay = resolveAutosaveDelay()) => {
-    if (!paperDataRef.current || isTimeUpRef.current) return;
+    if (!paperDataRef.current || isTimeUpRef.current || submittedRef.current) return;
     if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
     flushTimerRef.current = setTimeout(() => {
       flushTimerRef.current = null;
@@ -153,18 +197,20 @@ export function StudentExamRuntimePage() {
     }, delay);
   };
 
-  const flushAutosave = async () => {
+  const flushAutosave = async (options?: { allowAfterTimeUp?: boolean }) => {
     const paper = paperDataRef.current;
-    if (!paper || isTimeUpRef.current) return;
+    if (!paper || submittedRef.current || (isTimeUpRef.current && !options?.allowAfterTimeUp)) return true;
 
     if (saveInFlightRef.current) {
       flushAfterCurrentRef.current = true;
-      return;
+      return true;
     }
 
     const idsToSave = Array.from(dirtyQuestionIdsRef.current);
-    const answersList = idsToSave.map((id) => answersRef.current[id]).filter(Boolean);
-    if (answersList.length === 0) return;
+    const answersList = idsToSave
+      .map((id) => answersRef.current[id])
+      .filter((answer): answer is StudentAnswer => Boolean(answer));
+    if (answersList.length === 0) return true;
 
     const versionsAtSave = idsToSave.reduce<Record<string, number>>((acc, id) => {
       acc[id] = answerVersionsRef.current[id] ?? 0;
@@ -203,9 +249,12 @@ export function StudentExamRuntimePage() {
         scheduleAutosaveFlush(failed ? 1000 : resolveAutosaveDelay());
       }
     }
+
+    return !failed;
   };
 
   const markDirty = (questionId: string) => {
+    if (submittedRef.current) return;
     const nextSeq = clientSeqRef.current + 1;
     clientSeqRef.current = nextSeq;
     setAnswerVersions((prev) => ({ ...prev, [questionId]: nextSeq }));
@@ -214,7 +263,7 @@ export function StudentExamRuntimePage() {
   };
 
   const handleAnswerChange = (questionId: string, selectedOptionIds: string[]) => {
-    if (isTimeUp) return;
+    if (isTimeUp || submitInFlightRef.current || submittedRef.current) return;
 
     setAnswers((prev) => ({
       ...prev,
@@ -227,7 +276,7 @@ export function StudentExamRuntimePage() {
   };
 
   const handleMarkForReviewToggle = (questionId: string) => {
-    if (isTimeUp) return;
+    if (isTimeUp || submitInFlightRef.current || submittedRef.current) return;
 
     setAnswers((prev) => ({
       ...prev,
@@ -239,11 +288,61 @@ export function StudentExamRuntimePage() {
     markDirty(questionId);
   };
 
+  const getCurrentAnswersList = (paper: StudentPaperResponse) =>
+    paper.questions
+      .map((question) => answersRef.current[question.questionId])
+      .filter((answer): answer is StudentAnswer => Boolean(answer));
+
+  const submitCurrentSession = async (confirmFirst: boolean) => {
+    const paper = paperDataRef.current;
+    if (!paper || submitInFlightRef.current || submittedRef.current) return;
+    if (confirmFirst && !window.confirm("Bạn chắc chắn muốn nộp bài? Sau khi nộp, bạn sẽ không thể sửa đáp án.")) {
+      return;
+    }
+
+    submitInFlightRef.current = true;
+    setSubmitError(null);
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
+
+    try {
+      await flushAutosave({ allowAfterTimeUp: true });
+      const response = await submitMutation.mutateAsync({
+        sessionId: paper.sessionId,
+        idempotencyKey: getSessionSubmitIdempotencyKey(paper.sessionId),
+        clientSeq: clientSeqRef.current,
+        finalAnswers: getCurrentAnswersList(paper),
+      });
+      setSubmittedResponse(response);
+      setDirtyQuestionIds(new Set());
+      setSaveState("idle");
+      submittedRef.current = true;
+    } catch (error) {
+      console.error("Nộp bài thất bại", error);
+      setSubmitError("Không thể nộp bài lúc này. Hệ thống sẽ tiếp tục thử lại nếu hết giờ.");
+    } finally {
+      submitInFlightRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!isTimeUp || timeUpSubmitStartedRef.current || submittedRef.current) return;
+    timeUpSubmitStartedRef.current = true;
+    void submitCurrentSession(false);
+    // submitCurrentSession reads refs so this effect fires only on the time-up edge.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTimeUp]);
+
   const isLoading = examQuery.isLoading || paperQuery.isLoading;
   const error = examQuery.error ?? paperQuery.error;
   const questions = paperQuery.data?.questions ?? [];
   const currentQuestion = questions[currentIndex];
   const currentAnswer = currentQuestion ? answers[currentQuestion.questionId] : null;
+  const isSubmitPending = submitMutation.isPending;
+  const isSubmitted = Boolean(submittedResponse);
+  const editingDisabled = isTimeUp || isSubmitPending || isSubmitted;
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
@@ -262,12 +361,24 @@ export function StudentExamRuntimePage() {
               remainingSeconds={remainingSeconds}
               saveState={saveState}
               lastSavedAt={lastSavedAt}
+              submitPending={isSubmitPending}
+              submitted={isSubmitted}
+              submitDisabled={isTimeUp}
+              onSubmit={() => void submitCurrentSession(true)}
             />
 
-            {isTimeUp && (
-              <div className="flex items-center justify-center gap-2 border-b border-danger/20 bg-danger/10 p-4 text-center font-semibold text-danger">
+            {(isTimeUp || submitError || submittedResponse) && (
+              <div className={`flex items-center justify-center gap-2 border-b p-4 text-center font-semibold ${
+                submittedResponse
+                  ? "border-success/20 bg-success/10 text-success"
+                  : "border-danger/20 bg-danger/10 text-danger"
+              }`}>
                 <AlertCircle size={18} />
-                <span>Hết giờ làm bài - tính năng nộp bài tự động/thủ công chưa được hỗ trợ.</span>
+                <span>
+                  {submittedResponse
+                    ? `Bài nộp đã được tiếp nhận lúc ${new Date(submittedResponse.submittedAt).toLocaleTimeString("vi-VN")}.`
+                    : submitError ?? "Hết giờ làm bài. Hệ thống đang gửi bài nộp tốt nhất có thể."}
+                </span>
               </div>
             )}
 
@@ -278,7 +389,7 @@ export function StudentExamRuntimePage() {
                     question={currentQuestion}
                     index={currentIndex}
                     answer={currentAnswer}
-                    disabled={isTimeUp}
+                    disabled={editingDisabled}
                     onAnswerChange={(optionIds) => handleAnswerChange(currentQuestion.questionId, optionIds)}
                     onMarkForReviewToggle={() => handleMarkForReviewToggle(currentQuestion.questionId)}
                   />

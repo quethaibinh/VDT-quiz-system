@@ -84,6 +84,16 @@ const server = setupServer(
       lastAutosaveAt: "2026-07-01T08:15:00Z",
     }));
   }),
+  http.post("*/v1/api/examruntime-service/student/sessions/:sessionId/submit", async ({ request }) => {
+    captured = { path: new URL(request.url).pathname, body: await request.json() };
+    return HttpResponse.json(apiResponse({
+      submissionId: "submission-1",
+      sessionId: "session-1",
+      status: "RECEIVED",
+      submitReason: "STUDENT",
+      submittedAt: "2026-07-01T08:30:00Z",
+    }));
+  }),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -117,5 +127,20 @@ test("student runtime repository uses examruntime-service paths", async () => {
   expect(captured.body).toEqual({
     clientSeq: 12,
     answers: [{ questionId: "q1", selectedOptionIds: ["o1"], answerText: null, markedForReview: false }],
+  });
+
+  await expect(studentRuntimeRepository.submitStudentSession("session-1", {
+    idempotencyKey: "submit-key-1",
+    clientSeq: 13,
+    finalAnswers: [{ questionId: "q1", selectedOptionIds: ["o1"], answerText: null, markedForReview: false }],
+  })).resolves.toMatchObject({
+    submissionId: "submission-1",
+    status: "RECEIVED",
+  });
+  expect(captured.path).toBe("/v1/api/examruntime-service/student/sessions/session-1/submit");
+  expect(captured.body).toEqual({
+    idempotencyKey: "submit-key-1",
+    clientSeq: 13,
+    finalAnswers: [{ questionId: "q1", selectedOptionIds: ["o1"], answerText: null, markedForReview: false }],
   });
 });

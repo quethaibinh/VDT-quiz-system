@@ -43,6 +43,14 @@ public class RuntimeActivationCache {
         redisTemplate.opsForValue().set(paperPoolKey(examId, snapshotVersion), payload, ttl);
     }
 
+    public String getAnswerKey(UUID examId, int snapshotVersion) {
+        return redisTemplate.opsForValue().get(answerKeyKey(examId, snapshotVersion));
+    }
+
+    public void putAnswerKey(UUID examId, int snapshotVersion, String payload, Duration ttl) {
+        redisTemplate.opsForValue().set(answerKeyKey(examId, snapshotVersion), payload, ttl);
+    }
+
     public void putActivation(RuntimeActivationMetadata metadata, Duration ttl) {
         try {
             // Metadata nay la read path sau nay cho join-window enforcement.
@@ -50,6 +58,18 @@ public class RuntimeActivationCache {
             redisTemplate.opsForValue().set(activationKey(metadata.examId()), payload, ttl);
         } catch (Exception exception) {
             throw new IllegalStateException("RUNTIME_ACTIVATION_METADATA_SERIALIZATION_FAILED", exception);
+        }
+    }
+
+    public RuntimeActivationMetadata getActivation(UUID examId) {
+        String payload = redisTemplate.opsForValue().get(activationKey(examId));
+        if (payload == null || payload.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(payload, RuntimeActivationMetadata.class);
+        } catch (Exception exception) {
+            return null;
         }
     }
 
@@ -71,5 +91,9 @@ public class RuntimeActivationCache {
 
     public static String paperPoolKey(UUID examId, int snapshotVersion) {
         return "exam:%s:v%d:paper-pool".formatted(examId, snapshotVersion);
+    }
+
+    public static String answerKeyKey(UUID examId, int snapshotVersion) {
+        return "exam:%s:v%d:answer-key".formatted(examId, snapshotVersion);
     }
 }

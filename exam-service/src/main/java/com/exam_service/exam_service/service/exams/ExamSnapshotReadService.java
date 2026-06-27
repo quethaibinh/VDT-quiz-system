@@ -73,10 +73,16 @@ public class ExamSnapshotReadService {
         return new RuntimeActivationDTO(
                 examId,
                 exam.getSnapshotVersion(),
+                exam.getCode(),
+                exam.getTitle(),
+                exam.getSubjectId(),
+                exam.getSubjectNameSnapshot(),
+                exam.getCreatedByTeacherId(),
                 exam.getStartAt(),
                 exam.getEndAt(),
                 exam.getJoinBeforeMinutes(),
-                exam.getJoinAfterMinutes()
+                exam.getJoinAfterMinutes(),
+                exam.getShowResultPolicy() != null ? exam.getShowResultPolicy().name() : null
         );
     }
 

@@ -39,6 +39,11 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
             return body;
         }
 
+        // File download dung converter rieng; khong boc vao ApiResponse.
+        if (body instanceof byte[]) {
+            return body;
+        }
+
         // Boc cac du lieu thanh cong con lai vao cau truc chung.
         return ApiResponse.builder()
                 .timestamp(LocalDateTime.now())
