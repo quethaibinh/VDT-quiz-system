@@ -7,6 +7,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,10 +28,7 @@ import java.util.UUID;
  * Cong viec ben vung de day snapshot tu PostgreSQL sang Redis.
  * Payload chi giu ID va version, khong sao chep noi dung de thi.
  */
-public class OutboxEvent {
-
-    @jakarta.persistence.Id
-    private UUID id;
+public class OutboxEvent extends BaseEntity {
 
     @Column(nullable = false, length = 64)
     private String aggregateType;
@@ -50,20 +48,6 @@ public class OutboxEvent {
     @Column(columnDefinition = "text")
     private String lastError;
 
-    @jakarta.persistence.Version
+    @Version
     private Long version;
-
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-
-    @jakarta.persistence.PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @jakarta.persistence.PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

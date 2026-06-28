@@ -9,6 +9,7 @@ import type {
 } from "@/features/teacher/exams/model/exam-contracts";
 
 const exams: ExamDetail[] = [];
+const mockSessions = new Map<string, any>();
 const assignments = new Map<string, Assignment[]>();
 const students: StudentSummary[] = Array.from({ length: 48 }, (_, index) => ({
   id: `student-${index + 1}`,
@@ -46,11 +47,21 @@ function getPageParams(request: Request, defaultSize = 20) {
 function ensureSubjectExams(subjectId: string) {
   if (exams.some((exam) => exam.subjectId === subjectId)) return;
   exams.push(
-    makeExam(subjectId, `${subjectId}-draft`, "Thi giữa kỳ", "DRAFT"),
+    makeExam(subjectId, `${subjectId}-draft`, "Thi giữa kỳ (Bản nháp)", "DRAFT"),
     makeExam(subjectId, `${subjectId}-cancelled`, "Bài kiểm tra đã hủy", "CANCELLED"),
     makeExam(subjectId, `${subjectId}-closed`, "Bài kiểm tra đã hoàn thành", "CLOSED"),
+    makeExam(subjectId, `${subjectId}-scheduled`, "Thi cuối kỳ (Sắp diễn ra)", "SCHEDULED", {
+      startAt: new Date(Date.now() + 3600_000 * 24).toISOString(), // Ngay mai
+      durationMinutes: 90,
+    }),
+    makeExam(subjectId, `${subjectId}-active`, "Thi giữa kỳ (Đang diễn ra)", "ACTIVE", {
+      startAt: new Date(Date.now() - 600_000).toISOString(), // 10 phut truoc
+      durationMinutes: 45,
+    }),
   );
 }
+
+ensureSubjectExams("sub-1");
 
 function makeExam(
   subjectId: string,
@@ -265,14 +276,207 @@ export const handlers = [
     ],
     events: [],
   })),
-  http.get("*/v1/api/result-service/teacher/exams/:id/results", ({ params }) => HttpResponse.json({
-    examId: params.id,
-    participantCount: 120,
-    gradedCount: 118,
-    average: 7.2,
-    highest: 9.8,
-    lowest: 2.5,
-    distribution: [],
-    students: [],
-  })),
+  // Lay danh sach ca thi cua hoc sinh
+  http.get("*/v1/api/exam-service/student/exams", ({ request }) => {
+    const { searchParams, page, size } = getPageParams(request);
+    const statusFilter = searchParams.get("status");
+    const now = new Date();
+
+    const studentExams = exams
+      .filter((exam) => exam.status !== "DRAFT" && exam.status !== "CANCELLED")
+      .map((exam) => {
+        let availability: "UPCOMING" | "OPEN" | "ENDED" = "OPEN";
+        const start = new Date(exam.startAt);
+        const end = new Date(exam.endAt);
+        if (now < start) {
+          availability = "UPCOMING";
+        } else if (now > end || exam.status === "CLOSED") {
+          availability = "ENDED";
+        }
+
+        return {
+          examId: exam.id,
+          code: exam.code,
+          title: exam.title,
+          subjectName: exam.subjectName,
+          startAt: exam.startAt,
+          endAt: exam.endAt,
+          durationMinutes: exam.durationMinutes,
+          questionCount: exam.easyCount + exam.mediumCount + exam.hardCount,
+          status: exam.status,
+          studentAvailability: availability,
+          assignmentStatus: "ASSIGNED",
+        };
+      })
+      .filter((exam) => !statusFilter || exam.studentAvailability === statusFilter);
+
+    return HttpResponse.json(envelope({
+      serverTime: new Date().toISOString(),
+      ...pageOf(studentExams, page, size),
+    }));
+  }),
+
+  // Lay chi tiet ca thi cua hoc sinh
+  http.get("*/v1/api/exam-service/student/exams/:examId", ({ params }) => {
+    const exam = exams.find((item) => item.id === params.examId);
+    if (!exam || exam.status === "DRAFT" || exam.status === "CANCELLED") {
+      return HttpResponse.json({ message: "Không tìm thấy ca thi." }, { status: 404 });
+    }
+    const now = new Date();
+    let availability: "UPCOMING" | "OPEN" | "ENDED" = "OPEN";
+    const start = new Date(exam.startAt);
+    const end = new Date(exam.endAt);
+    if (now < start) {
+      availability = "UPCOMING";
+    } else if (now > end || exam.status === "CLOSED") {
+      availability = "ENDED";
+    }
+
+    return HttpResponse.json(envelope({
+      examId: exam.id,
+      code: exam.code,
+      title: exam.title,
+      description: exam.description,
+      subjectName: exam.subjectName,
+      startAt: exam.startAt,
+      endAt: exam.endAt,
+      durationMinutes: exam.durationMinutes,
+      questionCount: exam.easyCount + exam.mediumCount + exam.hardCount,
+      status: exam.status,
+      studentAvailability: availability,
+      assignmentStatus: "ASSIGNED",
+    }));
+  }),
+
+  // Join vao ca thi de nhan session
+  http.post("*/v1/api/examruntime-service/student/exams/:examId/join", ({ params }) => {
+    const examId = String(params.examId);
+    const exam = exams.find((item) => item.id === examId);
+    if (!exam) {
+      return HttpResponse.json({ message: "Không tìm thấy ca thi." }, { status: 404 });
+    }
+
+    let session = Array.from(mockSessions.values()).find((s) => s.examId === examId);
+    if (!session) {
+      const sessionId = crypto.randomUUID();
+      session = {
+        sessionId,
+        examId,
+        status: "CREATED",
+        serverTime: new Date().toISOString(),
+        startAt: exam.startAt,
+        endAt: exam.endAt,
+        canStart: new Date() >= new Date(exam.startAt),
+        remainingSecondsToStart: Math.max(0, Math.ceil((new Date(exam.startAt).getTime() - Date.now()) / 1000)),
+        questions: [],
+        answers: [],
+      };
+      mockSessions.set(sessionId, session);
+    } else {
+      session.serverTime = new Date().toISOString();
+      session.canStart = new Date() >= new Date(session.startAt);
+      session.remainingSecondsToStart = Math.max(0, Math.ceil((new Date(session.startAt).getTime() - Date.now()) / 1000));
+    }
+
+    return HttpResponse.json(envelope({
+      sessionId: session.sessionId,
+      examId: session.examId,
+      status: session.status,
+      serverTime: session.serverTime,
+      startAt: session.startAt,
+      endAt: session.endAt,
+      canStart: session.canStart,
+      remainingSecondsToStart: session.remainingSecondsToStart,
+    }));
+  }),
+
+  // Bat dau lam bai thi
+  http.post("*/v1/api/examruntime-service/student/exams/:examId/start", ({ params }) => {
+    const examId = String(params.examId);
+    const exam = exams.find((item) => item.id === examId);
+    if (!exam) {
+      return HttpResponse.json({ message: "Không tìm thấy ca thi." }, { status: 404 });
+    }
+
+    let session = Array.from(mockSessions.values()).find((s) => s.examId === examId);
+    if (!session) {
+      return HttpResponse.json({ message: "Session chưa được khởi tạo." }, { status: 400 });
+    }
+
+    if (session.status === "CREATED") {
+      session.status = "IN_PROGRESS";
+      session.serverStartedAt = new Date().toISOString();
+      session.serverDeadlineAt = exam.endAt;
+
+      // Sinh 10 cau hoi gia dinh tu collection
+      session.questions = Array.from({ length: 10 }, (_, i) => ({
+        questionId: `q-${examId}-${i + 1}`,
+        difficulty: i < 4 ? "EASY" : i < 8 ? "MEDIUM" : "HARD",
+        type: i % 3 === 0 ? "MULTIPLE_CHOICE" : "SINGLE_CHOICE",
+        content: `Nội dung câu hỏi trắc nghiệm số ${i + 1} của ca thi ${exam.title}.`,
+        contentFormat: "TEXT",
+        score: 1.0,
+        options: [
+          { optionId: `opt-${examId}-${i + 1}-a`, key: "A", content: `Đáp án lựa chọn A cho câu ${i + 1}`, contentFormat: "TEXT" },
+          { optionId: `opt-${examId}-${i + 1}-b`, key: "B", content: `Đáp án lựa chọn B cho câu ${i + 1}`, contentFormat: "TEXT" },
+          { optionId: `opt-${examId}-${i + 1}-c`, key: "C", content: `Đáp án lựa chọn C cho câu ${i + 1}`, contentFormat: "TEXT" },
+          { optionId: `opt-${examId}-${i + 1}-d`, key: "D", content: `Đáp án lựa chọn D cho câu ${i + 1}`, contentFormat: "TEXT" },
+        ],
+      }));
+      session.answers = [];
+    }
+
+    return HttpResponse.json(envelope({
+      sessionId: session.sessionId,
+      status: session.status,
+      serverStartedAt: session.serverStartedAt,
+      serverDeadlineAt: session.serverDeadlineAt,
+      questions: session.questions,
+      answers: session.answers,
+    }));
+  }),
+
+  // Lay lai session da co
+  http.get("*/v1/api/examruntime-service/student/sessions/:sessionId", ({ params }) => {
+    const sessionId = String(params.sessionId);
+    const session = mockSessions.get(sessionId);
+    if (!session) {
+      return HttpResponse.json({ message: "Không tìm thấy phiên thi." }, { status: 404 });
+    }
+
+    return HttpResponse.json(envelope({
+      sessionId: session.sessionId,
+      status: session.status,
+      serverStartedAt: session.serverStartedAt,
+      serverDeadlineAt: session.serverDeadlineAt,
+      questions: session.questions,
+      answers: session.answers,
+    }));
+  }),
+
+  // Luu dap an tu dong
+  http.put("*/v1/api/examruntime-service/student/sessions/:sessionId/answers", async ({ params, request }) => {
+    const sessionId = String(params.sessionId);
+    const session = mockSessions.get(sessionId);
+    if (!session) {
+      return HttpResponse.json({ message: "Không tìm thấy phiên thi." }, { status: 404 });
+    }
+
+    const body = await request.json() as { clientSeq: number; answers: any[] };
+    
+    // Merge batch autosave vao cac dap an da co
+    const byQuestion = new Map((session.answers ?? []).map((answer: any) => [answer.questionId, answer]));
+    body.answers.forEach((answer) => byQuestion.set(answer.questionId, answer));
+    session.answers = Array.from(byQuestion.values());
+
+    return HttpResponse.json(envelope({
+      sessionId: session.sessionId,
+      acceptedSeq: body.clientSeq,
+      serverSeq: (session.serverSeq ?? 0) + 1,
+      savedCount: body.answers.length,
+      skippedCount: 0,
+      storeMode: "REDIS",
+      lastAutosaveAt: new Date().toISOString(),
+    }));
+  }),
 ];

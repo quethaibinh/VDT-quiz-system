@@ -1,0 +1,32 @@
+package com.result_service.result_service.model.dto.results;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
+public record TeacherResultDetailDTO(
+        TeacherResultRowDTO summary,
+        String adjustmentReason,
+        OffsetDateTime adjustedAt,
+        UUID adjustedBy,
+        List<TeacherResultAnswerDTO> answers,
+        List<ResultIncidentDTO> incidents,
+        List<ResultIncidentDTO> gradingErrors
+) {
+    public record TeacherResultAnswerDTO(
+            UUID questionId,
+            int questionOrder,
+            List<UUID> selectedOptionIds,
+            List<UUID> correctOptionIds,
+            boolean correct,
+            BigDecimal scoreAwarded,
+            BigDecimal maxScore,
+            String gradingNote,
+            Object questionSnapshot
+    ) {
+    }
+
+    public record ResultIncidentDTO(String type, String message, OffsetDateTime occurredAt) {
+    }
+}

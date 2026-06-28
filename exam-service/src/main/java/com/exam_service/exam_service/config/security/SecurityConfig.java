@@ -51,6 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/v1/api/exam-service/public/**").permitAll()
                         .requestMatchers("/v1/internal/**").permitAll()
                         .requestMatchers("/v1/api/exam-service/teacher/**").hasRole("TEACHER")
+                        .requestMatchers("/v1/api/exam-service/student/**").hasRole("STUDENT")
                         .requestMatchers("/v1/api/admin/exam-service/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )

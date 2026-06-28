@@ -44,6 +44,8 @@ public class SecurityConfig {
                         .pathMatchers("/v1/api/auth-service/login").permitAll()
                         .pathMatchers("/v1/api/auth-service/register").permitAll()
                         .pathMatchers("/v1/api/question-service/public/**").permitAll()
+                        // Cho phep api public cua examruntime di qua khong can token
+                        .pathMatchers("/v1/api/examruntime-service/public/**").permitAll()
                         .pathMatchers("/v1/api/admin/**").hasRole("ADMIN")
                         // Cac request con lai phai co JWT hop le.
                         .anyExchange().authenticated()

@@ -1,0 +1,20 @@
+name: Runtime Service CI
+
+on:
+  push:
+    paths:
+      - 'examruntime-service/**'
+      - '.github/workflows/runtime-service-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+  pull_request:
+    paths:
+      - 'examruntime-service/**'
+      - '.github/workflows/runtime-service-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/template-java-ci.yml
+    with:
+      working-directory: examruntime-service
+    secrets: inherit

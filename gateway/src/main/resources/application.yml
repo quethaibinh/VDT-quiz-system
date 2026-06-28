@@ -43,6 +43,16 @@ spring:
               predicates:
                 - Path=/v1/api/exam-service/**,/v1/api/admin/exam-service/**
 
+            - id: examruntime-service-route
+              uri: ${EXAMRUNTIME_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/v1/api/examruntime-service/**,/v1/api/admin/examruntime-service/**
+
+            - id: result-service-route
+              uri: ${RESULT_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/v1/api/result-service/**,/v1/api/admin/result-service/**
+
 jwt:
   secret: ${JWT_SECRET}
 

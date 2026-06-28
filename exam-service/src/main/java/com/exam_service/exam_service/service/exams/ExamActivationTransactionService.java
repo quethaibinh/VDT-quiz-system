@@ -36,9 +36,8 @@ public class ExamActivationTransactionService {
     }
 
     /**
-     * Re-checks the activation threshold under a pessimistic lock.
-     * If due, transitions the exam to ACTIVE and inserts an outbox event.
-     * This requires a new transaction so a failure in one exam does not fail the batch.
+     * Kiem tra lai nguong kich hoat trong pessimistic lock.
+     * Moi ca thi dung giao dich rieng de loi mot ca khong lam hong ca batch.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean activateIfDue(UUID examId) {
@@ -73,10 +72,16 @@ public class ExamActivationTransactionService {
                 ExamActivatedEvent.EVENT_VERSION,
                 exam.getId(),
                 exam.getSnapshotVersion(),
+                exam.getCode(),
+                exam.getTitle(),
+                exam.getSubjectId(),
+                exam.getSubjectNameSnapshot(),
+                exam.getCreatedByTeacherId(),
                 exam.getStartAt(),
                 exam.getEndAt(),
                 exam.getJoinBeforeMinutes(),
                 exam.getJoinAfterMinutes(),
+                exam.getShowResultPolicy() != null ? exam.getShowResultPolicy().name() : null,
                 now
         );
 
@@ -88,7 +93,6 @@ public class ExamActivationTransactionService {
         }
 
         OutboxEvent outboxEvent = new OutboxEvent();
-        outboxEvent.setId(outboxRowId);
         outboxEvent.setAggregateType("EXAM");
         outboxEvent.setAggregateId(exam.getId());
         outboxEvent.setEventType(ExamActivatedEvent.EVENT_TYPE);

@@ -61,4 +61,52 @@ public interface ExamRepo extends JpaRepository<Exam, UUID>, JpaSpecificationExe
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Exam e where e.id = :id")
     Optional<Exam> findByIdForUpdate(@Param("id") UUID id);
+
+    // Tim kiem ca thi duoc phan cong cho hoc sinh voi bo loc availability
+    @Query("""
+        select e from Exam e
+        where e.id in (
+            select a.examId from ExamAssignment a
+            where a.studentId = :studentId
+              and a.status = com.exam_service.exam_service.model.entity.enums.AssignmentStatus.ASSIGNED
+        )
+        and e.status in (
+            com.exam_service.exam_service.model.entity.enums.ExamStatus.SCHEDULED,
+            com.exam_service.exam_service.model.entity.enums.ExamStatus.ACTIVE,
+            com.exam_service.exam_service.model.entity.enums.ExamStatus.CLOSED
+        )
+        and (
+            :availability is null or
+            (:availability = 'UPCOMING' and e.startAt > :now) or
+            (:availability = 'OPEN' and e.startAt <= :now and e.endAt >= :now) or
+            (:availability = 'ENDED' and (e.endAt < :now or e.status = com.exam_service.exam_service.model.entity.enums.ExamStatus.CLOSED))
+        )
+    """)
+    Page<Exam> findAssignedExamsForStudent(
+            @Param("studentId") UUID studentId,
+            @Param("availability") String availability,
+            @Param("now") OffsetDateTime now,
+            Pageable pageable
+    );
+
+    // Lay chi tiet ca thi duoc phan cong cho hoc sinh
+    @Query("""
+        select e from Exam e
+        where e.id = :examId
+          and e.id in (
+              select a.examId from ExamAssignment a
+              where a.studentId = :studentId
+                and a.status = com.exam_service.exam_service.model.entity.enums.AssignmentStatus.ASSIGNED
+          )
+          and e.status in (
+              com.exam_service.exam_service.model.entity.enums.ExamStatus.SCHEDULED,
+              com.exam_service.exam_service.model.entity.enums.ExamStatus.ACTIVE,
+              com.exam_service.exam_service.model.entity.enums.ExamStatus.CLOSED
+          )
+    """)
+    Optional<Exam> findAssignedExamForStudent(
+            @Param("examId") UUID examId,
+            @Param("studentId") UUID studentId
+    );
 }
+

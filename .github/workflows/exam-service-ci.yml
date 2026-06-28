@@ -1,0 +1,20 @@
+name: Exam Service CI
+
+on:
+  push:
+    paths:
+      - 'exam-service/**'
+      - '.github/workflows/exam-service-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+  pull_request:
+    paths:
+      - 'exam-service/**'
+      - '.github/workflows/exam-service-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/template-java-ci.yml
+    with:
+      working-directory: exam-service
+    secrets: inherit

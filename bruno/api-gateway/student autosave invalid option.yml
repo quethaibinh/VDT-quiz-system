@@ -1,0 +1,43 @@
+info:
+  name: student autosave invalid option
+  type: http
+  seq: 32
+
+http:
+  method: PUT
+  url: "{{url}}/v1/api/examruntime-service/student/sessions/{{sessionId}}/answers"
+  auth:
+    type: bearer
+    token: "{{token}}"
+  body:
+    type: json
+    data: |-
+      {
+        "clientSeq": {{clientSeq}},
+        "answers": [
+          {
+            "questionId": "{{questionId}}",
+            "selectedOptionIds": ["00000000-0000-0000-0000-000000000000"],
+            "answerText": null,
+            "markedForReview": false
+          }
+        ]
+      }
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+        const message = body?.message ?? body?.error ?? "";
+
+        if (message !== "INVALID_OPTION_ID") {
+          throw new Error(`Expected INVALID_OPTION_ID, got: ${message || JSON.stringify(body)}`);
+        }
+        console.log("Invalid option was rejected as expected.");
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

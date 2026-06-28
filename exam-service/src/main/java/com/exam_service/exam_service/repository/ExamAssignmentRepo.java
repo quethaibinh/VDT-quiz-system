@@ -26,5 +26,8 @@ public interface ExamAssignmentRepo extends JpaRepository<ExamAssignment, UUID> 
             Pageable pageable
     );
 
+    // Tim tat ca phan cong theo examId va status khong can phan trang
+    List<ExamAssignment> findAllByExamIdAndStatus(UUID examId, AssignmentStatus status);
+
     long countByExamIdAndStatus(UUID examId, AssignmentStatus status);
 }

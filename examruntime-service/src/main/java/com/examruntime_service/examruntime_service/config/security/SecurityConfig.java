@@ -52,6 +52,8 @@ public class SecurityConfig {
                         .requestMatchers("/v1/internal/**").permitAll()
                         .requestMatchers("/v1/api/examruntime-service/teacher/**").hasRole("TEACHER")
                         .requestMatchers("/v1/api/admin/examruntime-service/**").hasRole("ADMIN")
+                        // Chi cho phep role STUDENT truy cap cac api student cua examruntime
+                        .requestMatchers("/v1/api/examruntime-service/student/**").hasRole("STUDENT")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

@@ -1,0 +1,82 @@
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Award, Clock, LockKeyhole, Medal } from "lucide-react";
+import { DataState } from "@/components/shared/data-state";
+import { PageHeader } from "@/components/shared/page-header";
+import { StatusChip } from "@/components/ui/status-chip";
+import { Button } from "@/components/ui/button";
+import { studentResultRepository } from "@/features/student/results/api/student-result-repository";
+import type { StudentResultSummary, StudentResultVisibilityState } from "@/features/student/results/model/student-result-contracts";
+import { getApiErrorMessage } from "@/lib/http/api-error";
+
+const stateLabels: Record<StudentResultVisibilityState, string> = {
+  GRADING: "Đang chấm",
+  READY: "Đã có điểm",
+  RELEASED: "Đã có điểm",
+  PENDING_REVIEW: "Chờ giáo viên duyệt",
+  LOCKED_UNTIL_CLOSED: "Xem sau ca thi",
+  GRADING_FAILED: "Lỗi chấm",
+  CONFIG_MISSING: "Thiếu cấu hình",
+};
+
+export function StudentResultsPage() {
+  const query = useQuery({ queryKey: ["student", "results"], queryFn: () => studentResultRepository.listResults() });
+  const results = query.data ?? [];
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Kết quả" description="Điểm và xếp hạng cá nhân của các ca thi đã nộp." />
+      <DataState
+        loading={query.isLoading}
+        error={query.error ? getApiErrorMessage(query.error) : null}
+        empty={query.isSuccess && results.length === 0}
+        emptyMessage="Chưa có kết quả ca thi."
+        onRetry={() => void query.refetch()}
+      >
+        <div className="space-y-3">
+          {results.map((result) => <ResultRow key={result.examId} result={result} />)}
+        </div>
+      </DataState>
+    </div>
+  );
+}
+
+function ResultRow({ result }: { result: StudentResultSummary }) {
+  const visible = result.visibilityState === "READY" || result.visibilityState === "RELEASED";
+  return (
+    <article className="grid gap-4 rounded-xl border border-line bg-surface p-5 shadow-soft md:grid-cols-[1fr_auto] md:items-center">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="m-0 text-xl">{result.title}</h2>
+          <StatusChip tone={visible ? "success" : result.visibilityState === "GRADING_FAILED" ? "danger" : "warning"}>
+            {stateLabels[result.visibilityState]}
+          </StatusChip>
+        </div>
+        <p className="mb-0 mt-2 text-sm text-muted">
+          {result.subjectName || "Ca thi"} · Nộp lúc {new Date(result.submittedAt).toLocaleString("vi-VN")}
+        </p>
+        {!visible && <p className="mb-0 mt-2 flex items-center gap-2 text-sm text-muted"><LockKeyhole size={14} /> {message(result)}</p>}
+      </div>
+      {visible ? (
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="text-right">
+            <strong className="block text-2xl text-primary">{result.score?.toFixed(2)} / {result.maxScore?.toFixed(2)}</strong>
+            <small className="text-muted"><Medal size={12} className="inline" /> Hạng #{result.rank}</small>
+          </div>
+          <Link to={`/student/results/${result.examId}`}><Button><Award size={16} /> Xem</Button></Link>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 text-sm font-semibold text-muted"><Clock size={16} /> Chưa mở</div>
+      )}
+    </article>
+  );
+}
+
+function message(result: StudentResultSummary) {
+  if (result.visibilityState === "LOCKED_UNTIL_CLOSED" && result.availableAt) {
+    return `Mở sau ${new Date(result.availableAt).toLocaleString("vi-VN")}`;
+  }
+  if (result.visibilityState === "PENDING_REVIEW") return "Giáo viên chưa phát hành điểm.";
+  if (result.visibilityState === "GRADING") return "Hệ thống đang chấm điểm.";
+  return result.message;
+}

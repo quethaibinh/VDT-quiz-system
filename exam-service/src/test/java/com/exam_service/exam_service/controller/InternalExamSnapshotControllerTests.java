@@ -4,6 +4,7 @@ import com.exam_service.exam_service.config.security.ExamHeaderAuthenticationFil
 import com.exam_service.exam_service.config.security.InternalApiKeyAuthenticationFilter;
 import com.exam_service.exam_service.config.security.SecurityConfig;
 import com.exam_service.exam_service.model.dto.cache.ExamPaperPoolDTO;
+import com.exam_service.exam_service.model.dto.cache.RuntimeActivationDTO;
 import com.exam_service.exam_service.service.exams.ExamSnapshotReadService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.OffsetDateTime;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -54,5 +56,30 @@ class InternalExamSnapshotControllerTests {
                 .andExpect(jsonPath("$.data.examId").value(examId.toString()))
                 .andExpect(jsonPath("$.data.snapshotVersion").value(1))
                 .andExpect(jsonPath("$.data.answers").doesNotExist());
+    }
+
+    @Test
+    void returnsRuntimeActivationMetadataForRepair() throws Exception {
+        UUID examId = UUID.randomUUID();
+        when(snapshotReadService.getRuntimeActivation(examId))
+                .thenReturn(new RuntimeActivationDTO(
+                        examId,
+                        1,
+                        OffsetDateTime.parse("2026-07-01T08:00:00Z"),
+                        OffsetDateTime.parse("2026-07-01T09:00:00Z"),
+                        10,
+                        15
+                ));
+
+        mockMvc.perform(get("/v1/internal/exam-service/exams/{examId}/runtime-activation", examId)
+                        .header(
+                                InternalApiKeyAuthenticationFilter.INTERNAL_API_KEY_HEADER,
+                                "test-internal-api-key"
+                        ))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.examId").value(examId.toString()))
+                .andExpect(jsonPath("$.data.snapshotVersion").value(1))
+                .andExpect(jsonPath("$.data.joinBeforeMinutes").value(10))
+                .andExpect(jsonPath("$.data.joinAfterMinutes").value(15));
     }
 }

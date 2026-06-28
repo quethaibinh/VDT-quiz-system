@@ -1,0 +1,37 @@
+info:
+  name: student join exam
+  type: http
+  seq: 27
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/examruntime-service/student/exams/{{examId}}/join"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+        const data = body?.data ?? body;
+
+        if (!data?.sessionId) {
+          throw new Error("Join response must contain data.sessionId.");
+        }
+        if (data.examId !== bru.getEnvVar("examId")) {
+          throw new Error(`Join response examId mismatch. Expected ${bru.getEnvVar("examId")}, got ${data.examId}`);
+        }
+        if (!["CREATED", "IN_PROGRESS"].includes(data.status)) {
+          throw new Error(`Unexpected join session status: ${data.status}`);
+        }
+
+        bru.setEnvVar("sessionId", data.sessionId);
+        console.log(`Saved sessionId=${data.sessionId}`);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

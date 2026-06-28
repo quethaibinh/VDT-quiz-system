@@ -2,6 +2,7 @@ package com.exam_service.exam_service.controller;
 
 import com.exam_service.exam_service.model.dto.cache.ExamAnswerKeyDTO;
 import com.exam_service.exam_service.model.dto.cache.ExamPaperPoolDTO;
+import com.exam_service.exam_service.model.dto.cache.RuntimeActivationDTO;
 import com.exam_service.exam_service.service.exams.ExamSnapshotReadService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,5 +32,10 @@ public class InternalExamSnapshotController {
     @GetMapping("/answer-key")
     public ExamAnswerKeyDTO getAnswerKey(@PathVariable UUID examId) {
         return snapshotReadService.getAnswerKey(examId);
+    }
+
+    @GetMapping("/runtime-activation")
+    public RuntimeActivationDTO getRuntimeActivation(@PathVariable UUID examId) {
+        return snapshotReadService.getRuntimeActivation(examId);
     }
 }

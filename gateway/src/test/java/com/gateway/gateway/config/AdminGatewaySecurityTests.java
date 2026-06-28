@@ -21,7 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
         "gateway.trusted-secret=test-gateway-secret",
         "AUTH_SERVICE_URL=http://127.0.0.1:1",
         "QUESTION_SERVICE_URL=http://127.0.0.1:1",
-        "EXAM_SERVICE_URL=http://127.0.0.1:1"
+        "EXAM_SERVICE_URL=http://127.0.0.1:1",
+        "EXAMRUNTIME_SERVICE_URL=http://127.0.0.1:1"
 })
 class AdminGatewaySecurityTests {
 
@@ -77,6 +78,33 @@ class AdminGatewaySecurityTests {
                         HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS,
                         value -> assertThat(value).contains("PATCH")
                 );
+    }
+
+    @Test
+    void studentRoutesAllowedForAuthenticatedUsers() {
+        // Kiem tra route student cho phep request co JWT hop le di qua gateway
+        client.get().uri("/v1/api/examruntime-service/student/exams/123/join")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token("STUDENT"))
+                .exchange()
+                .expectStatus()
+                .value(status -> assertThat(status).isNotIn(401, 403));
+    }
+
+    @Test
+    void studentRoutesRejectUnauthenticatedRequests() {
+        // Kiem tra route student chan request khong co JWT o gateway
+        client.get().uri("/v1/api/examruntime-service/student/exams/123/join")
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void publicRuntimeRouteAllowsUnauthenticatedRequests() {
+        // Kiem tra route public cua examruntime cho phep request khong co JWT di qua
+        client.get().uri("/v1/api/examruntime-service/public/status")
+                .exchange()
+                .expectStatus()
+                .value(status -> assertThat(status).isNotIn(401, 403));
     }
 
     private String[] adminPaths() {

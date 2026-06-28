@@ -28,7 +28,7 @@ public class OutboxEventDispatcher {
         this.objectMapper = objectMapper;
     }
 
-    // ham dung de xu ly event outbox, neu la cache -> redis, neu la event -> kafka
+    // Phan tuyen outbox theo event type: snapshot -> Redis, activation -> Kafka.
     public void dispatch(OutboxEvent event) throws Exception {
         if (ExamSchedulingTransactionService.CACHE_EVENT.equals(event.getEventType())) {
             ExamSnapshotCacheRequested request = objectMapper.readValue(

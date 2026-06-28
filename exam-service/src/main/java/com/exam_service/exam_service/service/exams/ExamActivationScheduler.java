@@ -45,9 +45,8 @@ public class ExamActivationScheduler {
         }
 
         OffsetDateTime now = OffsetDateTime.now(clock);
-        // Window end is a loose upper bound to query SCHEDULED exams.
-        // The transaction service will precisely check if the exam is actually due.
-        // We use (preloadLeadMinutes + 120) to comfortably cover the max joinBeforeMinutes + 30m offset.
+        // Lay rong ung vien theo startAt, sau do transaction service se tinh nguong chinh xac theo tung ca thi.
+        // Cong them 120 phut de bao phu joinBeforeMinutes lon ma van giu batch co gioi han.
         OffsetDateTime windowEnd = now.plusMinutes(preloadLeadMinutes).plusMinutes(120);
 
         var candidateIds = examRepo.findCandidateIdsForActivation(

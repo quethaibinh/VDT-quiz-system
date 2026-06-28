@@ -4,6 +4,7 @@ import com.exam_service.exam_service.model.dto.cache.AnswerEntryDTO;
 import com.exam_service.exam_service.model.dto.cache.ExamAnswerKeyDTO;
 import com.exam_service.exam_service.model.dto.cache.ExamPaperPoolDTO;
 import com.exam_service.exam_service.model.dto.cache.PaperQuestionDTO;
+import com.exam_service.exam_service.model.dto.cache.RuntimeActivationDTO;
 import com.exam_service.exam_service.model.entity.Exam;
 import com.exam_service.exam_service.model.entity.ExamQuestion;
 import com.exam_service.exam_service.model.entity.enums.ExamStatus;
@@ -61,6 +62,28 @@ public class ExamSnapshotReadService {
                 .map(row -> read(row.getAnswerKeySnapshot(), AnswerEntryDTO.class))
                 .toList();
         return new ExamAnswerKeyDTO(examId, exam.getSnapshotVersion(), answers);
+    }
+
+    @Transactional(readOnly = true)
+    public RuntimeActivationDTO getRuntimeActivation(UUID examId) {
+        Exam exam = requireSnapshotExam(examId);
+        if (exam.getStatus() != ExamStatus.ACTIVE) {
+            throw new ConflictException("EXAM_RUNTIME_NOT_READY");
+        }
+        return new RuntimeActivationDTO(
+                examId,
+                exam.getSnapshotVersion(),
+                exam.getCode(),
+                exam.getTitle(),
+                exam.getSubjectId(),
+                exam.getSubjectNameSnapshot(),
+                exam.getCreatedByTeacherId(),
+                exam.getStartAt(),
+                exam.getEndAt(),
+                exam.getJoinBeforeMinutes(),
+                exam.getJoinAfterMinutes(),
+                exam.getShowResultPolicy() != null ? exam.getShowResultPolicy().name() : null
+        );
     }
 
     private Exam requireSnapshotExam(UUID examId) {
