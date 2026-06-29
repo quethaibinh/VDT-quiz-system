@@ -7,7 +7,6 @@ import com.examruntime_service.examruntime_service.model.entity.enums.ExamSessio
 import com.examruntime_service.examruntime_service.repository.ExamSessionRepo;
 import com.examruntime_service.examruntime_service.service.session.autoSave.AnswerDraftStore;
 import com.examruntime_service.examruntime_service.service.session.autoSave.SessionAnswerCheckpointWriter;
-import com.examruntime_service.examruntime_service.service.session.autoSave.StudentAutosaveService;
 import com.examruntime_service.examruntime_service.service.session.autoSave.AnswerDraftSaveResult;
 import com.examruntime_service.examruntime_service.util.exception.ConflictException;
 import org.junit.jupiter.api.BeforeEach;

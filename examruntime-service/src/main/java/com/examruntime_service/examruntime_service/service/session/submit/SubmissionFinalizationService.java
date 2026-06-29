@@ -252,8 +252,12 @@ public class SubmissionFinalizationService {
         return snapshot;
     }
 
+    // xu lý neu redis loi, khong lay duoc snapshort thi goi sang exam de lay data
     private Map<String, Object> examSnapshot(ExamSession session) {
         RuntimeActivationMetadata metadata = activationCache.getActivation(session.getExamId());
+        if (metadata == null) {
+            metadata = repairActivationMetadata(session);
+        }
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("examId", session.getExamId());
         snapshot.put("snapshotVersion", session.getSnapshotVersion());
@@ -268,6 +272,32 @@ public class SubmissionFinalizationService {
             snapshot.put("showResultPolicy", metadata.showResultPolicy());
         }
         return snapshot;
+    }
+
+    // ham xu ly phan goi sang exam service de lay snapshort
+    private RuntimeActivationMetadata repairActivationMetadata(ExamSession session) {
+        try {
+            var dto = snapshotClient.getRuntimeActivation(session.getExamId());
+            return new RuntimeActivationMetadata(
+                    dto.examId(),
+                    dto.snapshotVersion(),
+                    dto.code(),
+                    dto.title(),
+                    dto.subjectId(),
+                    dto.subjectName(),
+                    dto.ownerTeacherId(),
+                    dto.startAt(),
+                    dto.endAt(),
+                    dto.joinBeforeMinutes(),
+                    dto.joinAfterMinutes(),
+                    dto.showResultPolicy(),
+                    RuntimeActivationMetadata.STATUS_READY,
+                    null,
+                    RuntimeActivationMetadata.SOURCE_EXAM_SERVICE_FALLBACK
+            );
+        } catch (Exception exception) {
+            return null;
+        }
     }
 
     // Chuyen doi question va option tu ID sang ban day du de snapshot.

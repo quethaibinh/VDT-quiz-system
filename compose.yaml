@@ -216,6 +216,7 @@ services:
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
       QUESTION_SERVICE_URL: ${QUESTION_SERVICE_URL}
       EXAM_SERVICE_URL: ${EXAM_SERVICE_URL}
+      RESULT_SERVICE_URL: ${RESULT_SERVICE_URL}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
       GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
       REDIS_HOST: redis
@@ -258,6 +259,8 @@ services:
       RESULT_RUNTIME_SUBMISSIONS_TOPIC: ${RESULT_RUNTIME_SUBMISSIONS_TOPIC:-runtime-submission-events}
       GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      EXAM_SERVICE_URL: ${EXAM_SERVICE_URL}
     healthcheck:
       test:
         [
@@ -272,6 +275,10 @@ services:
       result-postgres:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      exam-service:
         condition: service_healthy
 
   redis:
@@ -293,6 +300,9 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     ports:
       - "${KAFKA_HOST_PORT:-9092}:9094"
     healthcheck:

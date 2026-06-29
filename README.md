@@ -11,6 +11,7 @@ repository:
 - Question PostgreSQL: `localhost:5434`
 - Exam PostgreSQL: `localhost:5435`
 - Exam Runtime PostgreSQL: `localhost:5436`
+- Result PostgreSQL: `localhost:5437`
 
 ### Prerequisites
 
@@ -85,12 +86,19 @@ Stop containers and delete the PostgreSQL volume:
 docker compose down -v
 ```
 
-Question, Exam, and Exam Runtime services each use a separate PostgreSQL
-container. Exam Runtime consumes `ExamActivated` from Kafka and stores
-readiness metadata in Redis under `runtime:exam:{examId}:activation`; it does
-not create student sessions until a student joins. Exam draft APIs are routed
-through Gateway; internal validation and snapshot fallback endpoints are
-service-network only. See `docs/EXAM_DRAFT_MANAGEMENT.md`,
-`docs/EXAM_ACTIVATION_RUNTIME_READINESS.md`, and the new
-`docs/EXAM_STUDENT_RUNTIME_BACKEND.md` for student runtime APIs (join, start,
-resume, autosave).
+Question, Exam, Exam Runtime, and Result services each use a separate
+PostgreSQL container. Exam Runtime consumes `ExamActivated` from Kafka and
+stores readiness metadata in Redis under `runtime:exam:{examId}:activation`; it
+does not create student sessions until a student joins. Exam Service also runs a
+closing scheduler so ended `ACTIVE` exams become `CLOSED`, which is the status
+the teacher result UI uses to list completed exams.
+
+Submission grading is asynchronous: Runtime writes a durable outbox event,
+publishes `SubmissionCreated` to Kafka, and reconciles with Result Service via
+an internal status API if a published submission still has no result. Exam
+draft APIs are routed through Gateway; internal validation, snapshot fallback,
+runtime activation, and result status endpoints are service-network only. See
+`docs/EXAM_DRAFT_MANAGEMENT.md`,
+`docs/EXAM_ACTIVATION_RUNTIME_READINESS.md`,
+`docs/EXAM_MANUAL_AND_AUTO_SUBMISSION.md`, and
+`docs/RESULT_REVIEW_RELEASE.md` for the current exam/result flow.

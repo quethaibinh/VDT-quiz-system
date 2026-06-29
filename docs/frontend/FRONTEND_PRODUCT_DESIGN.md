@@ -286,7 +286,7 @@ Dang nhap
 | Tao/sua ca thi | Planned |
 | Gan hoc sinh | Planned |
 | Giam sat thi | Planned |
-| Ket qua/thong ke | Planned |
+| Ket qua/thong ke | Implemented against Exam `CLOSED` list + Result Service |
 
 ### Student
 
@@ -337,22 +337,21 @@ mock directory hoac fallback identity.
 
 ### P1 cho exam
 
-- Exam CRUD, blueprint, assignments, activate/close.
+- Exam CRUD, blueprint, assignments, schedule, activation va auto-close.
 - Student assigned exams va lobby readiness.
 - Runtime start/resume, server time, auto-save, submit.
 - Teacher monitor state va proctoring event stream.
-- Result list, statistics, detail va Excel export.
+- Result list/detail da dung Result Service; statistics/export tiep tuc bo sung neu UI can.
 
 ## 13. Planned API contract toi thieu
 
 ```text
-POST /v1/api/exam-service/teacher/exams
-GET  /v1/api/exam-service/teacher/exams
-GET  /v1/api/exam-service/teacher/exams/{examId}
-PUT  /v1/api/exam-service/teacher/exams/{examId}
-POST /v1/api/exam-service/teacher/exams/{examId}/assignments
-POST /v1/api/exam-service/teacher/exams/{examId}/activate
-POST /v1/api/exam-service/teacher/exams/{examId}/close
+POST /v1/api/exam-service/teacher/subjects/{subjectId}/exams
+GET  /v1/api/exam-service/teacher/subjects/{subjectId}/exams?status=CLOSED
+GET  /v1/api/exam-service/teacher/subjects/{subjectId}/exams/{examId}
+PUT  /v1/api/exam-service/teacher/subjects/{subjectId}/exams/{examId}
+POST /v1/api/exam-service/teacher/subjects/{subjectId}/exams/{examId}/assignments
+PATCH /v1/api/exam-service/teacher/subjects/{subjectId}/exams/{examId}/schedule
 
 GET  /v1/api/exam-service/student/exams
 GET  /v1/api/exam-service/student/exams/{examId}
@@ -360,14 +359,22 @@ POST /v1/api/examruntime-service/student/exams/{examId}/join
 POST /v1/api/examruntime-service/student/exams/{examId}/start
 GET  /v1/api/examruntime-service/student/sessions/{sessionId}
 PUT  /v1/api/examruntime-service/student/sessions/{sessionId}/answers
-POST /v1/api/examruntime-service/student/sessions/{sessionId}/submit (Chua ho tro)
+POST /v1/api/examruntime-service/student/sessions/{sessionId}/submit
 
 GET  /v1/api/result-service/teacher/exams/{examId}/results
 GET  /v1/api/result-service/teacher/exams/{examId}/statistics
 GET  /v1/api/result-service/student/results/{resultId}
 ```
 
-Submit can co idempotency key khi duoc thiet ke sau. Auto-save hien dung
+Teacher result screen flow:
+
+1. Load subjects for teacher.
+2. For selected subject, call Exam Service with `status=CLOSED`.
+3. Use the selected `examId` to call Result Service teacher results.
+4. If an ended exam is missing from the list, check Exam Service closing
+   scheduler/status before assuming Result Service has no data.
+
+Submit uses a stable idempotency key. Auto-save hien dung
 `clientSeq`, server timestamp va dirty-answer batch; frontend khong gui toan bo
 de sau resume/start.
 
