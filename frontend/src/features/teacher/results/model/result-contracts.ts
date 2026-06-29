@@ -67,6 +67,22 @@ export interface TeacherResultDetail {
     maxScore: number;
     gradingNote: string | null;
     questionSnapshot: unknown;
+    answerState: "CORRECT" | "WRONG" | "BLANK";
+    question: {
+      questionId: string;
+      content: string | null;
+      type: string | null;
+      difficulty: string | null;
+      contentFormat: string | null;
+    };
+    options: {
+      optionId: string;
+      key: string | null;
+      content: string | null;
+      contentFormat: string | null;
+      selected: boolean;
+      correct: boolean;
+    }[];
   }[];
   incidents: { type: string; message: string; occurredAt: string }[];
   gradingErrors: { type: string; message: string; occurredAt: string }[];

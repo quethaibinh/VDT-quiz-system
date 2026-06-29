@@ -23,7 +23,29 @@ public record TeacherResultDetailDTO(
             BigDecimal scoreAwarded,
             BigDecimal maxScore,
             String gradingNote,
-            Object questionSnapshot
+            Object questionSnapshot,
+            String answerState,
+            QuestionDisplayDTO question,
+            List<OptionDisplayDTO> options
+    ) {
+    }
+
+    public record QuestionDisplayDTO(
+            UUID questionId,
+            String content,
+            String type,
+            String difficulty,
+            String contentFormat
+    ) {
+    }
+
+    public record OptionDisplayDTO(
+            UUID optionId,
+            String key,
+            String content,
+            String contentFormat,
+            boolean selected,
+            boolean correct
     ) {
     }
 

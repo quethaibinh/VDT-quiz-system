@@ -58,6 +58,18 @@ public interface ExamRepo extends JpaRepository<Exam, UUID>, JpaSpecificationExe
             Pageable pageable
     );
 
+    @Query("""
+            select e.id from Exam e
+            where e.status = com.exam_service.exam_service.model.entity.enums.ExamStatus.ACTIVE
+              and e.endAt is not null
+              and e.endAt <= :closeBefore
+            order by e.endAt asc
+            """)
+    Page<UUID> findCandidateIdsForClosing(
+            @Param("closeBefore") OffsetDateTime closeBefore,
+            Pageable pageable
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Exam e where e.id = :id")
     Optional<Exam> findByIdForUpdate(@Param("id") UUID id);

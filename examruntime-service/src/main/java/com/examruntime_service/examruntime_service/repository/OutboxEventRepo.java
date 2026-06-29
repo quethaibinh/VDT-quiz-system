@@ -27,6 +27,20 @@ public interface OutboxEventRepo extends JpaRepository<OutboxEvent, UUID> {
             Pageable pageable
     );
 
+    @Query("""
+            select e from OutboxEvent e
+            where e.status = com.examruntime_service.examruntime_service.model.entity.enums.OutboxStatus.PUBLISHED
+              and e.eventType = :eventType
+              and e.publishedAt is not null
+              and e.publishedAt <= :publishedBefore
+            order by e.publishedAt asc
+            """)
+    List<OutboxEvent> findPublishedForReconciliation(
+            @Param("eventType") String eventType,
+            @Param("publishedBefore") LocalDateTime publishedBefore,
+            Pageable pageable
+    );
+
     @Modifying
     @Query("""
             update OutboxEvent e

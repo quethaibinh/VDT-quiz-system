@@ -1,10 +1,10 @@
-package com.examruntime_service.examruntime_service.service.session.submit;
+package com.examruntime_service.examruntime_service.service.session;
 
 import com.examruntime_service.examruntime_service.model.dto.session.AutosaveRequestDTO;
 import com.examruntime_service.examruntime_service.model.dto.session.SubmitRequestDTO;
 import com.examruntime_service.examruntime_service.model.dto.session.SubmitResponseDTO;
 import com.examruntime_service.examruntime_service.model.entity.enums.SubmitReason;
-import com.examruntime_service.examruntime_service.service.session.autoSave.StudentAutosaveService;
+import com.examruntime_service.examruntime_service.service.session.submit.SubmissionFinalizationService;
 import com.examruntime_service.examruntime_service.util.exception.ConflictException;
 import org.springframework.stereotype.Service;
 

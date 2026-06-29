@@ -35,6 +35,7 @@ import { StudentExamLobbyPage } from "@/features/student/exams/pages/student-exa
 import { StudentExamRuntimePage } from "@/features/student/exams/pages/student-exam-runtime-page";
 import { StudentResultDetailPage } from "@/features/student/results/pages/student-result-detail-page";
 import { StudentResultsPage } from "@/features/student/results/pages/student-results-page";
+import { ProfilePage } from "@/features/profile/pages/profile-page";
 
 function RootProviders() {
   return <AuthProvider><Outlet /></AuthProvider>;
@@ -69,6 +70,7 @@ export const router = createBrowserRouter([
             { path: "results", element: <ResultSubjectPickerPage /> },
             { path: "subjects/:subjectId/results", element: <SubjectResultListPage /> },
             { path: "exams/:examId/results", element: <ExamResultsPage /> },
+            { path: "profile", element: <ProfilePage /> },
           ],
         }],
       },
@@ -101,6 +103,7 @@ export const router = createBrowserRouter([
             { path: "exams/:examId/session", element: <StudentExamRuntimePage /> },
             { path: "results", element: <StudentResultsPage /> },
             { path: "results/:examId", element: <StudentResultDetailPage /> },
+            { path: "profile", element: <ProfilePage /> },
           ],
         }],
       },

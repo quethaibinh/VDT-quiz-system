@@ -63,6 +63,7 @@ public class SecurityConfig {
                         .requestMatchers(POST, "/v1/api/auth-service/login").permitAll()
                         .requestMatchers(POST, "/v1/api/auth-service/register").permitAll()
                         .requestMatchers("/v1/internal/auth-service/**").hasRole("INTERNAL")
+                        .requestMatchers("/v1/api/auth-service/profile/**").hasAnyRole("TEACHER", "STUDENT")
                         .requestMatchers("/v1/api/auth-service/teacher/**").hasRole("TEACHER")
                         .requestMatchers("/v1/api/admin/auth-service/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

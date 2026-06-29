@@ -6,6 +6,7 @@ import com.examruntime_service.examruntime_service.model.dto.cache.ExamAnswerKey
 import com.examruntime_service.examruntime_service.model.dto.cache.ExamPaperPoolDTO;
 import com.examruntime_service.examruntime_service.model.dto.cache.PaperOptionDTO;
 import com.examruntime_service.examruntime_service.model.dto.cache.PaperQuestionDTO;
+import com.examruntime_service.examruntime_service.model.dto.cache.RuntimeActivationDTO;
 import com.examruntime_service.examruntime_service.model.dto.session.StudentAnswerDTO;
 import com.examruntime_service.examruntime_service.model.entity.ExamSession;
 import com.examruntime_service.examruntime_service.model.entity.OutboxEvent;
@@ -60,6 +61,8 @@ class SubmissionFinalizationServiceTest {
     private final UUID sessionId = UUID.randomUUID();
     private final UUID examId = UUID.randomUUID();
     private final UUID studentId = UUID.randomUUID();
+    private final UUID teacherId = UUID.randomUUID();
+    private final UUID subjectId = UUID.randomUUID();
     private final UUID questionId = UUID.randomUUID();
     private final UUID optionId = UUID.randomUUID();
     private final Instant fixedInstant = Instant.parse("2026-07-01T08:00:00Z");
@@ -121,6 +124,44 @@ class SubmissionFinalizationServiceTest {
         assertThat(outboxCaptor.getValue().getEventType()).isEqualTo("SubmissionCreated");
         assertThat(outboxCaptor.getValue().getStatus()).isEqualTo(OutboxStatus.PENDING);
         assertThat(outboxCaptor.getValue().getPayload()).contains("\"producer\":\"examruntime-service\"");
+    }
+
+    @Test
+    void submitRepairsExamSnapshotMetadataFromExamServiceWhenActivationCacheMisses() {
+        ExamSession session = inProgressSession();
+        when(examSessionRepo.findByIdForUpdate(sessionId)).thenReturn(Optional.of(session));
+        when(submissionRepo.findBySessionId(sessionId)).thenReturn(Optional.empty());
+        when(submissionRepo.findByIdempotencyKey("key-2")).thenReturn(Optional.empty());
+        when(answerSnapshotReader.readForResume(eq(session), any())).thenReturn(List.of(answer()));
+        when(activationCache.getActivation(examId)).thenReturn(null);
+        when(snapshotClient.getRuntimeActivation(examId)).thenReturn(new RuntimeActivationDTO(
+                examId,
+                3,
+                "EXAM-1",
+                "Midterm",
+                subjectId,
+                "Philosophy",
+                teacherId,
+                OffsetDateTime.ofInstant(fixedInstant.minusSeconds(3600), ZoneOffset.UTC),
+                OffsetDateTime.ofInstant(fixedInstant.plusSeconds(3600), ZoneOffset.UTC),
+                10,
+                15,
+                "AFTER_CLOSED"
+        ));
+        when(submissionRepo.save(any())).thenAnswer(invocation -> {
+            Submission submission = invocation.getArgument(0);
+            submission.setId(UUID.randomUUID());
+            return submission;
+        });
+
+        service.finalizeSubmission(sessionId, studentId, SubmitReason.STUDENT, "key-2");
+
+        ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxEventRepo).save(outboxCaptor.capture());
+        assertThat(outboxCaptor.getValue().getPayload())
+                .contains("\"ownerTeacherId\":\"" + teacherId + "\"")
+                .contains("\"showResultPolicy\":\"AFTER_CLOSED\"")
+                .contains("\"subjectId\":\"" + subjectId + "\"");
     }
 
     @Test

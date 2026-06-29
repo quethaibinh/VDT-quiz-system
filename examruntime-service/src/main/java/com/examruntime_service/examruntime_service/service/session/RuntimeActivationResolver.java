@@ -59,6 +59,7 @@ public class RuntimeActivationResolver {
         }
     }
 
+    // goi nguoc sang exam-service neu chua thay trang thai active cua ca thi tren redis
     private RuntimeActivationMetadata repairFromExamService(UUID examId) {
         try {
             RuntimeActivationDTO dto = snapshotClient.getRuntimeActivation(examId);

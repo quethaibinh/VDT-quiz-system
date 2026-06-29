@@ -15,8 +15,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Bo tinh diem thuc hien cham bai thi trac nghiem dua tren thong tin tu SubmissionCreatedEvent.
+ * Diem so duoc tinh theo thang diem 10 mac dinh (NORMALIZED_MAX_SCORE) chia deu cho tong so cau hoi.
+ */
 @Component
 public class GradeCalculator {
+
+    private static final BigDecimal NORMALIZED_MAX_SCORE = BigDecimal.TEN;
+    private static final int INTERNAL_SCORE_SCALE = 10;
 
     private final GradingJsonSupport jsonSupport;
 
@@ -24,10 +31,20 @@ public class GradeCalculator {
         this.jsonSupport = jsonSupport;
     }
 
+    /**
+     * Tinh toan ket qua thi va sinh danh sach chi tiet cau tra loi.
+     * Quy trinh gom: Validate dau vao -> Nhom cau tra loi cua hoc sinh -> Sap xep cau hoi ->
+     * Chia deu diem cho cac cau hoi -> Cham tung cau hoi -> Tinh toan ty le phan tram dung.
+     *
+     * @param event thong tin submission tu he thong runtime
+     * @return GradeComputation chua thong ke so cau dung/sai/trong va chi tiet diem so
+     */
     public GradeComputation compute(SubmissionCreatedEvent event) {
+        // Validate tinh hop le cua snapshot ky thi va cau tra loi cua hoc sinh
         validateGradingSnapshot(event);
 
-        // Gom cau tra loi theo questionId; neu duplicate thi lay ban ghi cuoi cung.
+        // Nhom cau tra loi cua hoc sinh theo questionId.
+        // Neu hoc sinh nop nhieu hon mot cau tra loi cho cung mot cau hoi, he thong lay ban ghi cuoi cung (right).
         Map<UUID, List<UUID>> selectedByQuestion = event.answerSnapshot().stream()
                 .collect(Collectors.toMap(
                         SubmissionCreatedEvent.AnswerSnapshotItem::questionId,
@@ -35,6 +52,7 @@ public class GradeCalculator {
                         (left, right) -> right
                 ));
 
+        // Lay danh sach cau hoi tu snapshot va sap xep theo dung thu tu (questionOrder) duoc thiet lap.
         List<SubmissionCreatedEvent.QuestionSnapshot> questions = new ArrayList<>(event.paperSnapshot().questions());
         questions.sort(Comparator.comparingInt(question -> question.questionOrder() != null
                 ? question.questionOrder()
@@ -42,17 +60,30 @@ public class GradeCalculator {
 
         List<ResultAnswer> answers = new ArrayList<>();
         BigDecimal totalScore = BigDecimal.ZERO;
-        BigDecimal maxScore = BigDecimal.ZERO;
         int answered = 0;
         int correct = 0;
         int index = 0;
+        int totalQuestions = questions.size();
+        
+        // Diem toi da cho moi cau = 10.0 / tong so cau hoi.
+        // Dung scale = 10 de tranh lam tron qua som lam sai lech tong diem cuoi cung.
+        BigDecimal questionMax = NORMALIZED_MAX_SCORE.divide(
+                BigDecimal.valueOf(totalQuestions),
+                INTERNAL_SCORE_SCALE,
+                RoundingMode.HALF_UP
+        );
 
+        // Duyet qua tung cau hoi trong bai thi de cham diem
         for (SubmissionCreatedEvent.QuestionSnapshot question : questions) {
             index++;
+            // Chuan hoa danh sach id cac lua chon cua hoc sinh va dap an dung
             List<UUID> selected = normalizeIds(selectedByQuestion.get(question.questionId()));
             List<UUID> correctOptions = normalizeIds(question.correctOptionIds());
-            BigDecimal questionMax = question.effectiveMaxScore();
+            
+            // Xac dinh hoc sinh co bo trong cau nay khong
             boolean blank = selected.isEmpty();
+            
+            // So sanh 2 tap hop de xac dinh dung/sai. Neu khong blank va cac lua chon trung khop thi dung.
             boolean isCorrect = !blank && sameIds(selected, correctOptions);
             BigDecimal awarded = isCorrect ? questionMax : BigDecimal.ZERO;
 
@@ -63,17 +94,18 @@ public class GradeCalculator {
                 correct++;
             }
             totalScore = totalScore.add(awarded);
-            maxScore = maxScore.add(questionMax);
 
-            answers.add(buildAnswer(event, question, index, selected, correctOptions, blank, isCorrect, awarded));
+            // Tao doi tuong ResultAnswer de luu vao DB
+            answers.add(buildAnswer(event, question, index, selected, correctOptions, blank, isCorrect, awarded, questionMax));
         }
 
-        int totalQuestions = questions.size();
+        // Tinh toan so cau bo trong va so cau lam sai
         int blank = totalQuestions - answered;
         int wrong = answered - correct;
-        BigDecimal percentage = maxScore.compareTo(BigDecimal.ZERO) == 0
-                ? BigDecimal.ZERO
-                : totalScore.multiply(BigDecimal.valueOf(100)).divide(maxScore, 3, RoundingMode.HALF_UP);
+        
+        // Tinh phan tram hoan thanh chinh xac: (totalScore * 100) / 10.0, lam tron den 3 chu so thap phan
+        BigDecimal percentage = totalScore.multiply(BigDecimal.valueOf(100))
+                .divide(NORMALIZED_MAX_SCORE, 3, RoundingMode.HALF_UP);
 
         return new GradeComputation(
                 answers,
@@ -83,11 +115,14 @@ public class GradeCalculator {
                 wrong,
                 blank,
                 totalScore.setScale(4, RoundingMode.HALF_UP),
-                maxScore.setScale(4, RoundingMode.HALF_UP),
+                NORMALIZED_MAX_SCORE.setScale(4, RoundingMode.HALF_UP),
                 percentage
         );
     }
 
+    /**
+     * Khoi tao va dinh dang thong tin thuc the ResultAnswer de luu tru.
+     */
     private ResultAnswer buildAnswer(
             SubmissionCreatedEvent event,
             SubmissionCreatedEvent.QuestionSnapshot question,
@@ -96,7 +131,8 @@ public class GradeCalculator {
             List<UUID> correctOptions,
             boolean blank,
             boolean isCorrect,
-            BigDecimal awarded
+            BigDecimal awarded,
+            BigDecimal questionMax
     ) {
         ResultAnswer answer = new ResultAnswer();
         answer.setExamId(event.examId());
@@ -105,8 +141,9 @@ public class GradeCalculator {
         answer.setSelectedOptionIds(jsonSupport.toJson(selected));
         answer.setCorrectOptionIds(jsonSupport.toJson(correctOptions));
         answer.setCorrect(isCorrect);
+        // Diem dat duoc va diem toi da cua cau hoi duoc lam tron ve 3 chu so thap phan de luu tru dep hon
         answer.setScoreAwarded(awarded.setScale(3, RoundingMode.HALF_UP));
-        answer.setMaxScore(question.effectiveMaxScore().setScale(3, RoundingMode.HALF_UP));
+        answer.setMaxScore(questionMax.setScale(3, RoundingMode.HALF_UP));
         answer.setGradingNote(blank ? "BLANK" : isCorrect ? "CORRECT" : "WRONG");
         answer.setQuestionSnapshot(jsonSupport.toJson(question.questionSnapshot() != null
                 ? question.questionSnapshot()
@@ -114,6 +151,10 @@ public class GradeCalculator {
         return answer;
     }
 
+    /**
+     * Kiem tra tinh toan ven cua du lieu snapshot truoc khi cham diem.
+     * Tat ca cac thieu sot nghiep vu nhu thieu danh sach cau hoi, thieu dap an dung deu se nem ra loi.
+     */
     private void validateGradingSnapshot(SubmissionCreatedEvent event) {
         if (event.answerSnapshot() == null) {
             throw new IllegalArgumentException("ANSWER_SNAPSHOT_REQUIRED");
@@ -133,9 +174,6 @@ public class GradeCalculator {
             if (question.correctOptionIds() == null || question.correctOptionIds().isEmpty()) {
                 throw new IllegalArgumentException("QUESTION_CORRECT_OPTIONS_REQUIRED");
             }
-            if (question.effectiveMaxScore().compareTo(BigDecimal.ZERO) < 0) {
-                throw new IllegalArgumentException("QUESTION_SCORE_INVALID");
-            }
         });
         event.answerSnapshot().forEach(answer -> {
             if (answer.questionId() == null) {
@@ -147,10 +185,18 @@ public class GradeCalculator {
         });
     }
 
+    /**
+     * So sanh danh sach cac lua chon hoc sinh chon co khop hoan toan voi dap an dung hay khong.
+     * Su dung LinkedHashSet de khong quan tam den thu tu lua chon ma chi so sanh cac phan tu.
+     */
     private boolean sameIds(List<UUID> selected, List<UUID> correct) {
         return new LinkedHashSet<>(selected).equals(new LinkedHashSet<>(correct));
     }
 
+    /**
+     * Chuan hoa list UUID: loai bo null, loai bo cac phan tu trung lap (distinct), sap xep tang dan.
+     * Muc dich la de phep so sanh equals cua Set/List giua selected va correct luon chinh xac va dong nhat.
+     */
     private List<UUID> normalizeIds(List<UUID> ids) {
         if (ids == null) {
             return List.of();

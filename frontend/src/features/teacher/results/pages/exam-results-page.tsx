@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { Download, Eye, Send, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Eye, Send, SlidersHorizontal } from "lucide-react";
 import { DataState } from "@/components/shared/data-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -15,13 +15,20 @@ import {
   publishTeacherExamResults,
   publishTeacherResult,
 } from "@/features/teacher/results/api/result-repository";
-import type { ResultReviewStatus, ResultVisibilityState, TeacherResultRow } from "@/features/teacher/results/model/result-contracts";
+import type {
+  ResultReviewStatus,
+  ResultVisibilityState,
+  TeacherResultDetail,
+  TeacherResultRow,
+} from "@/features/teacher/results/model/result-contracts";
 import { getApiErrorMessage } from "@/lib/http/api-error";
 
 interface ResultLocationState {
   backTo?: string;
   examTitle?: string;
 }
+
+type TeacherResultAnswer = TeacherResultDetail["answers"][number];
 
 const reviewLabels: Record<ResultReviewStatus, string> = {
   PENDING_REVIEW: "Chờ duyệt",
@@ -38,12 +45,25 @@ const visibilityLabels: Record<ResultVisibilityState, string> = {
   CONFIG_MISSING: "Thiếu cấu hình",
 };
 
+const answerLabels: Record<TeacherResultAnswer["answerState"], string> = {
+  CORRECT: "Đúng",
+  WRONG: "Sai",
+  BLANK: "Bỏ chọn",
+};
+
+const answerTones: Record<TeacherResultAnswer["answerState"], "success" | "danger" | "warning"> = {
+  CORRECT: "success",
+  WRONG: "danger",
+  BLANK: "warning",
+};
+
 export function ExamResultsPage() {
   const { examId = "" } = useParams();
   const location = useLocation();
   const state = location.state as ResultLocationState | null;
   const queryClient = useQueryClient();
   const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
+  const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["teacher", "results", examId],
@@ -189,7 +209,15 @@ export function ExamResultsPage() {
                         <td className="p-3">{new Date(row.submittedAt).toLocaleString("vi-VN")}</td>
                         <td className="p-3">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" onClick={() => setSelectedResultId(row.resultId)}><Eye size={15} /> Chi tiết</Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() => {
+                                setSelectedResultId(row.resultId);
+                                setExpandedQuestionId(null);
+                              }}
+                            >
+                              <Eye size={15} /> Chi tiết
+                            </Button>
                             <Button variant="secondary" onClick={() => handleAdjust(row)}><SlidersHorizontal size={15} /> Sửa</Button>
                             <Button
                               loading={publishOne.isPending}
@@ -223,21 +251,16 @@ export function ExamResultsPage() {
                         <Metric label="Số câu" value={String(detailQuery.data.summary.totalQuestions)} />
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full min-w-[760px] border-collapse text-sm">
-                          <thead className="bg-ink/5 text-left text-xs uppercase text-muted">
-                            <tr><th className="p-3">Câu</th><th className="p-3">Kết quả</th><th className="p-3">Điểm</th><th className="p-3">Đáp án đã chọn</th></tr>
-                          </thead>
-                          <tbody>
-                            {detailQuery.data.answers.map((answer) => (
-                              <tr key={answer.questionId} className="border-t border-line">
-                                <td className="p-3">{answer.questionOrder}</td>
-                                <td className="p-3"><StatusChip tone={answer.correct ? "success" : "danger"}>{answer.gradingNote || (answer.correct ? "Đúng" : "Sai")}</StatusChip></td>
-                                <td className="p-3">{answer.scoreAwarded.toFixed(2)} / {answer.maxScore.toFixed(2)}</td>
-                                <td className="p-3 text-xs text-muted">{answer.selectedOptionIds.join(", ") || "Bỏ trống"}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                        <div className="min-w-[760px] divide-y divide-line rounded-lg border border-line">
+                          {detailQuery.data.answers.map((answer) => (
+                            <QuestionResultRow
+                              key={answer.questionId}
+                              answer={answer}
+                              expanded={expandedQuestionId === answer.questionId}
+                              onToggle={() => setExpandedQuestionId(expandedQuestionId === answer.questionId ? null : answer.questionId)}
+                            />
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -253,4 +276,71 @@ export function ExamResultsPage() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return <div className="rounded-xl border border-line bg-surface p-4 shadow-soft"><strong className="text-2xl">{value}</strong><small className="block text-muted">{label}</small></div>;
+}
+
+function QuestionResultRow({
+  answer,
+  expanded,
+  onToggle,
+}: {
+  answer: TeacherResultAnswer;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const selectedLabels = answer.options
+    .filter((option) => option.selected)
+    .map((option) => option.key || option.optionId);
+
+  return (
+    <div>
+      <button
+        type="button"
+        className="grid w-full grid-cols-[72px_1fr_120px_120px_36px] items-center gap-3 px-3 py-4 text-left text-sm transition hover:bg-ink/5"
+        onClick={onToggle}
+      >
+        <span className="font-semibold text-ink">Câu {answer.questionOrder}</span>
+        <span className="min-w-0">
+          <span className="block truncate font-medium text-ink">{answer.question.content || `Câu hỏi ${answer.questionId}`}</span>
+          <span className="block text-xs text-muted">{answer.question.difficulty || "Chưa rõ độ khó"}</span>
+        </span>
+        <StatusChip tone={answerTones[answer.answerState]}>{answerLabels[answer.answerState]}</StatusChip>
+        <span className="text-sm font-semibold text-primary">{answer.scoreAwarded.toFixed(2)} / {answer.maxScore.toFixed(2)}</span>
+        <span className="text-muted">{expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</span>
+      </button>
+      {expanded && (
+        <div className="space-y-4 bg-ink/[0.02] px-5 pb-5 pt-1">
+          <div>
+            <small className="block text-muted">Nội dung câu hỏi</small>
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-ink">{answer.question.content || "Chưa có nội dung câu hỏi."}</p>
+          </div>
+          <div className="grid gap-2">
+            {answer.options.length > 0 ? answer.options.map((option) => (
+              <div
+                key={option.optionId}
+                className="grid grid-cols-[32px_1fr_auto] items-start gap-3 rounded-lg border border-line bg-surface px-3 py-2 text-sm"
+              >
+                <strong className="text-ink">{option.key || "-"}</strong>
+                <span className="whitespace-pre-wrap text-ink">{option.content || option.optionId}</span>
+                <span className="flex flex-wrap justify-end gap-1">
+                  {option.selected && <StatusChip tone="warning">Đã chọn</StatusChip>}
+                  {option.correct && <StatusChip tone="success">Đáp án đúng</StatusChip>}
+                </span>
+              </div>
+            )) : (
+              <p className="m-0 text-sm text-muted">Chưa có dữ liệu đáp án chi tiết.</p>
+            )}
+          </div>
+          <div className="grid gap-3 text-sm md:grid-cols-3">
+            <DetailLine label="Đáp án đã chọn" value={selectedLabels.length ? selectedLabels.join(", ") : "Bỏ chọn"} />
+            <DetailLine label="Ghi chú chấm" value={answer.gradingNote || answerLabels[answer.answerState]} />
+            <DetailLine label="Mã câu hỏi" value={answer.questionId} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetailLine({ label, value }: { label: string; value: string }) {
+  return <div><small className="block text-muted">{label}</small><strong className="break-words text-ink">{value}</strong></div>;
 }

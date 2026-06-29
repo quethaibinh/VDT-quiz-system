@@ -1,4 +1,4 @@
-package com.examruntime_service.examruntime_service.service.session.autoSave;
+package com.examruntime_service.examruntime_service.service.session;
 
 import com.examruntime_service.examruntime_service.model.dto.session.AutosaveAnswerDTO;
 import com.examruntime_service.examruntime_service.model.dto.session.AutosaveRequestDTO;
@@ -7,6 +7,9 @@ import com.examruntime_service.examruntime_service.model.entity.ExamSession;
 import com.examruntime_service.examruntime_service.model.entity.enums.AnswerStoreMode;
 import com.examruntime_service.examruntime_service.model.entity.enums.ExamSessionStatus;
 import com.examruntime_service.examruntime_service.repository.ExamSessionRepo;
+import com.examruntime_service.examruntime_service.service.session.autoSave.AnswerDraftSaveResult;
+import com.examruntime_service.examruntime_service.service.session.autoSave.AnswerDraftStore;
+import com.examruntime_service.examruntime_service.service.session.autoSave.SessionAnswerCheckpointWriter;
 import com.examruntime_service.examruntime_service.util.exception.ConflictException;
 import com.examruntime_service.examruntime_service.util.exception.NotFoundException;
 import com.examruntime_service.examruntime_service.util.exception.UnauthorizedException;

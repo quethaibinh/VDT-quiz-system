@@ -67,9 +67,6 @@ public class ExamSnapshotReadService {
     @Transactional(readOnly = true)
     public RuntimeActivationDTO getRuntimeActivation(UUID examId) {
         Exam exam = requireSnapshotExam(examId);
-        if (exam.getStatus() != ExamStatus.ACTIVE) {
-            throw new ConflictException("EXAM_RUNTIME_NOT_READY");
-        }
         return new RuntimeActivationDTO(
                 examId,
                 exam.getSnapshotVersion(),

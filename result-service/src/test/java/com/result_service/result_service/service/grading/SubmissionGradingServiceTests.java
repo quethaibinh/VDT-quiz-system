@@ -94,9 +94,16 @@ class SubmissionGradingServiceTests {
         assertThat(result.getCorrectCount()).isEqualTo(1);
         assertThat(result.getWrongCount()).isEqualTo(1);
         assertThat(result.getBlankCount()).isEqualTo(1);
-        assertThat(result.getTotalScore()).isEqualByComparingTo(new BigDecimal("2.0000"));
-        assertThat(result.getMaxScore()).isEqualByComparingTo(new BigDecimal("7.0000"));
-        assertThat(result.getPercentage()).isEqualByComparingTo(new BigDecimal("28.571"));
+        assertThat(result.getTotalScore()).isEqualByComparingTo(new BigDecimal("3.3333"));
+        assertThat(result.getMaxScore()).isEqualByComparingTo(new BigDecimal("10.0000"));
+        assertThat(result.getPercentage()).isEqualByComparingTo(new BigDecimal("33.333"));
+        assertThat(result.getGraderVersion()).isEqualTo("normalized-10-v1");
+        var correctAnswer = resultAnswerRepo.findAll().stream()
+                .filter(answer -> answer.getQuestionId().equals(q1))
+                .findFirst()
+                .orElseThrow();
+        assertThat(correctAnswer.getScoreAwarded()).isEqualByComparingTo(new BigDecimal("3.333"));
+        assertThat(correctAnswer.getMaxScore()).isEqualByComparingTo(new BigDecimal("3.333"));
     }
 
     @Test
