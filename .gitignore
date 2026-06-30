@@ -11,3 +11,4 @@ docs/**
 docs/frontend/**
 !docs/frontend/FRONTEND_PRODUCT_DESIGN.md
 !docs/frontend/WIREFRAMES.md
+.github/**
