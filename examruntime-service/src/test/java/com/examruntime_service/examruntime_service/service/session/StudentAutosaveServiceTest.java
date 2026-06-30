@@ -8,6 +8,7 @@ import com.examruntime_service.examruntime_service.repository.ExamSessionRepo;
 import com.examruntime_service.examruntime_service.service.session.autoSave.AnswerDraftStore;
 import com.examruntime_service.examruntime_service.service.session.autoSave.SessionAnswerCheckpointWriter;
 import com.examruntime_service.examruntime_service.service.session.autoSave.AnswerDraftSaveResult;
+import com.examruntime_service.examruntime_service.service.monitor.MonitorStateService;
 import com.examruntime_service.examruntime_service.util.exception.ConflictException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,7 @@ class StudentAutosaveServiceTest {
     private ExamSessionRepo examSessionRepo;
     private AnswerDraftStore answerDraftStore;
     private SessionAnswerCheckpointWriter checkpointWriter;
+    private MonitorStateService monitorStateService;
     private Clock clock;
     private StudentAutosaveService autosaveService;
 
@@ -53,6 +55,7 @@ class StudentAutosaveServiceTest {
         examSessionRepo = mock(ExamSessionRepo.class);
         answerDraftStore = mock(AnswerDraftStore.class);
         checkpointWriter = mock(SessionAnswerCheckpointWriter.class);
+        monitorStateService = mock(MonitorStateService.class);
         clock = Clock.fixed(fixedInstant, ZoneId.of("UTC"));
 
         autosaveService = new StudentAutosaveService(
@@ -60,6 +63,7 @@ class StudentAutosaveServiceTest {
                 answerDraftStore,
                 checkpointWriter,
                 new ObjectMapper(),
+                monitorStateService,
                 clock
         );
     }
@@ -72,6 +76,7 @@ class StudentAutosaveServiceTest {
                 .thenReturn(AnswerDraftSaveResult.builder()
                         .savedCount(1)
                         .skippedCount(0)
+                        .answeredCount(1)
                         .serverSeq(2)
                         .lastAutosaveAt(OffsetDateTime.ofInstant(fixedInstant, ZoneOffset.UTC))
                         .build());
@@ -85,6 +90,11 @@ class StudentAutosaveServiceTest {
         assertThat(response.getStoreMode()).isEqualTo("REDIS");
         verify(answerDraftStore).saveBatch(eq(session), any(), eq(2L), any(), any(Duration.class));
         verify(checkpointWriter, never()).writeAutosaveFallback(any(), any(), any(Long.class), any());
+        verify(monitorStateService).updateAnsweredCount(
+                eq(session),
+                eq(1),
+                eq(OffsetDateTime.ofInstant(fixedInstant, ZoneOffset.UTC))
+        );
     }
 
     @Test
@@ -97,6 +107,7 @@ class StudentAutosaveServiceTest {
                 .thenReturn(AnswerDraftSaveResult.builder()
                         .savedCount(1)
                         .skippedCount(0)
+                        .answeredCount(1)
                         .serverSeq(2)
                         .lastAutosaveAt(OffsetDateTime.ofInstant(fixedInstant, ZoneOffset.UTC))
                         .build());
@@ -130,6 +141,7 @@ class StudentAutosaveServiceTest {
                 .thenReturn(AnswerDraftSaveResult.builder()
                         .savedCount(0)
                         .skippedCount(1)
+                        .answeredCount(1)
                         .serverSeq(11)
                         .lastAutosaveAt(OffsetDateTime.ofInstant(fixedInstant, ZoneOffset.UTC))
                         .build());
@@ -160,6 +172,7 @@ class StudentAutosaveServiceTest {
                 .thenReturn(AnswerDraftSaveResult.builder()
                         .savedCount(0)
                         .skippedCount(0)
+                        .answeredCount(0)
                         .serverSeq(2)
                         .lastAutosaveAt(OffsetDateTime.ofInstant(fixedInstant, ZoneOffset.UTC))
                         .build());

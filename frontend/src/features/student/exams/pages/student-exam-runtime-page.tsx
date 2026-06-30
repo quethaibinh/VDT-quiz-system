@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertCircle, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertCircle, ArrowLeft, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataState } from "@/components/shared/data-state";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { studentRuntimeRepository } from "../api/student-runtime-repository";
 import { studentExamRepository } from "../api/student-exam-repository";
 import { initializeAnswers } from "../lib/runtime-answer-state";
@@ -11,6 +12,8 @@ import { RuntimeClock } from "../lib/runtime-clock";
 import { ExamRuntimeHeader } from "../components/exam-runtime-header";
 import { QuestionView } from "../components/question-view";
 import { QuestionNavigator } from "../components/question-navigator";
+import { SessionLockedOverlay } from "../components/session-locked-overlay";
+import { useStudentProctoring } from "../hooks/use-student-proctoring";
 import type { StudentAnswer, StudentPaperResponse, SubmitResponse } from "../model/student-exam-contracts";
 
 const submitKeyPrefix = "student-exam-submit-idempotency";
@@ -46,6 +49,9 @@ export function StudentExamRuntimePage() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [submittedResponse, setSubmittedResponse] = useState<SubmitResponse | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [fullscreenActive, setFullscreenActive] = useState(() => Boolean(document.fullscreenElement));
+  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
 
   const clientSeqRef = useRef(1);
   const serverTimeRef = useRef("");
@@ -85,9 +91,6 @@ export function StudentExamRuntimePage() {
 
       if (joinResult.status === "IN_PROGRESS") {
         return studentRuntimeRepository.resumeStudentSession(joinResult.sessionId);
-      }
-      if (joinResult.status === "CREATED" && joinResult.canStart) {
-        return studentRuntimeRepository.startStudentExam(examId);
       }
 
       navigate(`/student/exams/${examId}/lobby`, { replace: true });
@@ -148,6 +151,7 @@ export function StudentExamRuntimePage() {
     setSaveState("idle");
     setSubmittedResponse(null);
     setSubmitError(null);
+    setSubmitConfirmOpen(false);
     submitInFlightRef.current = false;
     submittedRef.current = false;
     timeUpSubmitStartedRef.current = false;
@@ -173,6 +177,17 @@ export function StudentExamRuntimePage() {
     const timer = setInterval(updateTimer, 1000);
     return () => clearInterval(timer);
   }, [paperQuery.data]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active = Boolean(document.fullscreenElement);
+      setFullscreenActive(active);
+      if (active) setFullscreenError(null);
+    };
+    handleFullscreenChange();
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
   useEffect(() => () => {
     if (flushTimerRef.current) {
@@ -263,7 +278,7 @@ export function StudentExamRuntimePage() {
   };
 
   const handleAnswerChange = (questionId: string, selectedOptionIds: string[]) => {
-    if (isTimeUp || submitInFlightRef.current || submittedRef.current) return;
+    if (!fullscreenActive || isTimeUp || submitInFlightRef.current || submittedRef.current) return;
 
     setAnswers((prev) => ({
       ...prev,
@@ -276,7 +291,7 @@ export function StudentExamRuntimePage() {
   };
 
   const handleMarkForReviewToggle = (questionId: string) => {
-    if (isTimeUp || submitInFlightRef.current || submittedRef.current) return;
+    if (!fullscreenActive || isTimeUp || submitInFlightRef.current || submittedRef.current) return;
 
     setAnswers((prev) => ({
       ...prev,
@@ -293,12 +308,15 @@ export function StudentExamRuntimePage() {
       .map((question) => answersRef.current[question.questionId])
       .filter((answer): answer is StudentAnswer => Boolean(answer));
 
-  const submitCurrentSession = async (confirmFirst: boolean) => {
+  const { locked: proctoringLocked, lastAlert, connectionStatus: proctoringConnectionStatus } = useStudentProctoring({
+    examId,
+    sessionId: paperQuery.data?.sessionId,
+    enabled: Boolean(paperQuery.data && paperQuery.data.status === "IN_PROGRESS" && !submittedResponse),
+  });
+
+  const submitCurrentSession = async (options?: { allowWithoutFullscreen?: boolean }) => {
     const paper = paperDataRef.current;
-    if (!paper || submitInFlightRef.current || submittedRef.current) return;
-    if (confirmFirst && !window.confirm("Bạn chắc chắn muốn nộp bài? Sau khi nộp, bạn sẽ không thể sửa đáp án.")) {
-      return;
-    }
+    if (!paper || (!options?.allowWithoutFullscreen && !fullscreenActive) || proctoringLocked || submitInFlightRef.current || submittedRef.current) return;
 
     submitInFlightRef.current = true;
     setSubmitError(null);
@@ -330,10 +348,22 @@ export function StudentExamRuntimePage() {
   useEffect(() => {
     if (!isTimeUp || timeUpSubmitStartedRef.current || submittedRef.current) return;
     timeUpSubmitStartedRef.current = true;
-    void submitCurrentSession(false);
+    void submitCurrentSession({ allowWithoutFullscreen: true });
     // submitCurrentSession reads refs so this effect fires only on the time-up edge.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTimeUp]);
+
+  const requestRuntimeFullscreen = async () => {
+    setFullscreenError(null);
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+      setFullscreenActive(Boolean(document.fullscreenElement));
+    } catch {
+      setFullscreenError("Khong the bat che do toan man hinh. Vui long cho phep fullscreen de tiep tuc lam bai.");
+    }
+  };
 
   const isLoading = examQuery.isLoading || paperQuery.isLoading;
   const error = examQuery.error ?? paperQuery.error;
@@ -342,7 +372,9 @@ export function StudentExamRuntimePage() {
   const currentAnswer = currentQuestion ? answers[currentQuestion.questionId] : null;
   const isSubmitPending = submitMutation.isPending;
   const isSubmitted = Boolean(submittedResponse);
-  const editingDisabled = isTimeUp || isSubmitPending || isSubmitted;
+  const isLocked = proctoringLocked || paperQuery.data?.status === "LOCKED";
+  const fullscreenRequired = Boolean(paperQuery.data && !fullscreenActive && !isSubmitted && !isLocked);
+  const editingDisabled = fullscreenRequired || isLocked || isTimeUp || isSubmitPending || isSubmitted;
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
@@ -356,6 +388,28 @@ export function StudentExamRuntimePage() {
       >
         {examQuery.data && paperQuery.data && (
           <>
+            {isLocked && <SessionLockedOverlay alert={lastAlert} onExit={() => navigate("/student/exams", { replace: true })} />}
+            {fullscreenRequired && (
+              <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/70 p-4">
+                <div className="w-[min(92vw,480px)] space-y-4 rounded-2xl border border-line bg-surface p-6 text-center shadow-soft">
+                  <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-warning/10 text-warning">
+                    <Maximize2 size={24} />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="m-0 text-xl font-bold text-ink">Can quay lai che do toan man hinh</h2>
+                    <p className="m-0 text-sm leading-6 text-muted">
+                      Bai thi dang duoc giam sat. Ban phai o che do toan man hinh de tiep tuc thao tac.
+                    </p>
+                  </div>
+                  {fullscreenError && (
+                    <p role="alert" className="rounded-lg bg-danger/10 p-3 text-sm text-danger">{fullscreenError}</p>
+                  )}
+                  <Button onClick={() => void requestRuntimeFullscreen()}>
+                    <Maximize2 size={16} /> Quay lai fullscreen
+                  </Button>
+                </div>
+              </div>
+            )}
             <ExamRuntimeHeader
               title={examQuery.data.title}
               remainingSeconds={remainingSeconds}
@@ -363,9 +417,39 @@ export function StudentExamRuntimePage() {
               lastSavedAt={lastSavedAt}
               submitPending={isSubmitPending}
               submitted={isSubmitted}
-              submitDisabled={isTimeUp}
-              onSubmit={() => void submitCurrentSession(true)}
+              submitDisabled={fullscreenRequired || isTimeUp || isLocked}
+              onSubmit={() => setSubmitConfirmOpen(true)}
             />
+            <ConfirmDialog
+              open={submitConfirmOpen}
+              onOpenChange={setSubmitConfirmOpen}
+              title="Nộp bài?"
+              description="Sau khi xác nhận nộp bài, bạn sẽ không thể sửa đáp án."
+              confirmLabel="Xác nhận nộp"
+              loading={isSubmitPending}
+              onConfirm={() => {
+                setSubmitConfirmOpen(false);
+                void submitCurrentSession();
+              }}
+            />
+            {submittedResponse && (
+              <FinalStateDialog
+                title="Đã ghi nhận bài nộp"
+                description={`Bài nộp đã được tiếp nhận lúc ${new Date(submittedResponse.submittedAt).toLocaleTimeString("vi-VN")}.`}
+                actionLabel="Về màn ca thi"
+                onAction={() => navigate("/student/exams", { replace: true })}
+              />
+            )}
+
+            <div className="border-b border-line bg-surface px-4 py-2 text-center text-xs font-semibold text-muted">
+              Giam sat realtime: {proctoringConnectionStatus === "connected"
+                ? "Da ket noi"
+                : proctoringConnectionStatus === "error"
+                  ? "Loi ket noi"
+                  : proctoringConnectionStatus === "reconnecting"
+                    ? "Dang noi lai"
+                    : "Dang ket noi"}
+            </div>
 
             {(isTimeUp || submitError || submittedResponse) && (
               <div className={`flex items-center justify-center gap-2 border-b p-4 text-center font-semibold ${
@@ -398,7 +482,7 @@ export function StudentExamRuntimePage() {
                 <div className="flex items-center justify-between rounded-xl border border-line bg-surface p-4 shadow-soft">
                   <Button
                     variant="secondary"
-                    disabled={currentIndex === 0}
+                    disabled={fullscreenRequired || currentIndex === 0}
                     onClick={() => setCurrentIndex((prev) => prev - 1)}
                   >
                     <ChevronLeft size={16} /> Câu trước
@@ -408,7 +492,7 @@ export function StudentExamRuntimePage() {
                   </span>
                   <Button
                     variant="secondary"
-                    disabled={currentIndex === questions.length - 1}
+                    disabled={fullscreenRequired || currentIndex === questions.length - 1}
                     onClick={() => setCurrentIndex((prev) => prev + 1)}
                   >
                     Câu tiếp theo <ChevronRight size={16} />
@@ -421,7 +505,9 @@ export function StudentExamRuntimePage() {
                   questions={questions}
                   answers={answers}
                   currentIndex={currentIndex}
-                  onSelect={(index) => setCurrentIndex(index)}
+                  onSelect={(index) => {
+                    if (!fullscreenRequired) setCurrentIndex(index);
+                  }}
                 />
 
                 <div className="space-y-3 rounded-2xl border border-line bg-surface p-5 shadow-soft">
@@ -429,17 +515,44 @@ export function StudentExamRuntimePage() {
                     Nếu gặp sự cố đường truyền, hãy giữ nguyên màn hình để hệ thống tự động thử lại.
                     Không tự ý reload tab nếu chưa có trạng thái đã lưu.
                   </p>
-                  <Link to="/student/exams" className="block">
+                  <div className="hidden">
                     <Button variant="ghost" className="flex w-full items-center gap-1 text-xs text-muted">
                       <ArrowLeft size={12} /> Quay lại danh sách ca thi
                     </Button>
-                  </Link>
+                  </div>
                 </div>
               </aside>
             </main>
           </>
         )}
       </DataState>
+    </div>
+  );
+}
+
+function FinalStateDialog({
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  description: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4">
+      <section
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="runtime-final-state-title"
+        className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 text-center shadow-soft"
+      >
+        <h2 id="runtime-final-state-title" className="m-0 text-2xl font-bold text-ink">{title}</h2>
+        <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-muted">{description}</p>
+        <Button className="mt-5" onClick={onAction}>{actionLabel}</Button>
+      </section>
     </div>
   );
 }

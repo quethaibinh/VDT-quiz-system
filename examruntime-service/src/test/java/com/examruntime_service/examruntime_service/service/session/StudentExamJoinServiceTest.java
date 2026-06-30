@@ -4,6 +4,7 @@ import com.examruntime_service.examruntime_service.model.dto.runtime.RuntimeActi
 import com.examruntime_service.examruntime_service.model.entity.ExamSession;
 import com.examruntime_service.examruntime_service.model.entity.enums.ExamSessionStatus;
 import com.examruntime_service.examruntime_service.repository.ExamSessionRepo;
+import com.examruntime_service.examruntime_service.service.monitor.MonitorStateService;
 import com.examruntime_service.examruntime_service.util.exception.ConflictException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,7 @@ class StudentExamJoinServiceTest {
     private RuntimeActivationResolver activationResolver;
     private RuntimeAssignmentResolver assignmentResolver;
     private ExamSessionRepo examSessionRepo;
+    private MonitorStateService monitorStateService;
     private Clock clock;
     private StudentExamJoinService joinService;
 
@@ -40,12 +42,14 @@ class StudentExamJoinServiceTest {
         activationResolver = mock(RuntimeActivationResolver.class);
         assignmentResolver = mock(RuntimeAssignmentResolver.class);
         examSessionRepo = mock(ExamSessionRepo.class);
+        monitorStateService = mock(MonitorStateService.class);
         clock = Clock.fixed(fixedInstant, ZoneId.of("UTC"));
 
         joinService = new StudentExamJoinService(
                 activationResolver,
                 assignmentResolver,
                 examSessionRepo,
+                monitorStateService,
                 clock
         );
     }

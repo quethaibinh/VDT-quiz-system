@@ -40,7 +40,11 @@ docker compose ps
 
 Open `http://localhost:3000`. The production container serves the Vite build
 with Nginx, supports React Router deep links, and proxies `/v1/api` to the
-Gateway service on the Docker network.
+Gateway service on the Docker network. Realtime monitoring WebSocket traffic
+also goes through this Nginx proxy when `VITE_API_BASE_URL=/`; the
+`/v1/api/examruntime-service/ws` location must keep the `Upgrade` and
+`Connection` proxy headers or STOMP handshakes will return HTTP 400 while REST
+requests still work.
 
 ## Verification
 

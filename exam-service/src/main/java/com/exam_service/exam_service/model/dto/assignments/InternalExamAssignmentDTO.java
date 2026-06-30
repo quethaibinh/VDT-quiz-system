@@ -25,5 +25,7 @@ public class InternalExamAssignmentDTO {
     public static class AssignmentDetail {
         private UUID assignmentId;
         private UUID studentId;
+        private String studentCode;
+        private String studentName;
     }
 }

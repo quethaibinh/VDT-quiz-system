@@ -22,6 +22,7 @@ import com.examruntime_service.examruntime_service.repository.SubmissionRepo;
 import com.examruntime_service.examruntime_service.service.activation.RuntimeActivationCache;
 import com.examruntime_service.examruntime_service.service.paper.RuntimePaperPoolLoader;
 import com.examruntime_service.examruntime_service.service.session.resume.AnswerSnapshotReader;
+import com.examruntime_service.examruntime_service.service.monitor.MonitorStateService;
 import com.examruntime_service.examruntime_service.util.exception.ConflictException;
 import com.examruntime_service.examruntime_service.util.exception.NotFoundException;
 import com.examruntime_service.examruntime_service.util.exception.UnauthorizedException;
@@ -56,6 +57,7 @@ public class SubmissionFinalizationService {
     private final RuntimeActivationCache activationCache;
     private final ExamServiceSnapshotClient snapshotClient;
     private final ObjectMapper objectMapper;
+    private final MonitorStateService monitorStateService;
     private final Clock clock;
 
     public SubmissionFinalizationService(
@@ -67,6 +69,7 @@ public class SubmissionFinalizationService {
             RuntimeActivationCache activationCache,
             ExamServiceSnapshotClient snapshotClient,
             ObjectMapper objectMapper,
+            MonitorStateService monitorStateService,
             Clock clock
     ) {
         this.examSessionRepo = examSessionRepo;
@@ -77,6 +80,7 @@ public class SubmissionFinalizationService {
         this.activationCache = activationCache;
         this.snapshotClient = snapshotClient;
         this.objectMapper = objectMapper;
+        this.monitorStateService = monitorStateService;
         this.clock = clock;
     }
 
@@ -181,6 +185,9 @@ public class SubmissionFinalizationService {
         session.setSubmitReason(actualSubmitReason);
         session.setAnsweredCount(submission.getAnswerCount());
         examSessionRepo.save(session);
+        // Khi da nop bai, monitor chuyen session sang trang thai terminal/offline
+        // de dashboard khong tiep tuc hien student dang lam bai.
+        monitorStateService.markSubmitted(session);
 
         // Outbox event nam chung transaction voi Submission de khong mat event neu Kafka tam thoi loi.
         SubmissionCreatedEvent event = new SubmissionCreatedEvent(

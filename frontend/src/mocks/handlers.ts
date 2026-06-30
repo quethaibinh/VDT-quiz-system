@@ -7,9 +7,37 @@ import type {
   ExamSummary,
   StudentSummary,
 } from "@/features/teacher/exams/model/exam-contracts";
+import type { Subject } from "@/features/teacher/subjects/model/subject-types";
+import type { StudentAnswer, StudentPaperResponse, StudentQuestion } from "@/features/student/exams/model/student-exam-contracts";
 
 const exams: ExamDetail[] = [];
-const mockSessions = new Map<string, any>();
+const subjects: Subject[] = [{
+  id: "sub-1",
+  code: "SUB001",
+  name: "Mon hoc mau",
+  description: "Du lieu mau cho giao vien.",
+  status: "ACTIVE",
+  createdAt: "2026-01-01T00:00:00Z",
+  updatedAt: "2026-01-01T00:00:00Z",
+  assignedAt: "2026-01-01T00:00:00Z",
+}];
+type MockSession = {
+  sessionId: string;
+  examId: string;
+  status: StudentPaperResponse["status"];
+  serverTime: string;
+  startAt: string;
+  endAt: string;
+  canStart: boolean;
+  remainingSecondsToStart: number;
+  serverStartedAt?: string;
+  serverDeadlineAt?: string;
+  questions: StudentQuestion[];
+  answers: StudentAnswer[];
+  serverSeq?: number;
+};
+
+const mockSessions = new Map<string, MockSession>();
 const assignments = new Map<string, Assignment[]>();
 const students: StudentSummary[] = Array.from({ length: 48 }, (_, index) => ({
   id: `student-${index + 1}`,
@@ -140,6 +168,23 @@ function createAssignment(studentId: string): Assignment {
 }
 
 export const handlers = [
+  http.get("*/v1/api/question-service/teacher/subjects", ({ request }) => {
+    const searchParams = new URL(request.url).searchParams;
+    const keyword = (searchParams.get("keyword") ?? "").toLowerCase();
+    const status = searchParams.get("status");
+    const filtered = subjects
+      .filter((subject) => !status || subject.status === status)
+      .filter((subject) => !keyword || `${subject.code} ${subject.name}`.toLowerCase().includes(keyword));
+    return HttpResponse.json(envelope(filtered));
+  }),
+
+  http.get("*/v1/api/question-service/teacher/subjects/:subjectId", ({ params }) => {
+    const subject = subjects.find((item) => item.id === String(params.subjectId));
+    return subject
+      ? HttpResponse.json(envelope(subject))
+      : HttpResponse.json({ message: "Khong tim thay mon hoc." }, { status: 404 });
+  }),
+
   http.get("*/v1/api/auth-service/teacher/students", ({ request }) => {
     const { searchParams, page, size } = getPageParams(request);
     const keyword = (searchParams.get("keyword") ?? "").toLowerCase();
@@ -268,13 +313,71 @@ export const handlers = [
     }));
   }),
 
-  http.get("*/v1/api/exam-runtime-service/teacher/exams/:id/monitor", ({ params }) => HttpResponse.json({
+  http.get("*/v1/api/examruntime-service/teacher/exams/:id/monitor", ({ params }) => HttpResponse.json({
     examId: params.id,
+    serverTime: new Date().toISOString(),
     participants: [
-      { id: "s1", name: "Nguyễn Minh Anh", status: "ONLINE", answered: 32, total: 50, violations: 0, risk: "LOW", lastSeen: new Date().toISOString() },
-      { id: "s2", name: "Trần Thu Hà", status: "OFFLINE", answered: 21, total: 50, violations: 2, risk: "HIGH", lastSeen: new Date(Date.now() - 40_000).toISOString() },
+      {
+        sessionId: "session-1",
+        studentId: "student-1",
+        studentCode: "SV0001",
+        studentName: "Nguyen Minh Anh",
+        status: "ONLINE",
+        answeredCount: 32,
+        totalQuestions: 50,
+        totalViolationCount: 0,
+        riskScore: 0,
+        riskLevel: "LOW",
+        locked: false,
+        lastSeenAt: new Date().toISOString(),
+        lastHeartbeatAt: new Date().toISOString(),
+        lastEventAt: null,
+      },
+      {
+        sessionId: "session-2",
+        studentId: "student-2",
+        studentCode: "SV0002",
+        studentName: "Tran Thu Ha",
+        status: "OFFLINE",
+        answeredCount: 21,
+        totalQuestions: 50,
+        totalViolationCount: 2,
+        riskScore: 8,
+        riskLevel: "HIGH",
+        locked: false,
+        lastSeenAt: new Date(Date.now() - 40_000).toISOString(),
+        lastHeartbeatAt: new Date(Date.now() - 40_000).toISOString(),
+        lastEventAt: new Date(Date.now() - 45_000).toISOString(),
+      },
+      {
+        sessionId: null,
+        studentId: "student-3",
+        studentCode: "SV0003",
+        studentName: "Le Hoang Nam",
+        status: "NOT_JOIN",
+        answeredCount: 0,
+        totalQuestions: 0,
+        totalViolationCount: 0,
+        riskScore: 0,
+        riskLevel: "LOW",
+        locked: false,
+        lastSeenAt: null,
+        lastHeartbeatAt: null,
+        lastEventAt: null,
+      },
     ],
-    events: [],
+    events: [{
+      id: "event-1",
+      examId: String(params.id),
+      sessionId: "session-2",
+      studentId: "student-2",
+      eventType: "FULLSCREEN_EXIT",
+      severity: "HIGH",
+      occurredAt: new Date(Date.now() - 45_000).toISOString(),
+      receivedAt: new Date(Date.now() - 44_000).toISOString(),
+      metadata: "{}",
+      countInSession: 2,
+    }],
   })),
   // Lay danh sach ca thi cua hoc sinh
   http.get("*/v1/api/exam-service/student/exams", ({ request }) => {
@@ -298,6 +401,7 @@ export const handlers = [
           examId: exam.id,
           code: exam.code,
           title: exam.title,
+          subjectId: exam.subjectId,
           subjectName: exam.subjectName,
           startAt: exam.startAt,
           endAt: exam.endAt,
@@ -337,6 +441,7 @@ export const handlers = [
       code: exam.code,
       title: exam.title,
       description: exam.description,
+      subjectId: exam.subjectId,
       subjectName: exam.subjectName,
       startAt: exam.startAt,
       endAt: exam.endAt,
@@ -398,7 +503,7 @@ export const handlers = [
       return HttpResponse.json({ message: "Không tìm thấy ca thi." }, { status: 404 });
     }
 
-    let session = Array.from(mockSessions.values()).find((s) => s.examId === examId);
+    const session = Array.from(mockSessions.values()).find((s) => s.examId === examId);
     if (!session) {
       return HttpResponse.json({ message: "Session chưa được khởi tạo." }, { status: 400 });
     }
@@ -409,7 +514,7 @@ export const handlers = [
       session.serverDeadlineAt = exam.endAt;
 
       // Sinh 10 cau hoi gia dinh tu collection
-      session.questions = Array.from({ length: 10 }, (_, i) => ({
+      session.questions = Array.from({ length: 10 }, (_, i): StudentQuestion => ({
         questionId: `q-${examId}-${i + 1}`,
         difficulty: i < 4 ? "EASY" : i < 8 ? "MEDIUM" : "HARD",
         type: i % 3 === 0 ? "MULTIPLE_CHOICE" : "SINGLE_CHOICE",
@@ -462,10 +567,10 @@ export const handlers = [
       return HttpResponse.json({ message: "Không tìm thấy phiên thi." }, { status: 404 });
     }
 
-    const body = await request.json() as { clientSeq: number; answers: any[] };
+    const body = await request.json() as { clientSeq: number; answers: StudentAnswer[] };
     
     // Merge batch autosave vao cac dap an da co
-    const byQuestion = new Map((session.answers ?? []).map((answer: any) => [answer.questionId, answer]));
+    const byQuestion = new Map(session.answers.map((answer) => [answer.questionId, answer]));
     body.answers.forEach((answer) => byQuestion.set(answer.questionId, answer));
     session.answers = Array.from(byQuestion.values());
 

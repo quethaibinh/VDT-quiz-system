@@ -14,6 +14,7 @@ public record StudentExamDetailDTO(
         String code,
         String title,
         String description,
+        UUID subjectId,
         String subjectName,
         OffsetDateTime startAt,
         OffsetDateTime endAt,

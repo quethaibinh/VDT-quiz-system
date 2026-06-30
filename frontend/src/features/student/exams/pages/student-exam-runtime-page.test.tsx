@@ -27,6 +27,7 @@ const server = setupServer(
       code: "EX001",
       title: "Practice Exam",
       description: "",
+      subjectId: "subject-1",
       subjectName: "Math",
       startAt: "2026-07-01T08:00:00Z",
       endAt: "2026-07-01T09:00:00Z",
@@ -97,6 +98,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  Object.defineProperty(document, "fullscreenElement", { configurable: true, value: null });
   requestOrder.length = 0;
   submitRequests = 0;
   submitBody = undefined;
@@ -106,15 +108,15 @@ afterEach(() => {
 afterAll(() => server.close());
 
 test("flushes dirty answers before submit and locks editing after acceptance", async () => {
-  vi.spyOn(window, "confirm").mockReturnValue(true);
   const user = userEvent.setup();
   renderPage();
 
   const option = await screen.findByRole("button", { name: /A\. Alpha/ });
   await user.click(option);
   await user.click(screen.getByRole("button", { name: "Nộp bài" }));
+  await user.click(screen.getByRole("button", { name: "Xác nhận nộp" }));
 
-  await screen.findByText(/Bài nộp đã được tiếp nhận/);
+  await screen.findByText("Đã ghi nhận bài nộp");
   expect(requestOrder).toEqual(["autosave", "submit"]);
   expect(submitRequests).toBe(1);
   expect(submitBody).toMatchObject({
@@ -125,7 +127,47 @@ test("flushes dirty answers before submit and locks editing after acceptance", a
   expect(option).toBeDisabled();
 });
 
+test("blocks copy paste and context menu while the runtime page is active", async () => {
+  renderPage();
+  await screen.findByText("Question one");
+
+  const copy = new Event("copy", { bubbles: true, cancelable: true });
+  document.dispatchEvent(copy);
+  expect(copy.defaultPrevented).toBe(true);
+
+  const paste = new Event("paste", { bubbles: true, cancelable: true });
+  document.dispatchEvent(paste);
+  expect(paste.defaultPrevented).toBe(true);
+
+  const contextMenu = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+  document.dispatchEvent(contextMenu);
+  expect(contextMenu.defaultPrevented).toBe(true);
+});
+
+test("shows locked dialog and exits to exam list", async () => {
+  server.use(
+    http.get("*/v1/api/examruntime-service/student/sessions/:sessionId", () =>
+      HttpResponse.json(envelope({
+        sessionId: "session-1",
+        status: "LOCKED",
+        serverStartedAt: "2026-07-01T08:00:00Z",
+        serverDeadlineAt: "2026-07-01T09:00:00Z",
+        questions: [],
+        answers: [],
+      }))),
+  );
+  const user = userEvent.setup();
+
+  renderPage();
+
+  await screen.findByText("Bài thi đã bị khóa");
+  await user.click(screen.getByRole("button", { name: "Thoát ra màn ca thi" }));
+
+  expect(await screen.findByText("Exam list")).toBeInTheDocument();
+});
+
 function renderPage() {
+  Object.defineProperty(document, "fullscreenElement", { configurable: true, value: document.documentElement });
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -138,6 +180,7 @@ function renderPage() {
       <MemoryRouter initialEntries={["/student/exams/exam-1/runtime"]}>
         <Routes>
           <Route path="/student/exams/:examId/runtime" element={<StudentExamRuntimePage />} />
+          <Route path="/student/exams" element={<div>Exam list</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,

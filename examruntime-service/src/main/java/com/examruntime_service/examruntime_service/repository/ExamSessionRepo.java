@@ -19,6 +19,8 @@ public interface ExamSessionRepo extends JpaRepository<ExamSession, UUID> {
 
     Optional<ExamSession> findByExamIdAndStudentIdAndAttemptNo(UUID examId, UUID studentId, int attemptNo);
 
+    List<ExamSession> findAllByExamId(UUID examId);
+
     List<ExamSession> findAllByExamIdAndStatusIn(UUID examId, Collection<ExamSessionStatus> statuses);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -1,6 +1,7 @@
 package com.gateway.gateway.filter;
 
 import com.gateway.gateway.util.JwtUtil;
+import com.gateway.gateway.config.JwtTokenResolver;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.Test;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -20,7 +21,7 @@ class HeaderEnhancerFilterTests {
     @Test
     void removesSpoofedUserHeadersWhenRequestHasNoToken() {
         JwtUtil jwtUtil = mock(JwtUtil.class);
-        HeaderEnhancerFilter filter = new HeaderEnhancerFilter(jwtUtil, "test-gateway-secret");
+        HeaderEnhancerFilter filter = new HeaderEnhancerFilter(jwtUtil, new JwtTokenResolver(), "test-gateway-secret");
         ServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/public")
                         .header("X-User-Id", "fake-user")
@@ -52,7 +53,7 @@ class HeaderEnhancerFilterTests {
         when(claims.get("userRole", String.class)).thenReturn("STUDENT");
         when(claims.get("username", String.class)).thenReturn("student01");
 
-        HeaderEnhancerFilter filter = new HeaderEnhancerFilter(jwtUtil, "test-gateway-secret");
+        HeaderEnhancerFilter filter = new HeaderEnhancerFilter(jwtUtil, new JwtTokenResolver(), "test-gateway-secret");
         ServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/protected")
                         .header("Authorization", "Bearer valid-token")
@@ -77,5 +78,55 @@ class HeaderEnhancerFilterTests {
                 .isEqualTo("student01");
         assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-Gateway-Secret"))
                 .isEqualTo("test-gateway-secret");
+    }
+
+    @Test
+    void acceptsAccessTokenOnlyForMonitorWebSocketPath() {
+        JwtUtil jwtUtil = mock(JwtUtil.class);
+        Claims claims = mock(Claims.class);
+        when(jwtUtil.getClaims("ws-token")).thenReturn(claims);
+        when(claims.get("userId", String.class)).thenReturn("teacher-id");
+        when(claims.get("userRole", String.class)).thenReturn("TEACHER");
+        when(claims.get("username", String.class)).thenReturn("teacher01");
+
+        HeaderEnhancerFilter filter = new HeaderEnhancerFilter(jwtUtil, new JwtTokenResolver(), "test-gateway-secret");
+        ServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/v1/api/examruntime-service/ws?access_token=ws-token")
+                        .build()
+        );
+        AtomicReference<ServerWebExchange> forwardedExchange = new AtomicReference<>();
+        GatewayFilterChain chain = currentExchange -> {
+            forwardedExchange.set(currentExchange);
+            return Mono.empty();
+        };
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-User-Id"))
+                .isEqualTo("teacher-id");
+        assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-User-Role"))
+                .isEqualTo("TEACHER");
+        assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-Gateway-Secret"))
+                .isEqualTo("test-gateway-secret");
+    }
+
+    @Test
+    void ignoresAccessTokenOnNonWebSocketPaths() {
+        JwtUtil jwtUtil = mock(JwtUtil.class);
+        HeaderEnhancerFilter filter = new HeaderEnhancerFilter(jwtUtil, new JwtTokenResolver(), "test-gateway-secret");
+        ServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/v1/api/examruntime-service/student/exams?access_token=ws-token")
+                        .build()
+        );
+        AtomicReference<ServerWebExchange> forwardedExchange = new AtomicReference<>();
+        GatewayFilterChain chain = currentExchange -> {
+            forwardedExchange.set(currentExchange);
+            return Mono.empty();
+        };
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-User-Id")).isNull();
+        assertThat(forwardedExchange.get().getRequest().getHeaders().getFirst("X-Gateway-Secret")).isNull();
     }
 }

@@ -20,6 +20,7 @@ import { SubjectExamListPage } from "@/features/teacher/exams/pages/exam-list-pa
 import { ExamSubjectPickerPage } from "@/features/teacher/exams/pages/exam-subject-picker-page";
 import { QuestionImportPage } from "@/features/teacher/imports/pages/question-import-page";
 import { TeacherLayout } from "@/features/teacher/layout/teacher-layout";
+import { MonitoringExamPickerPage } from "@/features/teacher/monitoring/pages/monitoring-exam-picker-page";
 import { ExamMonitorPage } from "@/features/teacher/monitoring/pages/exam-monitor-page";
 import { QuestionBankPage } from "@/features/teacher/questions/pages/question-bank-page";
 import { ExamResultsPage } from "@/features/teacher/results/pages/exam-results-page";
@@ -66,6 +67,7 @@ export const router = createBrowserRouter([
             { path: "subjects/:subjectId/exams", element: <SubjectExamListPage /> },
             { path: "subjects/:subjectId/exams/new", element: <ExamBuilderPage /> },
             { path: "subjects/:subjectId/exams/:examId/edit", element: <ExamEditPage /> },
+            { path: "monitoring", element: <MonitoringExamPickerPage /> },
             { path: "exams/:examId/monitor", element: <ExamMonitorPage /> },
             { path: "results", element: <ResultSubjectPickerPage /> },
             { path: "subjects/:subjectId/results", element: <SubjectResultListPage /> },
@@ -92,20 +94,22 @@ export const router = createBrowserRouter([
       },
       {
         element: <StudentGuard />,
-        children: [{
-          path: "/student",
-          element: <StudentLayout />,
-          children: [
-            { index: true, element: <Navigate to="dashboard" replace /> },
-            { path: "dashboard", element: <StudentDashboardPage /> },
-            { path: "exams", element: <StudentExamListPage /> },
-            { path: "exams/:examId/lobby", element: <StudentExamLobbyPage /> },
-            { path: "exams/:examId/session", element: <StudentExamRuntimePage /> },
-            { path: "results", element: <StudentResultsPage /> },
-            { path: "results/:examId", element: <StudentResultDetailPage /> },
-            { path: "profile", element: <ProfilePage /> },
-          ],
-        }],
+        children: [
+          {
+            path: "/student",
+            element: <StudentLayout />,
+            children: [
+              { index: true, element: <Navigate to="dashboard" replace /> },
+              { path: "dashboard", element: <StudentDashboardPage /> },
+              { path: "exams", element: <StudentExamListPage /> },
+              { path: "exams/:examId/lobby", element: <StudentExamLobbyPage /> },
+              { path: "results", element: <StudentResultsPage /> },
+              { path: "results/:examId", element: <StudentResultDetailPage /> },
+              { path: "profile", element: <ProfilePage /> },
+            ],
+          },
+          { path: "/student/exams/:examId/session", element: <StudentExamRuntimePage /> },
+        ],
       },
       { path: "*", element: <NotFoundPage /> },
     ],

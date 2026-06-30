@@ -11,6 +11,7 @@ import com.examruntime_service.examruntime_service.repository.SessionAnswerRepo;
 import com.examruntime_service.examruntime_service.service.paper.StudentPaperGenerator;
 import com.examruntime_service.examruntime_service.service.paper.StudentPaperMapper;
 import com.examruntime_service.examruntime_service.service.paper.RuntimePaperPoolLoader;
+import com.examruntime_service.examruntime_service.service.monitor.MonitorStateService;
 import com.examruntime_service.examruntime_service.util.exception.ConflictException;
 import com.examruntime_service.examruntime_service.util.exception.NotFoundException;
 import com.examruntime_service.examruntime_service.util.exception.UnauthorizedException;
@@ -38,6 +39,7 @@ public class StudentExamStartService {
     private final StudentPaperGenerator paperGenerator;
     private final StudentPaperMapper paperMapper;
     private final ObjectMapper objectMapper;
+    private final MonitorStateService monitorStateService;
     private final Clock clock;
 
     public StudentExamStartService(
@@ -48,6 +50,7 @@ public class StudentExamStartService {
             StudentPaperGenerator paperGenerator,
             StudentPaperMapper paperMapper,
             ObjectMapper objectMapper,
+            MonitorStateService monitorStateService,
             Clock clock
     ) {
         this.examSessionRepo = examSessionRepo;
@@ -57,6 +60,7 @@ public class StudentExamStartService {
         this.paperGenerator = paperGenerator;
         this.paperMapper = paperMapper;
         this.objectMapper = objectMapper;
+        this.monitorStateService = monitorStateService;
         this.clock = clock;
     }
 
@@ -131,6 +135,8 @@ public class StudentExamStartService {
 
         // Lay tat ca cau tra loi da duoc luu neu co (khi resume lai phien dang lam)
         List<SessionAnswer> savedAnswers = sessionAnswerRepo.findAllBySessionId(session.getId());
+        // Sau khi de ca nhan da sinh xong, monitor co the tinh totalQuestions tu questionOrder.
+        monitorStateService.ensureSessionRegistered(session);
 
         return StudentPaperResponseDTO.builder()
                 .sessionId(session.getId())

@@ -8,6 +8,7 @@ public record StudentResultDetailDTO(
         UUID examId,
         String code,
         String title,
+        UUID subjectId,
         String subjectName,
         ResultVisibilityStateDTO visibilityState,
         String message,

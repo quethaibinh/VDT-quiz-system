@@ -4,24 +4,24 @@
 @theme {
   --font-serif: "EB Garamond", Georgia, serif;
   --font-sans: "Manrope", system-ui, sans-serif;
-  --color-canvas: #faf5ee;
-  --color-surface: #fffdf9;
-  --color-primary: #c2652a;
-  --color-primary-hover: #a95120;
-  --color-accent: #8c3c3c;
-  --color-ink: #3a302a;
-  --color-muted: #756a62;
-  --color-line: #ded6ce;
-  --color-success: #55745a;
+  --color-canvas: #FFF9F9;
+  --color-surface: #FCF2F2;
+  --color-primary: #CF1F1F;
+  --color-primary-hover: #940909;
+  --color-accent: #660E03;
+  --color-ink: #22222E;
+  --color-muted: #636275;
+  --color-line: #CCAAA3;
+  --color-success: #0AA825;
   --color-warning: #a46b22;
-  --color-danger: #a4443d;
+  --color-danger: #B02A20;
   --shadow-soft: 0 2px 16px rgba(58, 48, 42, 0.06);
 }
 
-:root { color: #3a302a; background: #faf5ee; font-family: "Manrope", system-ui, sans-serif; }
+:root { color: #22222E; background: #FFF9F9; font-family: "Manrope", system-ui, sans-serif; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 2px solid #c2652a; outline-offset: 2px; }
+:focus-visible { outline: 2px solid #CF1F1F; outline-offset: 2px; }
 h1, h2, h3 { font-family: "EB Garamond", Georgia, serif; }

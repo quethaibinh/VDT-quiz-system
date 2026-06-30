@@ -41,6 +41,7 @@ const server = setupServer(
       code: "EX001",
       title: "Giua ky",
       description: "",
+      subjectId: "subject-1",
       subjectName: "Triet hoc",
       startAt: "2026-07-01T08:00:00Z",
       endAt: "2026-07-01T09:00:00Z",

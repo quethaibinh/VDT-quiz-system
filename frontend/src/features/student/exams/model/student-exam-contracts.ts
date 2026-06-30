@@ -8,6 +8,7 @@ export interface StudentExamSummary {
   examId: string;
   code: string;
   title: string;
+  subjectId: string;
   subjectName: string;
   startAt: string;
   endAt: string;
@@ -23,6 +24,7 @@ export interface StudentExamDetail {
   code: string;
   title: string;
   description: string;
+  subjectId: string;
   subjectName: string;
   startAt: string;
   endAt: string;

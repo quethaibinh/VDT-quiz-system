@@ -1,12 +1,22 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { ChevronDown, ChevronUp, Download, Eye, Send, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Eye, FileClock, Send, SlidersHorizontal, X } from "lucide-react";
 import { DataState } from "@/components/shared/data-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { StatusChip } from "@/components/ui/status-chip";
+import { getMonitor } from "@/features/teacher/monitoring/api/monitor-repository";
+import type { MonitorEvent, MonitorParticipant } from "@/features/teacher/monitoring/model/monitor-contracts";
+import {
+  formatEventSummary,
+  formatRelativeTime,
+  getEventLabel,
+  getSeverityTone,
+  getStatusLabel,
+} from "@/features/teacher/monitoring/model/monitor-format";
 import {
   adjustTeacherResultScore,
   exportTeacherExamResults,
@@ -19,8 +29,12 @@ import type {
   ResultReviewStatus,
   ResultVisibilityState,
   TeacherResultDetail,
-  TeacherResultRow,
 } from "@/features/teacher/results/model/result-contracts";
+import {
+  buildGradebookView,
+  getStudentMonitorEvents,
+  type GradebookResultRow,
+} from "@/features/teacher/results/model/result-monitoring";
 import { getApiErrorMessage } from "@/lib/http/api-error";
 
 interface ResultLocationState {
@@ -57,12 +71,19 @@ const answerTones: Record<TeacherResultAnswer["answerState"], "success" | "dange
   BLANK: "warning",
 };
 
+const outcomeLabels: Record<GradebookResultRow["outcome"], string> = {
+  GRADED: "",
+  LOCKED: "Bị khóa",
+  NOT_JOIN: "Chưa tham gia",
+};
+
 export function ExamResultsPage() {
   const { examId = "" } = useParams();
   const location = useLocation();
   const state = location.state as ResultLocationState | null;
   const queryClient = useQueryClient();
   const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
+  const [selectedLogStudentId, setSelectedLogStudentId] = useState<string | null>(null);
   const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
 
   const query = useQuery({
@@ -75,6 +96,13 @@ export function ExamResultsPage() {
     queryKey: ["teacher", "results", examId, selectedResultId],
     queryFn: () => getTeacherResultDetail(examId, selectedResultId!),
     enabled: Boolean(examId && selectedResultId),
+  });
+
+  const monitorQuery = useQuery({
+    queryKey: ["teacher", "results", examId, "monitor"],
+    queryFn: () => getMonitor(examId),
+    enabled: Boolean(examId),
+    retry: false,
   });
 
   const invalidate = () => {
@@ -114,7 +142,8 @@ export function ExamResultsPage() {
     },
   });
 
-  const handleAdjust = (row: TeacherResultRow) => {
+  const handleAdjust = (row: GradebookResultRow) => {
+    if (!row.resultId || !row.canAdjust) return;
     const scoreValue = window.prompt("Nhập điểm mới", String(row.effectiveScore));
     if (scoreValue == null) return;
     const reason = window.prompt("Lý do điều chỉnh");
@@ -125,6 +154,16 @@ export function ExamResultsPage() {
   };
 
   const results = query.data?.students.content ?? [];
+  const monitorParticipants = monitorQuery.data?.participants ?? [];
+  const monitorEvents = monitorQuery.data?.events ?? [];
+  const gradebook = buildGradebookView(results, monitorParticipants, query.data?.distribution);
+  const displayRows = gradebook.rows;
+  const selectedLogParticipant = selectedLogStudentId
+    ? monitorParticipants.find((participant) => participant.studentId === selectedLogStudentId)
+    : undefined;
+  const selectedLogEvents = selectedLogStudentId
+    ? getStudentMonitorEvents(monitorEvents, selectedLogStudentId)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -146,24 +185,24 @@ export function ExamResultsPage() {
       <DataState
         loading={query.isLoading}
         error={query.error ? getApiErrorMessage(query.error) : null}
-        empty={query.isSuccess && results.length === 0}
+        empty={query.isSuccess && displayRows.length === 0}
         onRetry={() => void query.refetch()}
       >
         {query.data && (
           <>
             <div className="grid gap-3 md:grid-cols-5">
-              <Metric label="Đã chấm" value={`${query.data.gradedCount}/${query.data.participantCount}`} />
-              <Metric label="Đã phát hành" value={String(query.data.releasedCount)} />
-              <Metric label="Chờ duyệt" value={String(query.data.pendingReviewCount)} />
-              <Metric label="Trung bình" value={query.data.average.toFixed(1)} />
-              <Metric label="Cao nhất" value={query.data.highest.toFixed(1)} />
+              <Metric label="Đã chấm" value={`${gradebook.gradedCount}/${gradebook.participantCount}`} />
+              <Metric label="Đã phát hành" value={String(gradebook.releasedCount)} />
+              <Metric label="Chờ duyệt" value={String(gradebook.pendingReviewCount)} />
+              <Metric label="Trung bình" value={gradebook.average.toFixed(1)} />
+              <Metric label="Cao nhất" value={gradebook.highest.toFixed(1)} />
             </div>
 
             <section className="grid gap-5 xl:grid-cols-[360px_1fr]">
               <div className="h-80 rounded-xl border border-line bg-surface p-5 shadow-soft">
                 <h2 className="mt-0 text-xl">Phân bố điểm</h2>
                 <ResponsiveContainer width="100%" height="85%">
-                  <BarChart data={query.data.distribution}>
+                  <BarChart data={gradebook.distribution}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="range" />
                     <YAxis allowDecimals={false} />
@@ -173,9 +212,9 @@ export function ExamResultsPage() {
                 </ResponsiveContainer>
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-soft">
+              <div className="max-h-[min(64vh,560px)] overflow-auto rounded-xl border border-line bg-surface shadow-soft">
                 <table className="w-full min-w-[920px] border-collapse text-sm">
-                  <thead className="bg-ink/5 text-left text-xs uppercase text-muted">
+                  <thead className="sticky top-0 z-10 bg-ink/5 text-left text-xs uppercase text-muted shadow-[0_1px_0_var(--color-line)]">
                     <tr>
                       <th className="p-3">Học sinh</th>
                       <th className="p-3">Điểm</th>
@@ -187,8 +226,8 @@ export function ExamResultsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {results.map((row) => (
-                      <tr key={row.resultId} className="border-t border-line">
+                    {displayRows.map((row) => (
+                      <tr key={row.resultId ?? row.studentId} className="border-t border-line">
                         <td className="p-3">
                           <strong>{row.studentName}</strong>
                           <small className="block text-muted">{row.studentCode || row.studentId}</small>
@@ -202,27 +241,34 @@ export function ExamResultsPage() {
                         <td className="p-3">#{row.rank}</td>
                         <td className="p-3">
                           <div className="flex flex-col items-start gap-1">
-                            <StatusChip tone={row.reviewStatus === "RELEASED" ? "success" : "warning"}>{reviewLabels[row.reviewStatus]}</StatusChip>
-                            <small className="text-muted">{visibilityLabels[row.visibilityState]}</small>
+                            <StatusChip tone={getGradebookStatusTone(row)}>{getGradebookStatusLabel(row)}</StatusChip>
+                            <small className="text-muted">{getGradebookStatusDescription(row)}</small>
                           </div>
                         </td>
-                        <td className="p-3">{new Date(row.submittedAt).toLocaleString("vi-VN")}</td>
+                        <td className="p-3">{row.submittedAt ? new Date(row.submittedAt).toLocaleString("vi-VN") : "-"}</td>
                         <td className="p-3">
                           <div className="flex justify-end gap-2">
                             <Button
                               variant="ghost"
+                              disabled={!row.canOpenDetail || !row.resultId}
                               onClick={() => {
+                                if (!row.resultId || !row.canOpenDetail) return;
                                 setSelectedResultId(row.resultId);
                                 setExpandedQuestionId(null);
                               }}
                             >
                               <Eye size={15} /> Chi tiết
                             </Button>
-                            <Button variant="secondary" onClick={() => handleAdjust(row)}><SlidersHorizontal size={15} /> Sửa</Button>
+                            <Button variant="secondary" onClick={() => setSelectedLogStudentId(row.studentId)}>
+                              <FileClock size={15} /> Xem log
+                            </Button>
+                            <Button variant="secondary" disabled={!row.canAdjust} onClick={() => handleAdjust(row)}><SlidersHorizontal size={15} /> Sửa</Button>
                             <Button
                               loading={publishOne.isPending}
-                              disabled={row.reviewStatus === "RELEASED"}
-                              onClick={() => publishOne.mutate(row.resultId)}
+                              disabled={!row.canPublish || !row.resultId}
+                              onClick={() => {
+                                if (row.resultId && row.canPublish) publishOne.mutate(row.resultId);
+                              }}
                             >
                               <Send size={15} /> Duyệt
                             </Button>
@@ -235,38 +281,28 @@ export function ExamResultsPage() {
               </div>
             </section>
 
-            {selectedResultId && (
-              <section className="rounded-xl border border-line bg-surface p-5 shadow-soft">
-                <div className="flex items-start justify-between gap-4">
-                  <h2 className="m-0 text-xl">Chi tiết bài làm</h2>
-                  <Button variant="secondary" onClick={() => setSelectedResultId(null)}>Đóng</Button>
-                </div>
-                <DataState loading={detailQuery.isLoading} error={detailQuery.error ? getApiErrorMessage(detailQuery.error) : null}>
-                  {detailQuery.data && (
-                    <div className="mt-4 space-y-3">
-                      <div className="grid gap-3 md:grid-cols-4">
-                        <Metric label="Điểm" value={detailQuery.data.summary.effectiveScore.toFixed(2)} />
-                        <Metric label="Phần trăm" value={`${detailQuery.data.summary.percentage.toFixed(1)}%`} />
-                        <Metric label="Xếp hạng" value={`#${detailQuery.data.summary.rank}`} />
-                        <Metric label="Số câu" value={String(detailQuery.data.summary.totalQuestions)} />
-                      </div>
-                      <div className="overflow-x-auto">
-                        <div className="min-w-[760px] divide-y divide-line rounded-lg border border-line">
-                          {detailQuery.data.answers.map((answer) => (
-                            <QuestionResultRow
-                              key={answer.questionId}
-                              answer={answer}
-                              expanded={expandedQuestionId === answer.questionId}
-                              onToggle={() => setExpandedQuestionId(expandedQuestionId === answer.questionId ? null : answer.questionId)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </DataState>
-              </section>
-            )}
+            <ResultDetailDialog
+              open={Boolean(selectedResultId)}
+              detail={detailQuery.data}
+              loading={detailQuery.isLoading}
+              error={detailQuery.error ? getApiErrorMessage(detailQuery.error) : null}
+              expandedQuestionId={expandedQuestionId}
+              onToggleQuestion={(questionId) => setExpandedQuestionId(expandedQuestionId === questionId ? null : questionId)}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setSelectedResultId(null);
+                  setExpandedQuestionId(null);
+                }
+              }}
+            />
+            <StudentLogDialog
+              open={Boolean(selectedLogStudentId)}
+              participant={selectedLogParticipant}
+              events={selectedLogEvents}
+              onOpenChange={(open) => {
+                if (!open) setSelectedLogStudentId(null);
+              }}
+            />
           </>
         )}
       </DataState>
@@ -274,8 +310,146 @@ export function ExamResultsPage() {
   );
 }
 
+function StudentLogDialog({
+  open,
+  participant,
+  events,
+  onOpenChange,
+}: {
+  open: boolean;
+  participant?: MonitorParticipant;
+  events: MonitorEvent[];
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/35" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[86vh] w-[min(94vw,720px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-line bg-surface p-6 shadow-soft">
+          <Dialog.Title className="m-0 text-2xl">Log làm bài</Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm text-muted">
+            {participant
+              ? `${participant.studentName} - ${participant.studentCode || participant.studentId}`
+              : "Không tìm thấy học sinh trong snapshot giám sát hiện tại."}
+          </Dialog.Description>
+          <Dialog.Close className="absolute right-4 top-4 rounded-lg p-2" aria-label="Đóng">
+            <X className="h-5 w-5" />
+          </Dialog.Close>
+          {participant && (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <DetailLine label="Trạng thái" value={getStatusLabel(participant.status)} />
+              <DetailLine label="Số vi phạm" value={String(participant.totalViolationCount)} />
+              <DetailLine label="Lần cuối" value={formatRelativeTime(participant.lastEventAt ?? participant.lastHeartbeatAt ?? participant.lastSeenAt)} />
+            </div>
+          )}
+          {!events.length ? (
+            <p className="mb-0 mt-5 rounded-lg border border-line bg-canvas p-4 text-sm text-muted">
+              Chưa có log giám sát cho học sinh này trong snapshot hiện tại.
+            </p>
+          ) : (
+            <div className="mt-5 divide-y divide-line rounded-lg border border-line">
+              {events.map((event) => (
+                <article key={event.id} className="p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <strong className="text-sm text-ink">{getEventLabel(event.eventType)}</strong>
+                    <StatusChip tone={getSeverityTone(event.severity)}>{event.severity}</StatusChip>
+                  </div>
+                  <p className="my-1 text-sm text-muted">{formatEventSummary(event)}</p>
+                  <small className="text-xs text-muted">
+                    {new Date(event.occurredAt).toLocaleString("vi-VN")}
+                    {" - "}
+                    {formatRelativeTime(event.occurredAt)}
+                  </small>
+                </article>
+              ))}
+            </div>
+          )}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+function ResultDetailDialog({
+  open,
+  detail,
+  loading,
+  error,
+  expandedQuestionId,
+  onToggleQuestion,
+  onOpenChange,
+}: {
+  open: boolean;
+  detail?: TeacherResultDetail;
+  loading: boolean;
+  error: string | null;
+  expandedQuestionId: string | null;
+  onToggleQuestion: (questionId: string) => void;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/35" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[min(96vw,1100px)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-line bg-surface p-6 shadow-soft">
+          <Dialog.Title className="m-0 text-2xl">Chi tiết bài làm</Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm text-muted">
+            {detail ? `${detail.summary.studentName} - ${detail.summary.studentCode || detail.summary.studentId}` : "Đang tải chi tiết bài làm."}
+          </Dialog.Description>
+          <Dialog.Close className="absolute right-4 top-4 rounded-lg p-2" aria-label="Đóng">
+            <X className="h-5 w-5" />
+          </Dialog.Close>
+          <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
+            <DataState loading={loading} error={error}>
+              {detail && (
+                <div className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <Metric label="Điểm" value={detail.summary.effectiveScore.toFixed(2)} />
+                    <Metric label="Phần trăm" value={`${detail.summary.percentage.toFixed(1)}%`} />
+                    <Metric label="Xếp hạng" value={`#${detail.summary.rank}`} />
+                    <Metric label="Số câu" value={String(detail.summary.totalQuestions)} />
+                  </div>
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[820px] divide-y divide-line rounded-lg border border-line">
+                      {detail.answers.map((answer) => (
+                        <QuestionResultRow
+                          key={answer.questionId}
+                          answer={answer}
+                          expanded={expandedQuestionId === answer.questionId}
+                          onToggle={() => onToggleQuestion(answer.questionId)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </DataState>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
   return <div className="rounded-xl border border-line bg-surface p-4 shadow-soft"><strong className="text-2xl">{value}</strong><small className="block text-muted">{label}</small></div>;
+}
+
+function getGradebookStatusLabel(row: GradebookResultRow) {
+  if (row.outcome !== "GRADED") return outcomeLabels[row.outcome];
+  return reviewLabels[row.reviewStatus as ResultReviewStatus];
+}
+
+function getGradebookStatusDescription(row: GradebookResultRow) {
+  if (row.outcome === "LOCKED") return "0 điểm";
+  if (row.outcome === "NOT_JOIN") return "0 điểm";
+  return visibilityLabels[row.visibilityState as ResultVisibilityState];
+}
+
+function getGradebookStatusTone(row: GradebookResultRow): "neutral" | "success" | "warning" | "danger" {
+  if (row.outcome === "LOCKED") return "danger";
+  if (row.outcome === "NOT_JOIN") return "neutral";
+  return row.reviewStatus === "RELEASED" ? "success" : "warning";
 }
 
 function QuestionResultRow({

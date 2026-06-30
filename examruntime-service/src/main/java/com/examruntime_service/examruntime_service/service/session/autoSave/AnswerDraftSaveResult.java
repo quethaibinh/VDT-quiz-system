@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 public record AnswerDraftSaveResult(
         int savedCount,
         int skippedCount,
+        int answeredCount,
         long serverSeq,
         OffsetDateTime lastAutosaveAt
 ) {

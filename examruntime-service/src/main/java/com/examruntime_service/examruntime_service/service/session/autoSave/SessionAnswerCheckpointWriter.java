@@ -63,12 +63,14 @@ public class SessionAnswerCheckpointWriter {
 
         session.setAutosaveSeq(serverSeq);
         session.setLastAutosaveAt(now);
-        session.setAnsweredCount(countAnswered(session.getId()));
+        int answeredCount = countAnswered(session.getId());
+        session.setAnsweredCount(answeredCount);
         examSessionRepo.save(session);
 
         return AnswerDraftSaveResult.builder()
                 .savedCount(savedCount)
                 .skippedCount(skippedCount)
+                .answeredCount(answeredCount)
                 .serverSeq(serverSeq)
                 .lastAutosaveAt(now)
                 .build();

@@ -26,7 +26,6 @@ export function SubjectResultListPage() {
         description="Danh sách ca thi đã kết thúc và sẵn sàng xem báo cáo."
         action={<Link to="/teacher/results"><Button variant="secondary">Đổi môn</Button></Link>}
       />
-      <p className="rounded-lg bg-warning/10 p-3 text-sm text-warning">Dữ liệu kết quả đang dùng API mô phỏng trong lúc Result Service chưa được triển khai.</p>
       <DataState
         loading={subject.isLoading || exams.isLoading}
         error={error ? getApiErrorMessage(error) : null}

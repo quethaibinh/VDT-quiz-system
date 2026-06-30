@@ -5,6 +5,7 @@ import com.examruntime_service.examruntime_service.model.dto.session.StudentJoin
 import com.examruntime_service.examruntime_service.model.entity.ExamSession;
 import com.examruntime_service.examruntime_service.model.entity.enums.ExamSessionStatus;
 import com.examruntime_service.examruntime_service.repository.ExamSessionRepo;
+import com.examruntime_service.examruntime_service.service.monitor.MonitorStateService;
 import com.examruntime_service.examruntime_service.util.exception.ConflictException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -23,17 +24,20 @@ public class StudentExamJoinService {
     private final RuntimeActivationResolver activationResolver;
     private final RuntimeAssignmentResolver assignmentResolver;
     private final ExamSessionRepo examSessionRepo;
+    private final MonitorStateService monitorStateService;
     private final Clock clock;
 
     public StudentExamJoinService(
             RuntimeActivationResolver activationResolver,
             RuntimeAssignmentResolver assignmentResolver,
             ExamSessionRepo examSessionRepo,
+            MonitorStateService monitorStateService,
             Clock clock
     ) {
         this.activationResolver = activationResolver;
         this.assignmentResolver = assignmentResolver;
         this.examSessionRepo = examSessionRepo;
+        this.monitorStateService = monitorStateService;
         this.clock = clock;
     }
 
@@ -75,6 +79,9 @@ public class StudentExamJoinService {
         boolean canStart = (now.isAfter(metadata.startAt()) || now.isEqual(metadata.startAt()))
                 && (metadata.endAt() == null || now.isBefore(metadata.endAt()));
         long remainingSecondsToStart = Math.max(0, Duration.between(now, metadata.startAt()).toSeconds());
+        // Dang ky session vao monitor ngay khi student join de teacher thay hoc sinh trong snapshot,
+        // ke ca truoc khi student mo WebSocket realtime.
+        monitorStateService.ensureSessionRegistered(session);
 
         return StudentJoinResponseDTO.builder()
                 .sessionId(session.getId())

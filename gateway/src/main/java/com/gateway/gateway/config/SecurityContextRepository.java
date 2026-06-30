@@ -1,6 +1,5 @@
 package com.gateway.gateway.config;
 
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextImpl;
@@ -16,9 +15,11 @@ import reactor.core.publisher.Mono;
 public class SecurityContextRepository implements ServerSecurityContextRepository {
 
     private final JwtAuthenticationManager authenticationManager;
+    private final JwtTokenResolver tokenResolver;
 
-    public SecurityContextRepository(JwtAuthenticationManager authenticationManager) {
+    public SecurityContextRepository(JwtAuthenticationManager authenticationManager, JwtTokenResolver tokenResolver) {
         this.authenticationManager = authenticationManager;
+        this.tokenResolver = tokenResolver;
     }
 
     @Override
@@ -29,11 +30,8 @@ public class SecurityContextRepository implements ServerSecurityContextRepositor
 
     @Override
     public Mono<SecurityContext> load(ServerWebExchange exchange) {
-        // Chi nhan token theo dinh dang Authorization: Bearer <token>.
-        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
+        String token = tokenResolver.resolve(exchange);
+        if (token != null) {
             UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(token, token);
 
             return authenticationManager.authenticate(authRequest)

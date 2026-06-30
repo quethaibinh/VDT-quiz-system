@@ -1,10 +1,12 @@
-import { Link } from "react-router-dom";
+import { useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Award, Clock, LockKeyhole, Medal } from "lucide-react";
+import { ArrowLeft, Award, BookOpen, ChevronRight, Clock, LockKeyhole, Medal } from "lucide-react";
 import { DataState } from "@/components/shared/data-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusChip } from "@/components/ui/status-chip";
 import { Button } from "@/components/ui/button";
+import { buildStudentSubjectGroups, type StudentSubjectGroup } from "@/features/student/shared/student-subject-groups";
 import { studentResultRepository } from "@/features/student/results/api/student-result-repository";
 import type { StudentResultSummary, StudentResultVisibilityState } from "@/features/student/results/model/student-result-contracts";
 import { getApiErrorMessage } from "@/lib/http/api-error";
@@ -20,23 +22,64 @@ const stateLabels: Record<StudentResultVisibilityState, string> = {
 };
 
 export function StudentResultsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedSubjectId = searchParams.get("subjectId") ?? "";
   const query = useQuery({ queryKey: ["student", "results"], queryFn: () => studentResultRepository.listResults() });
   const results = query.data ?? [];
+  const subjectGroups = useMemo(() => buildStudentSubjectGroups(results), [results]);
+  const selectedSubject = subjectGroups.find((subject) => subject.subjectId === selectedSubjectId);
+  const visibleResults = selectedSubjectId
+    ? results.filter((result) => (result.subjectId ?? `unknown:${(result.subjectName || "Chưa rõ môn học").toLowerCase()}`) === selectedSubjectId)
+    : results;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Kết quả" description="Điểm và xếp hạng cá nhân của các ca thi đã nộp." />
+      <PageHeader
+        title={selectedSubject ? `Kết quả · ${selectedSubject.subjectName}` : selectedSubjectId ? "Kết quả" : "Kết quả"}
+        description={selectedSubjectId ? "Điểm và xếp hạng cá nhân của môn học đã chọn." : "Chọn môn học để xem kết quả các ca thi đã nộp."}
+        action={selectedSubjectId ? <Button variant="secondary" onClick={() => setSearchParams({})}><ArrowLeft size={16} />Đổi môn</Button> : undefined}
+      />
       <DataState
         loading={query.isLoading}
         error={query.error ? getApiErrorMessage(query.error) : null}
-        empty={query.isSuccess && results.length === 0}
+        empty={query.isSuccess && (selectedSubjectId ? visibleResults.length === 0 : results.length === 0)}
         emptyMessage="Chưa có kết quả ca thi."
         onRetry={() => void query.refetch()}
       >
-        <div className="space-y-3">
-          {results.map((result) => <ResultRow key={result.examId} result={result} />)}
-        </div>
+        {!selectedSubjectId ? (
+          <SubjectPicker subjects={subjectGroups} onSelect={(subjectId) => setSearchParams({ subjectId })} />
+        ) : (
+          <div className="space-y-3">
+            {visibleResults.map((result) => <ResultRow key={result.examId} result={result} />)}
+          </div>
+        )}
       </DataState>
+    </div>
+  );
+}
+
+function SubjectPicker({ subjects, onSelect }: { subjects: StudentSubjectGroup[]; onSelect: (subjectId: string) => void }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {subjects.map((subject) => (
+        <button
+          key={subject.subjectId}
+          type="button"
+          onClick={() => onSelect(subject.subjectId)}
+          className="group flex min-h-32 items-center justify-between gap-4 rounded-xl border border-line bg-surface p-5 text-left shadow-soft transition hover:border-primary/40 hover:shadow-md"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              <BookOpen size={22} />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-lg font-bold text-ink">{subject.subjectName}</span>
+              <span className="mt-1 block text-sm font-medium text-muted">{subject.total} kết quả</span>
+            </span>
+          </span>
+          <ChevronRight size={20} className="shrink-0 text-muted transition group-hover:text-primary" />
+        </button>
+      ))}
     </div>
   );
 }
