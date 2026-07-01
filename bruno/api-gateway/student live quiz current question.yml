@@ -1,0 +1,12 @@
+meta:
+  name: student live quiz current question
+  type: http
+  seq: 0
+
+get:
+  url: {{baseUrl}}/v1/api/examruntime-service/student/live-quizzes/{{roomId}}/current-question
+  body: none
+  auth: bearer
+
+auth:bearer:
+  token: {{studentToken}}

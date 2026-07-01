@@ -5,6 +5,7 @@ import com.exam_service.exam_service.client.QuestionServiceClient;
 import com.exam_service.exam_service.model.dto.exams.ExamDetailDTO;
 import com.exam_service.exam_service.model.entity.Exam;
 import com.exam_service.exam_service.model.entity.enums.ExamStatus;
+import com.exam_service.exam_service.model.entity.enums.ExamType;
 import com.exam_service.exam_service.repository.ExamQuestionRepo;
 import com.exam_service.exam_service.repository.ExamRepo;
 import com.exam_service.exam_service.util.exception.ConflictException;
@@ -43,6 +44,9 @@ public class TeacherExamSchedulingService {
         Exam exam = examRepo.findByIdAndSubjectIdAndCreatedByTeacherId(
                 examId, subjectId, teacherId
         ).orElseThrow(() -> new NotFoundException("EXAM_NOT_FOUND"));
+        if (exam.getExamType() != ExamType.STANDARD_EXAM) {
+            throw new ConflictException("LIVE_QUIZ_CANNOT_USE_EXAM_SCHEDULE");
+        }
         // status o schedule roi thi bo qua
         if (exam.getStatus() == ExamStatus.SCHEDULED && questionRepo.existsByExamId(examId)) {
             return draftService.toDetail(exam);

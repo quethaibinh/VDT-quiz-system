@@ -6,6 +6,7 @@ import com.exam_service.exam_service.model.dto.exams.ExamDraftRequestDTO;
 import com.exam_service.exam_service.model.entity.Exam;
 import com.exam_service.exam_service.model.entity.enums.AssignmentStatus;
 import com.exam_service.exam_service.model.entity.enums.ExamStatus;
+import com.exam_service.exam_service.model.entity.enums.ExamType;
 import com.exam_service.exam_service.repository.ExamAssignmentRepo;
 import com.exam_service.exam_service.repository.ExamRepo;
 import com.exam_service.exam_service.util.exception.ConflictException;
@@ -262,11 +263,13 @@ class TeacherExamDraftServiceTests {
         );
         Path subjectPath = mock(Path.class);
         Path ownerPath = mock(Path.class);
+        Path examTypePath = mock(Path.class);
         Path statusPath = mock(Path.class);
         Path titlePath = mock(Path.class);
         Path codePath = mock(Path.class);
         when(root.get("subjectId")).thenReturn(subjectPath);
         when(root.get("createdByTeacherId")).thenReturn(ownerPath);
+        when(root.get("examType")).thenReturn(examTypePath);
         when(root.get("status")).thenReturn(statusPath);
         when(root.get("title")).thenReturn(titlePath);
         when(root.get("code")).thenReturn(codePath);
@@ -276,6 +279,7 @@ class TeacherExamDraftServiceTests {
 
         verify(cb).equal(subjectPath, subjectId);
         verify(cb).equal(ownerPath, teacherId);
+        verify(cb).equal(examTypePath, ExamType.STANDARD_EXAM);
         verify(cb).equal(statusPath, ExamStatus.DRAFT);
         verify(cb, times(2)).like(any(), eq("%calculus%"));
     }

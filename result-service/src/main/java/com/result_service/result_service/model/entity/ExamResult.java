@@ -2,6 +2,7 @@ package com.result_service.result_service.model.entity;
 
 import com.result_service.result_service.model.entity.enums.ExamStatus;
 import com.result_service.result_service.model.entity.enums.ResultReviewStatus;
+import com.result_service.result_service.model.entity.enums.ResultType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -28,14 +29,19 @@ import java.util.UUID;
         name = "exam_results",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_exam_results_submission_id", columnNames = "submission_id"),
-                @UniqueConstraint(name = "uk_exam_results_exam_student_attempt", columnNames = {"exam_id", "student_id", "attempt_no"})
+                @UniqueConstraint(name = "uk_exam_results_exam_student_attempt", columnNames = {"result_type", "exam_id", "student_id", "attempt_no"})
         },
         indexes = {
-                @Index(name = "idx_exam_results_exam_score", columnList = "exam_id,total_score"),
-                @Index(name = "idx_exam_results_student_graded", columnList = "student_id,graded_at")
+                @Index(name = "idx_exam_results_type_exam_score", columnList = "result_type,exam_id,total_score"),
+                @Index(name = "idx_exam_results_type_student_graded", columnList = "result_type,student_id,graded_at"),
+                @Index(name = "idx_exam_results_room", columnList = "room_id")
         }
 )
 public class ExamResult extends BaseEntity {
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "result_type", nullable = false, length = 32, columnDefinition = "varchar(32) default 'STANDARD_EXAM'")
+    private ResultType resultType = ResultType.STANDARD_EXAM;
 
     @Column(name = "exam_id", nullable = false)
     private UUID examId;
@@ -45,6 +51,12 @@ public class ExamResult extends BaseEntity {
 
     @Column(name = "session_id", nullable = false)
     private UUID sessionId;
+
+    @Column(name = "room_id")
+    private UUID roomId;
+
+    @Column(name = "participant_id")
+    private UUID participantId;
 
     @Column(name = "submission_id", nullable = false)
     private UUID submissionId;
@@ -103,6 +115,12 @@ public class ExamResult extends BaseEntity {
 
     @Column(name = "grading_duration_ms")
     private Integer gradingDurationMs;
+
+    @Column(name = "average_response_ms")
+    private Integer averageResponseMs;
+
+    @Column(name = "finished_at")
+    private OffsetDateTime finishedAt;
 
     @Column(name = "grader_version", nullable = false, length = 64)
     private String graderVersion;

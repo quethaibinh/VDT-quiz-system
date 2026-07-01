@@ -6,6 +6,7 @@ describe("teacher navigation", () => {
     expect(teacherNavigationItems.map((item) => item.path)).toEqual([
       "/teacher/subjects",
       "/teacher/exams",
+      "/teacher/live-quizzes",
       "/teacher/monitoring",
       "/teacher/results",
       "/teacher/profile",
@@ -18,6 +19,9 @@ describe("teacher navigation", () => {
     ["/teacher/subjects/subject-1/collections/collection-1", "subjects"],
     ["/teacher/exams", "exams"],
     ["/teacher/subjects/subject-1/exams", "exams"],
+    ["/teacher/live-quizzes", "live-quizzes"],
+    ["/teacher/subjects/subject-1/live-quizzes", "live-quizzes"],
+    ["/teacher/live-quizzes/room-1/room", "live-quizzes"],
     ["/teacher/monitoring", "monitoring"],
     ["/teacher/exams/exam-1/monitor", "monitoring"],
     ["/teacher/results", "results"],

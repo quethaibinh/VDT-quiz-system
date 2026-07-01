@@ -1,0 +1,17 @@
+info:
+  name: teacher open live quiz room
+  type: http
+  seq: 33
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/examruntime-service/teacher/live-quizzes/{{roomId}}/open"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

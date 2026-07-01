@@ -38,4 +38,13 @@ public class InternalExamCollectionController {
     ) {
         return collectionService.getExamSnapshot(subjectId, collectionId, teacherId);
     }
+
+    @GetMapping("/{collectionId}/live-quiz-snapshot")
+    public ExamCollectionSnapshotDTO getLiveQuizSnapshot(
+            @PathVariable UUID subjectId,
+            @PathVariable UUID collectionId,
+            @RequestParam UUID teacherId
+    ) {
+        return collectionService.getLiveQuizSnapshot(subjectId, collectionId, teacherId);
+    }
 }

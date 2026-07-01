@@ -20,6 +20,11 @@ import { SubjectExamListPage } from "@/features/teacher/exams/pages/exam-list-pa
 import { ExamSubjectPickerPage } from "@/features/teacher/exams/pages/exam-subject-picker-page";
 import { QuestionImportPage } from "@/features/teacher/imports/pages/question-import-page";
 import { TeacherLayout } from "@/features/teacher/layout/teacher-layout";
+import { LiveQuizBuilderPage } from "@/features/teacher/live-quizzes/pages/live-quiz-builder-page";
+import { LiveQuizEditPage } from "@/features/teacher/live-quizzes/pages/live-quiz-edit-page";
+import { LiveQuizListPage } from "@/features/teacher/live-quizzes/pages/live-quiz-list-page";
+import { LiveQuizRoomPage } from "@/features/teacher/live-quizzes/pages/live-quiz-room-page";
+import { LiveQuizSubjectPickerPage } from "@/features/teacher/live-quizzes/pages/live-quiz-subject-picker-page";
 import { MonitoringExamPickerPage } from "@/features/teacher/monitoring/pages/monitoring-exam-picker-page";
 import { ExamMonitorPage } from "@/features/teacher/monitoring/pages/exam-monitor-page";
 import { QuestionBankPage } from "@/features/teacher/questions/pages/question-bank-page";
@@ -67,6 +72,11 @@ export const router = createBrowserRouter([
             { path: "subjects/:subjectId/exams", element: <SubjectExamListPage /> },
             { path: "subjects/:subjectId/exams/new", element: <ExamBuilderPage /> },
             { path: "subjects/:subjectId/exams/:examId/edit", element: <ExamEditPage /> },
+            { path: "live-quizzes", element: <LiveQuizSubjectPickerPage /> },
+            { path: "subjects/:subjectId/live-quizzes", element: <LiveQuizListPage /> },
+            { path: "subjects/:subjectId/live-quizzes/new", element: <LiveQuizBuilderPage /> },
+            { path: "subjects/:subjectId/live-quizzes/:quizId/edit", element: <LiveQuizEditPage /> },
+            { path: "live-quizzes/:roomId/room", element: <LiveQuizRoomPage /> },
             { path: "monitoring", element: <MonitoringExamPickerPage /> },
             { path: "exams/:examId/monitor", element: <ExamMonitorPage /> },
             { path: "results", element: <ResultSubjectPickerPage /> },

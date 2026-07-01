@@ -58,12 +58,12 @@ export function StudentExamCard({ exam }: StudentExamCardProps) {
 
       <div className="flex gap-2 pt-2">
         {studentAvailability === "UPCOMING" && (
-          <Link to={`${examId}/lobby`} className="w-full">
+          <Link to={`/student/exams/${examId}/lobby`} className="w-full">
             <Button variant="secondary" className="w-full">Vào phòng chờ</Button>
           </Link>
         )}
         {studentAvailability === "OPEN" && (
-          <Link to={`${examId}/lobby`} className="w-full">
+          <Link to={`/student/exams/${examId}/lobby`} className="w-full">
             <Button variant="primary" className="w-full">Vào thi</Button>
           </Link>
         )}

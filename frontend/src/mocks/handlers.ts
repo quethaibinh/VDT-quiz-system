@@ -7,10 +7,34 @@ import type {
   ExamSummary,
   StudentSummary,
 } from "@/features/teacher/exams/model/exam-contracts";
+import type { QuestionCollection } from "@/features/teacher/collections/model/collection-types";
+import type {
+  LiveQuizDetail,
+  LiveQuizRequest,
+  LiveQuizRoom,
+  LiveQuizSummary,
+} from "@/features/teacher/live-quizzes";
 import type { Subject } from "@/features/teacher/subjects/model/subject-types";
 import type { StudentAnswer, StudentPaperResponse, StudentQuestion } from "@/features/student/exams/model/student-exam-contracts";
 
 const exams: ExamDetail[] = [];
+const liveQuizzes: LiveQuizDetail[] = [];
+const liveQuizRooms = new Map<string, LiveQuizRoom>();
+const collections: QuestionCollection[] = [
+  {
+    id: "collection-1",
+    subjectId: "sub-1",
+    ownerTeacherId: "teacher-1",
+    name: "Bo cau hoi mau",
+    description: "Du lieu mau cho live quiz.",
+    visibility: "PRIVATE",
+    status: "ACTIVE",
+    editable: true,
+    stats: { questionCount: 50, easy: 20, medium: 20, hard: 10 },
+    createdAt: "2026-01-01T00:00:00Z",
+    updatedAt: "2026-01-01T00:00:00Z",
+  },
+];
 const subjects: Subject[] = [{
   id: "sub-1",
   code: "SUB001",
@@ -91,6 +115,24 @@ function ensureSubjectExams(subjectId: string) {
 
 ensureSubjectExams("sub-1");
 
+function ensureSubjectCollections(subjectId: string) {
+  if (collections.some((collection) => collection.subjectId === subjectId)) return;
+  collections.push({
+    ...collections[0],
+    id: `${subjectId}-collection-1`,
+    subjectId,
+  });
+}
+
+function ensureSubjectLiveQuizzes(subjectId: string) {
+  if (liveQuizzes.some((quiz) => quiz.subjectId === subjectId)) return;
+  ensureSubjectCollections(subjectId);
+  liveQuizzes.push(
+    makeLiveQuiz(subjectId, `${subjectId}-quiz-draft`, "Quiz on tap nhanh", "DRAFT"),
+    makeLiveQuiz(subjectId, `${subjectId}-quiz-prepared`, "Quiz da chuan bi", "PREPARED"),
+  );
+}
+
 function makeExam(
   subjectId: string,
   id: string,
@@ -148,6 +190,83 @@ function toSummary(exam: ExamDetail): ExamSummary {
   };
 }
 
+function makeLiveQuiz(
+  subjectId: string,
+  id: string,
+  title: string,
+  status: LiveQuizDetail["status"],
+  input?: Partial<LiveQuizRequest>,
+): LiveQuizDetail {
+  ensureSubjectCollections(subjectId);
+  const collection = collections.find((item) => item.id === input?.collectionId)
+    ?? collections.find((item) => item.subjectId === subjectId)
+    ?? collections[0];
+  return {
+    id,
+    code: `QUIZ-${id.slice(-6).toUpperCase()}`,
+    title,
+    description: input?.description ?? "",
+    subjectId,
+    subjectName: "Mon hoc da chon",
+    collectionId: collection.id,
+    collectionName: collection.name,
+    questionCount: collection.stats.questionCount,
+    shuffleQuestions: input?.shuffleQuestions ?? true,
+    showLeaderboard: input?.showLeaderboard ?? true,
+    showCorrectAnswer: input?.showCorrectAnswer ?? false,
+    joinPolicy: "CODE_ONLY",
+    status,
+    snapshotVersion: status === "PREPARED" ? 1 : 0,
+    preparedAt: status === "PREPARED" ? new Date().toISOString() : null,
+    version: 0,
+  };
+}
+
+function toLiveQuizSummary(quiz: LiveQuizDetail): LiveQuizSummary {
+  return {
+    id: quiz.id,
+    code: quiz.code,
+    title: quiz.title,
+    subjectId: quiz.subjectId,
+    subjectName: quiz.subjectName,
+    collectionId: quiz.collectionId,
+    collectionName: quiz.collectionName,
+    questionCount: quiz.questionCount,
+    shuffleQuestions: quiz.shuffleQuestions,
+    showLeaderboard: quiz.showLeaderboard,
+    showCorrectAnswer: quiz.showCorrectAnswer,
+    joinPolicy: quiz.joinPolicy,
+    status: quiz.status,
+    snapshotVersion: quiz.snapshotVersion,
+    version: quiz.version,
+  };
+}
+
+function findLiveQuiz(subjectId: unknown, quizId: unknown) {
+  return liveQuizzes.find(
+    (quiz) => quiz.subjectId === String(subjectId) && quiz.id === String(quizId),
+  );
+}
+
+function getOrCreateLiveQuizRoom(quiz: LiveQuizDetail): LiveQuizRoom {
+  const existing = Array.from(liveQuizRooms.values()).find(
+    (room) => room.examId === quiz.id && room.status !== "CLOSED",
+  );
+  if (existing) return existing;
+  const room: LiveQuizRoom = {
+    roomId: crypto.randomUUID(),
+    examId: quiz.id,
+    roomCode: "QZ" + String(liveQuizRooms.size + 1).padStart(4, "0"),
+    ownerTeacherId: "teacher-1",
+    status: "PREPARING",
+    openedAt: null,
+    startedAt: null,
+    closedAt: null,
+  };
+  liveQuizRooms.set(room.roomId, room);
+  return room;
+}
+
 function findExam(subjectId: unknown, examId: unknown) {
   return exams.find(
     (exam) => exam.subjectId === String(subjectId) && exam.id === String(examId),
@@ -192,6 +311,101 @@ export const handlers = [
       `${student.studentCode} ${student.fullName}`.toLowerCase().includes(keyword),
     );
     return HttpResponse.json(envelope(pageOf(filtered, page, size)));
+  }),
+
+  http.get("*/v1/api/question-service/teacher/subjects/:subjectId/question-collections", ({ params, request }) => {
+    const subjectId = String(params.subjectId);
+    ensureSubjectCollections(subjectId);
+    const { searchParams, page, size } = getPageParams(request);
+    const status = searchParams.get("status");
+    const keyword = (searchParams.get("keyword") ?? "").toLowerCase();
+    const filtered = collections
+      .filter((collection) => collection.subjectId === subjectId)
+      .filter((collection) => !status || collection.status === status)
+      .filter((collection) => !keyword || collection.name.toLowerCase().includes(keyword));
+    return HttpResponse.json(envelope(pageOf(filtered, page, size)));
+  }),
+
+  http.get("*/v1/api/exam-service/teacher/subjects/:subjectId/live-quizzes", ({ params, request }) => {
+    const subjectId = String(params.subjectId);
+    ensureSubjectLiveQuizzes(subjectId);
+    const { searchParams, page, size } = getPageParams(request);
+    const status = searchParams.get("status");
+    const keyword = (searchParams.get("keyword") ?? "").toLowerCase();
+    const filtered = liveQuizzes
+      .filter((quiz) => quiz.subjectId === subjectId)
+      .filter((quiz) => !status || quiz.status === status)
+      .filter((quiz) => !keyword || `${quiz.code} ${quiz.title}`.toLowerCase().includes(keyword))
+      .map(toLiveQuizSummary);
+    return HttpResponse.json(envelope(pageOf(filtered, page, size)));
+  }),
+
+  http.post("*/v1/api/exam-service/teacher/subjects/:subjectId/live-quizzes", async ({ params, request }) => {
+    const input = await request.json() as LiveQuizRequest;
+    const quiz = makeLiveQuiz(String(params.subjectId), crypto.randomUUID(), input.title, "DRAFT", input);
+    liveQuizzes.unshift(quiz);
+    return HttpResponse.json(envelope(quiz, 201, "Created"), { status: 201 });
+  }),
+
+  http.get("*/v1/api/exam-service/teacher/subjects/:subjectId/live-quizzes/:quizId", ({ params }) => {
+    const quiz = findLiveQuiz(params.subjectId, params.quizId);
+    return quiz
+      ? HttpResponse.json(envelope(quiz))
+      : HttpResponse.json({ message: "Khong tim thay quiz." }, { status: 404 });
+  }),
+
+  http.put("*/v1/api/exam-service/teacher/subjects/:subjectId/live-quizzes/:quizId", async ({ params, request }) => {
+    const index = liveQuizzes.findIndex((quiz) => quiz.id === params.quizId && quiz.subjectId === params.subjectId);
+    if (index < 0) return HttpResponse.json({ message: "Khong tim thay quiz." }, { status: 404 });
+    if (liveQuizzes[index].status !== "DRAFT") {
+      return HttpResponse.json({ message: "Quiz khong con co the chinh sua." }, { status: 409 });
+    }
+    const input = await request.json() as LiveQuizRequest;
+    liveQuizzes[index] = {
+      ...makeLiveQuiz(String(params.subjectId), String(params.quizId), input.title, "DRAFT", input),
+      version: liveQuizzes[index].version + 1,
+    };
+    return HttpResponse.json(envelope(liveQuizzes[index]));
+  }),
+
+  http.post("*/v1/api/exam-service/teacher/subjects/:subjectId/live-quizzes/:quizId/prepare", ({ params }) => {
+    const quiz = findLiveQuiz(params.subjectId, params.quizId);
+    if (!quiz) return HttpResponse.json({ message: "Khong tim thay quiz." }, { status: 404 });
+    quiz.status = "PREPARED";
+    quiz.snapshotVersion = 1;
+    quiz.preparedAt = quiz.preparedAt ?? new Date().toISOString();
+    quiz.version += 1;
+    const room = getOrCreateLiveQuizRoom(quiz);
+    return HttpResponse.json(envelope({
+      quiz,
+      roomId: room.roomId,
+      roomCode: room.roomCode,
+      roomStatus: room.status,
+    }));
+  }),
+
+  http.get("*/v1/api/examruntime-service/teacher/live-quizzes/:roomId", ({ params }) => {
+    const room = liveQuizRooms.get(String(params.roomId));
+    return room
+      ? HttpResponse.json(envelope(room))
+      : HttpResponse.json({ message: "Khong tim thay phong quiz." }, { status: 404 });
+  }),
+
+  http.post("*/v1/api/examruntime-service/teacher/live-quizzes/:roomId/open", ({ params }) => {
+    const room = liveQuizRooms.get(String(params.roomId));
+    if (!room) return HttpResponse.json({ message: "Khong tim thay phong quiz." }, { status: 404 });
+    if (room.status === "CLOSED") return HttpResponse.json({ message: "Phong quiz da dong." }, { status: 409 });
+    room.status = "OPEN";
+    room.openedAt = room.openedAt ?? new Date().toISOString();
+    return HttpResponse.json(envelope(room));
+  }),
+
+  http.post("*/v1/api/examruntime-service/teacher/live-quizzes/:roomId/close", ({ params }) => {
+    const room = liveQuizRooms.get(String(params.roomId));
+    if (!room) return HttpResponse.json({ message: "Khong tim thay phong quiz." }, { status: 404 });
+    room.status = "CLOSED";
+    room.closedAt = room.closedAt ?? new Date().toISOString();
+    return HttpResponse.json(envelope(room));
   }),
 
   http.get("*/v1/api/exam-service/teacher/subjects/:subjectId/exams", ({ params, request }) => {

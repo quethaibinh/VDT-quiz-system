@@ -15,6 +15,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Data
@@ -46,6 +47,9 @@ public class ResultAnswer extends BaseEntity {
     @Column(name = "question_order", nullable = false)
     private int questionOrder;
 
+    @Column(name = "question_position")
+    private Integer questionPosition;
+
     @Lob
     @Column(name = "selected_option_ids", nullable = false)
     private String selectedOptionIds;
@@ -65,6 +69,15 @@ public class ResultAnswer extends BaseEntity {
 
     @Column(name = "grading_note", columnDefinition = "text")
     private String gradingNote;
+
+    @Column(name = "response_time_ms")
+    private Integer responseTimeMs;
+
+    @Column(name = "answered_at")
+    private OffsetDateTime answeredAt;
+
+    @Column(name = "answer_status", length = 32)
+    private String answerStatus;
 
     @Lob
     @Column(name = "question_snapshot")

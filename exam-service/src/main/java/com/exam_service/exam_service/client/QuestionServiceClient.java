@@ -76,12 +76,33 @@ public class QuestionServiceClient {
             UUID collectionId,
             UUID teacherId
     ) {
+        return getSnapshot(subjectId, collectionId, teacherId, "exam-snapshot", "INVALID_COLLECTION_SNAPSHOT");
+    }
+
+    /**
+     * Lay snapshot rieng cho live quiz, bat buoc moi cau co estimatedSecond hop le.
+     */
+    public QuestionCollectionSnapshot getLiveQuizSnapshot(
+            UUID subjectId,
+            UUID collectionId,
+            UUID teacherId
+    ) {
+        return getSnapshot(subjectId, collectionId, teacherId, "live-quiz-snapshot", "INVALID_LIVE_QUIZ_SNAPSHOT");
+    }
+
+    private QuestionCollectionSnapshot getSnapshot(
+            UUID subjectId,
+            UUID collectionId,
+            UUID teacherId,
+            String endpoint,
+            String invalidSnapshotCode
+    ) {
         try {
             String body = client.get()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/v1/internal/question-service/subjects/{subjectId}/collections/{collectionId}/exam-snapshot")
+                            .path("/v1/internal/question-service/subjects/{subjectId}/collections/{collectionId}/{endpoint}")
                             .queryParam("teacherId", teacherId)
-                            .build(subjectId, collectionId))
+                            .build(subjectId, collectionId, endpoint))
                     .header("X-Internal-Api-Key", internalApiKey)
                     .retrieve()
                     .body(String.class);
@@ -92,7 +113,7 @@ public class QuestionServiceClient {
                 throw new NotFoundException("COLLECTION_NOT_FOUND");
             }
             if (exception.getStatusCode().is4xxClientError()) {
-                throw new IllegalArgumentException("INVALID_COLLECTION_SNAPSHOT");
+                throw new IllegalArgumentException(invalidSnapshotCode);
             }
             throw new IllegalStateException("QUESTION_SERVICE_UNAVAILABLE");
         } catch (ResourceAccessException exception) {

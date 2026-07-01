@@ -1,6 +1,8 @@
 package com.examruntime_service.examruntime_service.config.websocket;
 
 import com.examruntime_service.examruntime_service.repository.ExamSessionRepo;
+import com.examruntime_service.examruntime_service.repository.LiveQuizParticipantRepo;
+import com.examruntime_service.examruntime_service.repository.LiveQuizRoomRepo;
 import com.examruntime_service.examruntime_service.service.monitor.MonitorConnectionService;
 import com.examruntime_service.examruntime_service.service.monitor.TeacherMonitorService;
 import org.springframework.messaging.Message;
@@ -15,7 +17,6 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Component
 /**
  * Guard cho cac STOMP frame sau handshake.
  *
@@ -23,28 +24,43 @@ import java.util.regex.Pattern;
  * - Teacher chi subscribe topic cua exam minh so huu.
  * - Student chi gui event cho session cua chinh minh.
  * - Student chi subscribe user queue alert rieng.
+ * - Live quiz dung destination rieng de khong anh huong luong exam monitor.
  */
+@Component
 public class StompAuthorizationInterceptor implements ChannelInterceptor {
 
     private static final Pattern TEACHER_TOPIC =
             Pattern.compile("^/topic/exams/([0-9a-fA-F\\-]{36})/monitor$");
     private static final Pattern STUDENT_SEND =
             Pattern.compile("^/app/exams/([0-9a-fA-F\\-]{36})/sessions/([0-9a-fA-F\\-]{36})/events$");
+    private static final Pattern LIVE_QUIZ_TEACHER_TOPIC =
+            Pattern.compile("^/topic/live-quizzes/([0-9a-fA-F\\-]{36})/(lobby|teacher-progress|leaderboard)$");
+    private static final Pattern LIVE_QUIZ_STUDENT_QUEUE =
+            Pattern.compile("^/user/queue/live-quizzes/([0-9a-fA-F\\-]{36})$");
 
     private final TeacherMonitorService teacherMonitorService;
     private final MonitorConnectionService connectionService;
     private final ExamSessionRepo examSessionRepo;
+    private final LiveQuizRoomRepo liveQuizRoomRepo;
+    private final LiveQuizParticipantRepo liveQuizParticipantRepo;
 
     public StompAuthorizationInterceptor(
             TeacherMonitorService teacherMonitorService,
             MonitorConnectionService connectionService,
-            ExamSessionRepo examSessionRepo
+            ExamSessionRepo examSessionRepo,
+            LiveQuizRoomRepo liveQuizRoomRepo,
+            LiveQuizParticipantRepo liveQuizParticipantRepo
     ) {
         this.teacherMonitorService = teacherMonitorService;
         this.connectionService = connectionService;
         this.examSessionRepo = examSessionRepo;
+        this.liveQuizRoomRepo = liveQuizRoomRepo;
+        this.liveQuizParticipantRepo = liveQuizParticipantRepo;
     }
 
+    /**
+     * Entry point cua STOMP interceptor, route CONNECT/SUBSCRIBE/SEND den guard tuong ung.
+     */
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
@@ -70,6 +86,9 @@ public class StompAuthorizationInterceptor implements ChannelInterceptor {
         return message;
     }
 
+    /**
+     * Kiem tra quyen subscribe cac topic/queue monitor va live quiz.
+     */
     private void authorizeSubscribe(WebSocketPrincipal principal, String destination) {
         if (destination == null) {
             throw new IllegalArgumentException("DESTINATION_REQUIRED");
@@ -85,6 +104,30 @@ public class StompAuthorizationInterceptor implements ChannelInterceptor {
             }
             return;
         }
+        Matcher liveQuizTeacherTopic = LIVE_QUIZ_TEACHER_TOPIC.matcher(destination);
+        if (liveQuizTeacherTopic.matches()) {
+            UUID roomId = UUID.fromString(liveQuizTeacherTopic.group(1));
+            UUID teacherId = UUID.fromString(principal.getName());
+            // Teacher chi subscribe lobby/progress/leaderboard cua room minh so huu.
+            boolean ownsRoom = liveQuizRoomRepo.findById(roomId)
+                    .map(room -> room.getOwnerTeacherId().equals(teacherId))
+                    .orElse(false);
+            if (!principal.hasRole("TEACHER") || !ownsRoom) {
+                throw new IllegalArgumentException("SUBSCRIBE_FORBIDDEN");
+            }
+            return;
+        }
+        Matcher liveQuizStudentQueue = LIVE_QUIZ_STUDENT_QUEUE.matcher(destination);
+        if (liveQuizStudentQueue.matches()) {
+            UUID roomId = UUID.fromString(liveQuizStudentQueue.group(1));
+            UUID studentId = UUID.fromString(principal.getName());
+            // Student chi nhan queue live quiz neu da co participant trong room.
+            if (!principal.hasRole("STUDENT")
+                    || !liveQuizParticipantRepo.existsByRoomIdAndStudentId(roomId, studentId)) {
+                throw new IllegalArgumentException("SUBSCRIBE_FORBIDDEN");
+            }
+            return;
+        }
         if (destination.startsWith("/user/queue/exams/")) {
             if (!principal.hasRole("STUDENT")) {
                 throw new IllegalArgumentException("SUBSCRIBE_FORBIDDEN");
@@ -94,6 +137,9 @@ public class StompAuthorizationInterceptor implements ChannelInterceptor {
         throw new IllegalArgumentException("SUBSCRIBE_FORBIDDEN");
     }
 
+    /**
+     * Kiem tra student chi duoc send proctoring event vao session cua minh.
+     */
     private void authorizeSend(WebSocketPrincipal principal, String destination) {
         Matcher matcher = destination != null ? STUDENT_SEND.matcher(destination) : null;
         if (matcher == null || !matcher.matches() || !principal.hasRole("STUDENT")) {
@@ -111,6 +157,9 @@ public class StompAuthorizationInterceptor implements ChannelInterceptor {
         }
     }
 
+    /**
+     * Ep Principal chung cua Spring sang WebSocketPrincipal noi bo.
+     */
     private WebSocketPrincipal principal(Principal principal) {
         return principal instanceof WebSocketPrincipal value ? value : null;
     }

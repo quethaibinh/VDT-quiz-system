@@ -2,6 +2,7 @@ package com.exam_service.exam_service.repository;
 
 import com.exam_service.exam_service.model.entity.Exam;
 import com.exam_service.exam_service.model.entity.enums.ExamStatus;
+import com.exam_service.exam_service.model.entity.enums.ExamType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -29,6 +30,13 @@ public interface ExamRepo extends JpaRepository<Exam, UUID>, JpaSpecificationExe
             Pageable pageable
     );
 
+    Page<Exam> findAllBySubjectIdAndCreatedByTeacherIdAndExamType(
+            UUID subjectId,
+            UUID createdByTeacherId,
+            ExamType examType,
+            Pageable pageable
+    );
+
     Page<Exam> findAllBySubjectIdAndCreatedByTeacherIdAndStatus(
             UUID subjectId,
             UUID createdByTeacherId,
@@ -51,7 +59,12 @@ public interface ExamRepo extends JpaRepository<Exam, UUID>, JpaSpecificationExe
             @Param("teacherId") UUID teacherId
     );
 
-    @Query("select e.id from Exam e where e.status = :status and e.startAt <= :windowEnd")
+    @Query("""
+            select e.id from Exam e
+            where e.examType = com.exam_service.exam_service.model.entity.enums.ExamType.STANDARD_EXAM
+              and e.status = :status
+              and e.startAt <= :windowEnd
+            """)
     Page<UUID> findCandidateIdsForActivation(
             @Param("status") ExamStatus status,
             @Param("windowEnd") OffsetDateTime windowEnd,
@@ -60,7 +73,8 @@ public interface ExamRepo extends JpaRepository<Exam, UUID>, JpaSpecificationExe
 
     @Query("""
             select e.id from Exam e
-            where e.status = com.exam_service.exam_service.model.entity.enums.ExamStatus.ACTIVE
+            where e.examType = com.exam_service.exam_service.model.entity.enums.ExamType.STANDARD_EXAM
+              and e.status = com.exam_service.exam_service.model.entity.enums.ExamStatus.ACTIVE
               and e.endAt is not null
               and e.endAt <= :closeBefore
             order by e.endAt asc
@@ -82,6 +96,7 @@ public interface ExamRepo extends JpaRepository<Exam, UUID>, JpaSpecificationExe
             where a.studentId = :studentId
               and a.status = com.exam_service.exam_service.model.entity.enums.AssignmentStatus.ASSIGNED
         )
+        and e.examType = com.exam_service.exam_service.model.entity.enums.ExamType.STANDARD_EXAM
         and e.status in (
             com.exam_service.exam_service.model.entity.enums.ExamStatus.SCHEDULED,
             com.exam_service.exam_service.model.entity.enums.ExamStatus.ACTIVE,
@@ -105,6 +120,7 @@ public interface ExamRepo extends JpaRepository<Exam, UUID>, JpaSpecificationExe
     @Query("""
         select e from Exam e
         where e.id = :examId
+          and e.examType = com.exam_service.exam_service.model.entity.enums.ExamType.STANDARD_EXAM
           and e.id in (
               select a.examId from ExamAssignment a
               where a.studentId = :studentId

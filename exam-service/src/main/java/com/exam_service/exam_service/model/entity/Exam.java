@@ -1,7 +1,9 @@
 package com.exam_service.exam_service.model.entity;
 
 import com.exam_service.exam_service.model.entity.enums.ExamStatus;
+import com.exam_service.exam_service.model.entity.enums.ExamType;
 import com.exam_service.exam_service.model.entity.enums.HandleViolation;
+import com.exam_service.exam_service.model.entity.enums.LiveQuizJoinPolicy;
 import com.exam_service.exam_service.model.entity.enums.ShowResultPolicy;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -17,8 +19,8 @@ import java.util.UUID;
             @UniqueConstraint(name = "uk_exam_code", columnNames = "code")
         },
         indexes = {
-            @Index(name="idx_teacher_status_start_at", columnList = "created_by_teacher_id,status,start_at"),
-            @Index(name="idx_status_start_at", columnList = "status,start_at")
+            @Index(name="idx_teacher_type_status_start_at", columnList = "created_by_teacher_id,exam_type,status,start_at"),
+            @Index(name="idx_type_status_start_at", columnList = "exam_type,status,start_at")
         })
 @Data
 @NoArgsConstructor
@@ -44,11 +46,12 @@ public class Exam extends BaseEntity{
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private ExamStatus status;
-    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "exam_type", nullable = false, length = 32, columnDefinition = "varchar(32) default 'STANDARD_EXAM'")
+    private ExamType examType = ExamType.STANDARD_EXAM;
     private OffsetDateTime startAt;
     private OffsetDateTime endAt;
-    @Column(nullable = false)
-    private int durationMinutes;
+    private Integer durationMinutes;
     private int joinBeforeMinutes = 10;
     private int joinAfterMinutes;
     @Column(nullable = false)
@@ -60,6 +63,12 @@ public class Exam extends BaseEntity{
     private int hardCount;
     private boolean shuffleQuestions;
     private boolean shuffleOptions;
+    private Boolean liveQuizShowLeaderboard;
+    private Boolean liveQuizShowCorrectAnswer = false;
+    private Boolean liveQuizShuffleQuestions = true;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 32)
+    private LiveQuizJoinPolicy liveQuizJoinPolicy = LiveQuizJoinPolicy.CODE_ONLY;
     @Enumerated(EnumType.STRING)
     private ShowResultPolicy showResultPolicy = ShowResultPolicy.AFTER_CLOSED;
     private boolean autoSubmit = true;
