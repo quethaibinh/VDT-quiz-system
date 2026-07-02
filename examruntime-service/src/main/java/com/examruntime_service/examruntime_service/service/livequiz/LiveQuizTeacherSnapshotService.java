@@ -52,14 +52,19 @@ public class LiveQuizTeacherSnapshotService {
     @Transactional(readOnly = true)
     public LiveQuizTeacherSnapshotDTO snapshot(LiveQuizRoom room) {
         List<LiveQuizParticipant> participants = participantRepo.findByRoomId(room.getId());
+        List<LiveQuizParticipant> rankedParticipants = rankedParticipants(participants);
         List<LiveQuizParticipantSnapshotDTO> participantDtos = participants.stream()
-                .map(this::toParticipantSnapshot)
+                .map(participant -> toParticipantSnapshot(participant, rankOf(rankedParticipants, participant.getId())))
                 .toList();
-        List<LiveQuizLeaderboardEntryDTO> leaderboard = leaderboard(participants);
+        List<LiveQuizLeaderboardEntryDTO> leaderboard = leaderboard(rankedParticipants);
         return new LiveQuizTeacherSnapshotDTO(
                 room.getId(),
                 room.getExamId(),
                 room.getRoomCode(),
+                room.getQuizTitle(),
+                room.getSubjectName(),
+                room.getQuestionCount(),
+                room.isShowLeaderboard(),
                 room.getStatus(),
                 OffsetDateTime.now(clock),
                 summary(participants),
@@ -72,8 +77,7 @@ public class LiveQuizTeacherSnapshotService {
      * Sap xep participant thanh bang xep hang hien tai cua room.
      */
     public List<LiveQuizLeaderboardEntryDTO> leaderboard(List<LiveQuizParticipant> participants) {
-        List<LiveQuizParticipant> sorted = new ArrayList<>(participants);
-        sorted.sort(leaderboardComparator());
+        List<LiveQuizParticipant> sorted = rankedParticipants(participants);
         List<LiveQuizLeaderboardEntryDTO> result = new ArrayList<>();
         for (int index = 0; index < sorted.size(); index++) {
             LiveQuizParticipant participant = sorted.get(index);
@@ -97,6 +101,17 @@ public class LiveQuizTeacherSnapshotService {
      * Map participant entity sang snapshot DTO gui cho teacher/realtime.
      */
     public LiveQuizParticipantSnapshotDTO toParticipantSnapshot(LiveQuizParticipant participant) {
+        return toParticipantSnapshot(participant, participant.getCurrentRank());
+    }
+
+    public Integer currentRank(UUID roomId, UUID participantId) {
+        return rankOf(rankedParticipants(participantRepo.findByRoomId(roomId)), participantId);
+    }
+
+    /**
+     * Map participant entity sang snapshot DTO voi rank da tinh tu danh sach hien tai.
+     */
+    public LiveQuizParticipantSnapshotDTO toParticipantSnapshot(LiveQuizParticipant participant, Integer currentRank) {
         return new LiveQuizParticipantSnapshotDTO(
                 participant.getId(),
                 participant.getStudentId(),
@@ -111,12 +126,27 @@ public class LiveQuizTeacherSnapshotService {
                 participant.getTotalScore(),
                 participant.getMaxScore(),
                 participant.getAverageResponseMs(),
-                participant.getCurrentRank(),
+                currentRank,
                 participant.getJoinedAt(),
                 participant.getStartedAt(),
                 participant.getFinishedAt(),
                 participant.getLastSeenAt()
         );
+    }
+
+    private List<LiveQuizParticipant> rankedParticipants(List<LiveQuizParticipant> participants) {
+        List<LiveQuizParticipant> sorted = new ArrayList<>(participants);
+        sorted.sort(leaderboardComparator());
+        return sorted;
+    }
+
+    private Integer rankOf(List<LiveQuizParticipant> rankedParticipants, UUID participantId) {
+        for (int index = 0; index < rankedParticipants.size(); index++) {
+            if (rankedParticipants.get(index).getId().equals(participantId)) {
+                return index + 1;
+            }
+        }
+        return null;
     }
 
     /**

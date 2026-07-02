@@ -1,5 +1,5 @@
 import { Save } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DataState } from "@/components/shared/data-state";
 import { Button } from "@/components/ui/button";
@@ -38,23 +38,9 @@ export function LiveQuizForm({
   const [showLeaderboard, setShowLeaderboard] = useState(initial?.showLeaderboard ?? true);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(initial?.showCorrectAnswer ?? false);
 
-  useEffect(() => {
-    if (!initial) return;
-    setTitle(initial.title);
-    setDescription(initial.description ?? "");
-    setCollectionId(initial.collectionId);
-    setShuffleQuestions(initial.shuffleQuestions);
-    setShowLeaderboard(initial.showLeaderboard);
-    setShowCorrectAnswer(initial.showCorrectAnswer);
-  }, [initial]);
-
-  useEffect(() => {
-    if (collectionId || !collections.data?.content.length) return;
-    setCollectionId(collections.data.content[0].id);
-  }, [collectionId, collections.data]);
-
-  const selectedCollection = collections.data?.content.find((item) => item.id === collectionId);
-  const canSubmit = title.trim().length > 0 && Boolean(collectionId) && !submitting;
+  const effectiveCollectionId = collectionId || collections.data?.content[0]?.id || "";
+  const selectedCollection = collections.data?.content.find((item) => item.id === effectiveCollectionId);
+  const canSubmit = title.trim().length > 0 && Boolean(effectiveCollectionId) && !submitting;
 
   return (
     <DataState
@@ -72,7 +58,7 @@ export function LiveQuizForm({
           onSubmit({
             title: title.trim(),
             description: description.trim() || null,
-            collectionId,
+            collectionId: effectiveCollectionId,
             shuffleQuestions,
             showLeaderboard,
             showCorrectAnswer,
@@ -107,7 +93,7 @@ export function LiveQuizForm({
             Bo cau hoi
             <Select
               className="mt-2"
-              value={collectionId}
+              value={effectiveCollectionId}
               onChange={(event) => setCollectionId(event.target.value)}
             >
               {collections.data?.content.map((collection) => (

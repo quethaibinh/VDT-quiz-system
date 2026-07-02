@@ -6,6 +6,7 @@ import type {
   LiveQuizPrepareResponse,
   LiveQuizRequest,
   LiveQuizRoom,
+  LiveQuizTeacherSnapshot,
   LiveQuizStatus,
   LiveQuizSummary,
 } from "@/features/teacher/live-quizzes/model/live-quiz-contracts";
@@ -33,6 +34,7 @@ export const liveQuizKeys = {
     [...liveQuizKeys.details(subjectId), quizId] as const,
   rooms: () => [...liveQuizKeys.all, "rooms"] as const,
   room: (roomId: string) => [...liveQuizKeys.rooms(), roomId] as const,
+  snapshot: (roomId: string) => [...liveQuizKeys.room(roomId), "snapshot"] as const,
 };
 
 export async function listLiveQuizzes(
@@ -90,7 +92,17 @@ export async function openLiveQuizRoom(roomId: string): Promise<LiveQuizRoom> {
   return unwrap(response.data);
 }
 
+export async function startLiveQuizRoom(roomId: string): Promise<LiveQuizRoom> {
+  const response = await apiClient.post<ApiResponse<LiveQuizRoom>>(`${roomRoot}/${roomId}/start`);
+  return unwrap(response.data);
+}
+
 export async function closeLiveQuizRoom(roomId: string): Promise<LiveQuizRoom> {
   const response = await apiClient.post<ApiResponse<LiveQuizRoom>>(`${roomRoot}/${roomId}/close`);
+  return unwrap(response.data);
+}
+
+export async function getLiveQuizTeacherSnapshot(roomId: string): Promise<LiveQuizTeacherSnapshot> {
+  const response = await apiClient.get<ApiResponse<LiveQuizTeacherSnapshot>>(`${roomRoot}/${roomId}/snapshot`);
   return unwrap(response.data);
 }

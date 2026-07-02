@@ -14,6 +14,10 @@ public record CreateLiveQuizRoomRequestDTO(
         @Min(value = 1, message = "snapshotVersion must be positive")
         int snapshotVersion,
         @NotBlank(message = "joinPolicy is required")
-        String joinPolicy
+        String joinPolicy,
+        String quizTitle,
+        String subjectName,
+        int questionCount,
+        boolean showLeaderboard
 ) {
 }

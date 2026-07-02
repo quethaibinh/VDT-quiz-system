@@ -10,9 +10,14 @@ public record StudentLiveQuizJoinResponseDTO(
         UUID roomId,
         UUID examId,
         UUID participantId,
+        String roomCode,
+        String quizTitle,
+        String subjectName,
         LiveQuizParticipantStatus status,
         LiveQuizRoomStatus roomStatus,
         int totalQuestions,
+        int participantCount,
+        Integer currentRank,
         OffsetDateTime serverTime
 ) {
 }

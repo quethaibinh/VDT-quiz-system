@@ -39,6 +39,7 @@ export function LiveQuizEditPage() {
       >
         {detail.data && (
           <LiveQuizForm
+            key={detail.data.id}
             subjectId={subjectId}
             initial={detail.data}
             submitLabel="Luu thay doi"

@@ -31,7 +31,6 @@ import tools.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +48,7 @@ public class LiveQuizPlayService {
     private final LiveQuizRoomCache roomCache;
     private final LiveQuizRealtimePublisher realtimePublisher;
     private final LiveQuizTeacherSnapshotService snapshotService;
+    private final LiveQuizScoringPolicy scoringPolicy;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -60,6 +60,7 @@ public class LiveQuizPlayService {
             LiveQuizRoomCache roomCache,
             LiveQuizRealtimePublisher realtimePublisher,
             LiveQuizTeacherSnapshotService snapshotService,
+            LiveQuizScoringPolicy scoringPolicy,
             ObjectMapper objectMapper,
             Clock clock
     ) {
@@ -70,6 +71,7 @@ public class LiveQuizPlayService {
         this.roomCache = roomCache;
         this.realtimePublisher = realtimePublisher;
         this.snapshotService = snapshotService;
+        this.scoringPolicy = scoringPolicy;
         this.objectMapper = objectMapper;
         this.clock = clock;
     }
@@ -80,7 +82,7 @@ public class LiveQuizPlayService {
     @Transactional
     public StudentLiveQuizStateDTO state(UUID roomId, UUID studentId) {
         LiveQuizRoom room = requireRoom(roomId);
-        LiveQuizParticipant participant = requireParticipant(roomId, studentId);
+        LiveQuizParticipant participant = requireParticipantForUpdate(roomId, studentId);
         if (room.getStatus() == LiveQuizRoomStatus.STARTED) {
             // Timeout duoc tinh lazy khi student poll state/current/answer, khong can scheduler rieng.
             timeoutIfExpired(room, participant);
@@ -98,7 +100,7 @@ public class LiveQuizPlayService {
         LiveQuizRoom room = requireRoom(roomId);
         requireStarted(room);
         // tim phien tham gia choi cua student nay trong phong nay
-        LiveQuizParticipant participant = requireParticipant(roomId, studentId);
+        LiveQuizParticipant participant = requireParticipantForUpdate(roomId, studentId);
         timeoutIfExpired(room, participant); // xu ly timeout cua cau hien tai neu da het gio
         if (participant.getStatus() == LiveQuizParticipantStatus.FINISHED) {
             throw new ConflictException("LIVE_QUIZ_PARTICIPANT_FINISHED");
@@ -123,6 +125,11 @@ public class LiveQuizPlayService {
                 question.questionId(),
                 saved.getCurrentQuestionPosition() + 1,
                 saved.getTotalQuestions(),
+                saved.getAnsweredCount(),
+                saved.getTotalScore(),
+                saved.getMaxScore(),
+                snapshotService.currentRank(room.getId(), saved.getId()),
+                question.type(),
                 question.content(),
                 question.contentFormat(),
                 question.options(),
@@ -139,7 +146,7 @@ public class LiveQuizPlayService {
     public LiveQuizAnswerResponseDTO answer(UUID roomId, UUID studentId, LiveQuizAnswerRequestDTO request) {
         LiveQuizRoom room = requireRoom(roomId);
         requireStarted(room);
-        LiveQuizParticipant participant = requireParticipant(roomId, studentId);
+        LiveQuizParticipant participant = requireParticipantForUpdate(roomId, studentId);
         if (participant.getStatus() == LiveQuizParticipantStatus.FINISHED) {
             throw new ConflictException("LIVE_QUIZ_PARTICIPANT_FINISHED");
         }
@@ -261,15 +268,24 @@ public class LiveQuizPlayService {
      */
     private LiveQuizAnswer buildAnswer(LiveQuizRoom room, LiveQuizParticipant participant, LiveQuizAnswerRequestDTO request) {
         PaperQuestionDTO question = questionMap(room).get(participant.getCurrentQuestionId());
-        LiveQuizAnswer answer = baseAnswer(room, participant, question);
+        OffsetDateTime receivedAt = now();
+        LiveQuizAnswer answer = baseAnswer(room, participant, question, receivedAt);
         List<UUID> selectedIds = request.selectedOptionIds() != null ? request.selectedOptionIds() : List.of();
         boolean correct = isCorrect(room, request.questionId(), selectedIds);
+        LiveQuizScoreResult score = scoringPolicy.score(
+                BigDecimal.valueOf(question.score()),
+                participant.getCurrentQuestionStartedAt(),
+                participant.getCurrentQuestionEndsAt(),
+                receivedAt,
+                correct,
+                LiveQuizAnswerStatus.ANSWERED
+        );
         answer.setSelectedOptionIds(writeJson(selectedIds));
         answer.setAnswerStatus(LiveQuizAnswerStatus.ANSWERED);
-        answer.setAnsweredAt(now());
-        answer.setResponseTimeMs((int) ChronoUnit.MILLIS.between(participant.getCurrentQuestionStartedAt(), now()));
+        answer.setAnsweredAt(receivedAt);
+        answer.setResponseTimeMs(score.responseTimeMs());
         answer.setCorrect(correct);
-        answer.setScoreAwarded(correct ? BigDecimal.valueOf(question.score()) : BigDecimal.ZERO);
+        answer.setScoreAwarded(score.scoreAwarded());
         return answer;
     }
 
@@ -277,6 +293,10 @@ public class LiveQuizPlayService {
      * Tao cac truong chung cua LiveQuizAnswer truoc khi biet ANSWERED hay TIMEOUT.
      */
     private LiveQuizAnswer baseAnswer(LiveQuizRoom room, LiveQuizParticipant participant, PaperQuestionDTO question) {
+        return baseAnswer(room, participant, question, now());
+    }
+
+    private LiveQuizAnswer baseAnswer(LiveQuizRoom room, LiveQuizParticipant participant, PaperQuestionDTO question, OffsetDateTime serverReceivedAt) {
         if (question == null) {
             throw new ConflictException("LIVE_QUIZ_CURRENT_QUESTION_NOT_FOUND");
         }
@@ -289,7 +309,7 @@ public class LiveQuizPlayService {
         answer.setQuestionStartedAt(participant.getCurrentQuestionStartedAt());
         answer.setQuestionEndsAt(participant.getCurrentQuestionEndsAt());
         answer.setMaxScore(BigDecimal.valueOf(question.score()));
-        answer.setServerReceivedAt(now());
+        answer.setServerReceivedAt(serverReceivedAt);
         return answer;
     }
 
@@ -345,6 +365,11 @@ public class LiveQuizPlayService {
                 answer.getAnswerStatus(),
                 answer.isCorrect(),
                 answer.getScoreAwarded(),
+                answer.getMaxScore(),
+                answer.getResponseTimeMs(),
+                answer.getMaxScore().compareTo(BigDecimal.ZERO) > 0
+                        ? answer.getScoreAwarded().divide(answer.getMaxScore(), 4, java.math.RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO,
                 participant.getTotalScore(),
                 participant.getStatus() != LiveQuizParticipantStatus.FINISHED,
                 participant.getStatus() == LiveQuizParticipantStatus.FINISHED
@@ -359,12 +384,17 @@ public class LiveQuizPlayService {
                 room.getId(),
                 room.getExamId(),
                 participant.getId(),
+                room.getRoomCode(),
+                room.getQuizTitle(),
+                room.getSubjectName(),
                 room.getStatus(),
                 participant.getStatus(),
                 participant.getAnsweredCount(),
                 participant.getTotalQuestions(),
                 participant.getTotalScore(),
                 participant.getMaxScore(),
+                snapshotService.currentRank(room.getId(), participant.getId()),
+                participantRepo.findByRoomId(room.getId()).size(),
                 now(),
                 participant.getCurrentQuestionEndsAt()
         );
@@ -388,7 +418,7 @@ public class LiveQuizPlayService {
                 now(),
                 room.getStatus(),
                 studentTargetId,
-                snapshotService.toParticipantSnapshot(participant),
+                snapshotService.toParticipantSnapshot(participant, snapshotService.currentRank(room.getId(), participant.getId())),
                 includeLeaderboard ? snapshotService.leaderboard(participants) : null,
                 // Summary nhe hon leaderboard, nen gui kem moi progress event cho teacher UI.
                 snapshotService.summary(participants)
@@ -471,10 +501,11 @@ public class LiveQuizPlayService {
     }
 
     /**
-     * Lay participant cua student trong room, dam bao student da join truoc do.
+     * Lay participant voi row lock de state/current-question/answer khong ghi de nhau
+     * khi student vua vao man thi va client goi nhieu request gan dong thoi.
      */
-    private LiveQuizParticipant requireParticipant(UUID roomId, UUID studentId) {
-        return participantRepo.findByRoomIdAndStudentId(roomId, studentId)
+    private LiveQuizParticipant requireParticipantForUpdate(UUID roomId, UUID studentId) {
+        return participantRepo.findByRoomIdAndStudentIdForUpdate(roomId, studentId)
                 .orElseThrow(() -> new NotFoundException("LIVE_QUIZ_PARTICIPANT_NOT_FOUND"));
     }
 

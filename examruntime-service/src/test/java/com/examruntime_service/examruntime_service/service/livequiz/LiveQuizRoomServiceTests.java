@@ -50,18 +50,21 @@ class LiveQuizRoomServiceTests {
             return room;
         });
 
-        var created = service.createRoom(new CreateLiveQuizRoomRequestDTO(examId, teacherId, 1, "CODE_ONLY"));
+        var created = service.createRoom(request(examId, teacherId, "CODE_ONLY"));
 
         assertThat(created.examId()).isEqualTo(examId);
         assertThat(created.ownerTeacherId()).isEqualTo(teacherId);
         assertThat(created.roomCode()).isEqualTo("A7K2Q9");
+        assertThat(created.quizTitle()).isEqualTo("Quiz demo");
+        assertThat(created.subjectName()).isEqualTo("Mon demo");
+        assertThat(created.questionCount()).isEqualTo(10);
         assertThat(created.status()).isEqualTo(LiveQuizRoomStatus.PREPARING);
         verify(roomCache).putRoomSnapshot(any(LiveQuizRoom.class), eq(1), any(), any());
 
         LiveQuizRoom existing = room(examId, teacherId, LiveQuizRoomStatus.PREPARING);
         when(roomRepo.findFirstByExamIdAndStatusIn(any(), any())).thenReturn(Optional.of(existing));
 
-        var second = service.createRoom(new CreateLiveQuizRoomRequestDTO(examId, teacherId, 1, "CODE_ONLY"));
+        var second = service.createRoom(request(examId, teacherId, "CODE_ONLY"));
 
         assertThat(second.roomId()).isEqualTo(existing.getId());
         verify(roomCache, times(2)).putRoomSnapshot(any(LiveQuizRoom.class), eq(1), any(), any());
@@ -139,7 +142,7 @@ class LiveQuizRoomServiceTests {
     @Test
     void createRejectsUnknownJoinPolicy() {
         assertThatThrownBy(() -> service.createRoom(
-                new CreateLiveQuizRoomRequestDTO(UUID.randomUUID(), UUID.randomUUID(), 1, "ASSIGNED_ONLY")
+                request(UUID.randomUUID(), UUID.randomUUID(), "ASSIGNED_ONLY")
         ))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("INVALID_LIVE_QUIZ_JOIN_POLICY");
@@ -151,8 +154,25 @@ class LiveQuizRoomServiceTests {
         room.setExamId(examId);
         room.setOwnerTeacherId(teacherId);
         room.setRoomCode("A7K2Q9");
+        room.setQuizTitle("Quiz demo");
+        room.setSubjectName("Mon demo");
+        room.setQuestionCount(10);
+        room.setShowLeaderboard(true);
         room.setStatus(status);
         return room;
+    }
+
+    private CreateLiveQuizRoomRequestDTO request(UUID examId, UUID teacherId, String joinPolicy) {
+        return new CreateLiveQuizRoomRequestDTO(
+                examId,
+                teacherId,
+                1,
+                joinPolicy,
+                "Quiz demo",
+                "Mon demo",
+                10,
+                true
+        );
     }
 
     private void mockSnapshot(UUID examId, int snapshotVersion) {

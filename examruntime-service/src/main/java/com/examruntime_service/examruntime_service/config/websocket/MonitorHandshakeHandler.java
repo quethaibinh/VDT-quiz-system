@@ -17,6 +17,8 @@ public class MonitorHandshakeHandler extends DefaultHandshakeHandler {
             WebSocketHandler wsHandler,
             Map<String, Object> attributes
     ) {
+        // lay thong tin user security tu attribute ma ben ws authHandShake day vao
+        // vi ws la giao thuc rieng nen khong the chay qua springsecurity de xac thuc duoc nen la tu config security rieng o interceptor
         Object principal = attributes.get(WebSocketAuthHandshakeInterceptor.PRINCIPAL_ATTRIBUTE);
         return principal instanceof Principal value ? value : null;
     }

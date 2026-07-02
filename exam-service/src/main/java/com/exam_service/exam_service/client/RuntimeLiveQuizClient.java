@@ -39,13 +39,26 @@ public class RuntimeLiveQuizClient {
             UUID examId,
             UUID ownerTeacherId,
             int snapshotVersion,
-            LiveQuizJoinPolicy joinPolicy
+            LiveQuizJoinPolicy joinPolicy,
+            String quizTitle,
+            String subjectName,
+            int questionCount,
+            boolean showLeaderboard
     ) {
         try {
             String body = client.post()
                     .uri("/v1/internal/examruntime-service/live-quizzes/rooms")
                     .header("X-Internal-Api-Key", internalApiKey)
-                    .body(new LiveQuizRoomRequest(examId, ownerTeacherId, snapshotVersion, joinPolicy.name()))
+                    .body(new LiveQuizRoomRequest(
+                            examId,
+                            ownerTeacherId,
+                            snapshotVersion,
+                            joinPolicy.name(),
+                            quizTitle,
+                            subjectName,
+                            questionCount,
+                            showLeaderboard
+                    ))
                     .retrieve()
                     .body(String.class);
             // Gateway/global handler co the boc response trong field data; test/local co the tra DTO thang.
@@ -72,7 +85,11 @@ public class RuntimeLiveQuizClient {
             UUID examId,
             UUID ownerTeacherId,
             int snapshotVersion,
-            String joinPolicy
+            String joinPolicy,
+            String quizTitle,
+            String subjectName,
+            int questionCount,
+            boolean showLeaderboard
     ) {
     }
 
@@ -80,6 +97,10 @@ public class RuntimeLiveQuizClient {
             UUID roomId,
             UUID examId,
             String roomCode,
+            String quizTitle,
+            String subjectName,
+            int questionCount,
+            boolean showLeaderboard,
             String status
     ) {
     }

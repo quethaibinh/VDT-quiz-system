@@ -68,7 +68,11 @@ public class LiveQuizPrepareService {
                 prepared.getSnapshotVersion(),
                 prepared.getLiveQuizJoinPolicy() == null
                         ? LiveQuizJoinPolicy.CODE_ONLY
-                        : prepared.getLiveQuizJoinPolicy()
+                        : prepared.getLiveQuizJoinPolicy(),
+                prepared.getTitle(),
+                prepared.getSubjectNameSnapshot(),
+                liveQuizService.toDetail(prepared).questionCount(),
+                Boolean.TRUE.equals(prepared.getLiveQuizShowLeaderboard())
         );
         return new LiveQuizPrepareResponseDTO(
                 liveQuizService.toDetail(prepared),

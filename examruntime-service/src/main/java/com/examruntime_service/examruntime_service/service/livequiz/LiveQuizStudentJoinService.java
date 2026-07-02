@@ -106,9 +106,14 @@ public class LiveQuizStudentJoinService {
                 room.getId(),
                 room.getExamId(),
                 saved.getId(),
+                room.getRoomCode(),
+                room.getQuizTitle(),
+                room.getSubjectName(),
                 saved.getStatus(),
                 room.getStatus(),
                 saved.getTotalQuestions(),
+                participantRepo.findByRoomId(room.getId()).size(),
+                snapshotService.currentRank(room.getId(), saved.getId()),
                 OffsetDateTime.now(clock)
         );
     }
@@ -221,7 +226,7 @@ public class LiveQuizStudentJoinService {
                 OffsetDateTime.now(clock),
                 room.getStatus(),
                 null,
-                snapshotService.toParticipantSnapshot(participant),
+                snapshotService.toParticipantSnapshot(participant, snapshotService.currentRank(room.getId(), participant.getId())),
                 null,
                 snapshotService.summary(participantRepo.findByRoomId(room.getId()))
         ));

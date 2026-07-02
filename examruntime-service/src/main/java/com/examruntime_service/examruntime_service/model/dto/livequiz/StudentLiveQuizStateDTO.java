@@ -11,12 +11,17 @@ public record StudentLiveQuizStateDTO(
         UUID roomId,
         UUID examId,
         UUID participantId,
+        String roomCode,
+        String quizTitle,
+        String subjectName,
         LiveQuizRoomStatus roomStatus,
         LiveQuizParticipantStatus participantStatus,
         int answeredCount,
         int totalQuestions,
         BigDecimal totalScore,
         BigDecimal maxScore,
+        Integer currentRank,
+        int participantCount,
         OffsetDateTime serverTime,
         OffsetDateTime currentQuestionEndsAt
 ) {

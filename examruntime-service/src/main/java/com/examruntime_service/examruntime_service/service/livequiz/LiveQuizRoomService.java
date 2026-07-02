@@ -161,6 +161,10 @@ public class LiveQuizRoomService {
         LiveQuizRoom room = new LiveQuizRoom();
         room.setExamId(request.examId());
         room.setOwnerTeacherId(request.ownerTeacherId());
+        room.setQuizTitle(blankToDefault(request.quizTitle(), "Live quiz"));
+        room.setSubjectName(blankToDefault(request.subjectName(), "Mon hoc"));
+        room.setQuestionCount(Math.max(0, request.questionCount()));
+        room.setShowLeaderboard(request.showLeaderboard());
         room.setRoomCode(generateUniqueCode());
         // Tao room o PREPARING, chua cho hoc sinh join cho den khi teacher goi open.
         room.setStatus(LiveQuizRoomStatus.PREPARING);
@@ -178,6 +182,10 @@ public class LiveQuizRoomService {
         if (request.snapshotVersion() < 1) {
             throw new IllegalArgumentException("INVALID_LIVE_QUIZ_SNAPSHOT_VERSION");
         }
+    }
+
+    private String blankToDefault(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
     }
 
     /**
@@ -245,6 +253,10 @@ public class LiveQuizRoomService {
                 room.getId(),
                 room.getExamId(),
                 room.getRoomCode(),
+                room.getQuizTitle(),
+                room.getSubjectName(),
+                room.getQuestionCount(),
+                room.isShowLeaderboard(),
                 room.getOwnerTeacherId(),
                 room.getStatus(),
                 room.getOpenedAt(),

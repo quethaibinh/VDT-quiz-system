@@ -45,7 +45,7 @@ export function LiveQuizListPage() {
     mutationFn: (quiz: LiveQuizSummary) => prepareLiveQuiz(subjectId, quiz.id),
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: liveQuizKeys.subject(subjectId) });
-      navigate(`/teacher/live-quizzes/${result.roomId}/room`, {
+      navigate(`/teacher/live-quizzes/${result.roomId}/lobby`, {
         state: {
           subjectId,
           quizId: result.quiz.id,

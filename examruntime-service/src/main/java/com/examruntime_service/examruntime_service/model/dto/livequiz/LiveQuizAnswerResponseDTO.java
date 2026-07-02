@@ -11,6 +11,9 @@ public record LiveQuizAnswerResponseDTO(
         LiveQuizAnswerStatus answerStatus,
         boolean correct,
         BigDecimal scoreAwarded,
+        BigDecimal maxScore,
+        Integer responseTimeMs,
+        BigDecimal scoreRatio,
         BigDecimal totalScore,
         boolean nextQuestionAvailable,
         boolean finished

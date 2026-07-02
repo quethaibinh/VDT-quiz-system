@@ -37,6 +37,7 @@ public class WebSocketAuthHandshakeInterceptor implements HandshakeInterceptor {
             // Gateway phai authenticate JWT va forward trusted headers truoc khi request den service.
             return false;
         }
+        // put nhung thong tin security vao trong attribute de principal cua ws luu lai.
         attributes.put(PRINCIPAL_ATTRIBUTE,
                 new WebSocketPrincipal(new ExamRuntimeUserPrincipal(userId, username, role)));
         return true;
