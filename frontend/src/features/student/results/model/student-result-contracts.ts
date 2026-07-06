@@ -11,6 +11,7 @@ export interface StudentResultSummary {
   examId: string;
   code: string | null;
   title: string;
+  subjectId: string | null;
   subjectName: string | null;
   visibilityState: StudentResultVisibilityState;
   message: string;

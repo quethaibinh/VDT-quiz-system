@@ -20,11 +20,20 @@ import { SubjectExamListPage } from "@/features/teacher/exams/pages/exam-list-pa
 import { ExamSubjectPickerPage } from "@/features/teacher/exams/pages/exam-subject-picker-page";
 import { QuestionImportPage } from "@/features/teacher/imports/pages/question-import-page";
 import { TeacherLayout } from "@/features/teacher/layout/teacher-layout";
+import { LiveQuizBuilderPage } from "@/features/teacher/live-quizzes/pages/live-quiz-builder-page";
+import { LiveQuizDashboardPage } from "@/features/teacher/live-quizzes/pages/live-quiz-dashboard-page";
+import { LiveQuizEditPage } from "@/features/teacher/live-quizzes/pages/live-quiz-edit-page";
+import { LiveQuizLobbyPage } from "@/features/teacher/live-quizzes/pages/live-quiz-lobby-page";
+import { LiveQuizListPage } from "@/features/teacher/live-quizzes/pages/live-quiz-list-page";
+import { LiveQuizResultsPage } from "@/features/teacher/live-quizzes/pages/live-quiz-results-page";
+import { LiveQuizRoomPage } from "@/features/teacher/live-quizzes/pages/live-quiz-room-page";
+import { LiveQuizSubjectPickerPage } from "@/features/teacher/live-quizzes/pages/live-quiz-subject-picker-page";
+import { MonitoringExamPickerPage } from "@/features/teacher/monitoring/pages/monitoring-exam-picker-page";
 import { ExamMonitorPage } from "@/features/teacher/monitoring/pages/exam-monitor-page";
 import { QuestionBankPage } from "@/features/teacher/questions/pages/question-bank-page";
 import { ExamResultsPage } from "@/features/teacher/results/pages/exam-results-page";
 import { ResultSubjectPickerPage } from "@/features/teacher/results/pages/result-subject-picker-page";
-import { SubjectResultListPage } from "@/features/teacher/results/pages/subject-result-list-page";
+import { SubjectExamResultListPage } from "@/features/teacher/results/pages/subject-result-list-page";
 import { SubjectDashboardPage } from "@/features/teacher/subjects/pages/subject-dashboard-page";
 import { SubjectListPage } from "@/features/teacher/subjects/pages/subject-list-page";
 import { StudentGuard } from "@/features/auth/components/student-guard";
@@ -33,6 +42,10 @@ import { StudentDashboardPage } from "@/features/student/dashboard/pages/student
 import { StudentExamListPage } from "@/features/student/exams/pages/student-exam-list-page";
 import { StudentExamLobbyPage } from "@/features/student/exams/pages/student-exam-lobby-page";
 import { StudentExamRuntimePage } from "@/features/student/exams/pages/student-exam-runtime-page";
+import { StudentLiveQuizJoinPage } from "@/features/student/live-quizzes/pages/student-live-quiz-join-page";
+import { StudentLiveQuizLobbyPage } from "@/features/student/live-quizzes/pages/student-live-quiz-lobby-page";
+import { StudentLiveQuizPlayPage } from "@/features/student/live-quizzes/pages/student-live-quiz-play-page";
+import { StudentLiveQuizResultPage } from "@/features/student/live-quizzes/pages/student-live-quiz-result-page";
 import { StudentResultDetailPage } from "@/features/student/results/pages/student-result-detail-page";
 import { StudentResultsPage } from "@/features/student/results/pages/student-results-page";
 import { ProfilePage } from "@/features/profile/pages/profile-page";
@@ -66,9 +79,20 @@ export const router = createBrowserRouter([
             { path: "subjects/:subjectId/exams", element: <SubjectExamListPage /> },
             { path: "subjects/:subjectId/exams/new", element: <ExamBuilderPage /> },
             { path: "subjects/:subjectId/exams/:examId/edit", element: <ExamEditPage /> },
+            { path: "live-quizzes", element: <LiveQuizSubjectPickerPage /> },
+            { path: "subjects/:subjectId/live-quizzes", element: <LiveQuizListPage /> },
+            { path: "subjects/:subjectId/live-quizzes/new", element: <LiveQuizBuilderPage /> },
+            { path: "subjects/:subjectId/live-quizzes/:quizId/edit", element: <LiveQuizEditPage /> },
+            { path: "live-quizzes/:roomId/lobby", element: <LiveQuizLobbyPage /> },
+            { path: "live-quizzes/:roomId/dashboard", element: <LiveQuizDashboardPage /> },
+            { path: "live-quizzes/:roomId/results", element: <LiveQuizResultsPage /> },
+            { path: "live-quizzes/:roomId/room", element: <LiveQuizRoomPage /> },
+            { path: "monitoring", element: <MonitoringExamPickerPage /> },
             { path: "exams/:examId/monitor", element: <ExamMonitorPage /> },
             { path: "results", element: <ResultSubjectPickerPage /> },
-            { path: "subjects/:subjectId/results", element: <SubjectResultListPage /> },
+            { path: "subjects/:subjectId/results", element: <SubjectExamResultListPage /> },
+            { path: "subjects/:subjectId/results/quizzes", element: <Navigate to=".." replace /> },
+            { path: "subjects/:subjectId/results/exams", element: <Navigate to=".." replace /> },
             { path: "exams/:examId/results", element: <ExamResultsPage /> },
             { path: "profile", element: <ProfilePage /> },
           ],
@@ -92,20 +116,26 @@ export const router = createBrowserRouter([
       },
       {
         element: <StudentGuard />,
-        children: [{
-          path: "/student",
-          element: <StudentLayout />,
-          children: [
-            { index: true, element: <Navigate to="dashboard" replace /> },
-            { path: "dashboard", element: <StudentDashboardPage /> },
-            { path: "exams", element: <StudentExamListPage /> },
-            { path: "exams/:examId/lobby", element: <StudentExamLobbyPage /> },
-            { path: "exams/:examId/session", element: <StudentExamRuntimePage /> },
-            { path: "results", element: <StudentResultsPage /> },
-            { path: "results/:examId", element: <StudentResultDetailPage /> },
-            { path: "profile", element: <ProfilePage /> },
-          ],
-        }],
+        children: [
+          {
+            path: "/student",
+            element: <StudentLayout />,
+            children: [
+              { index: true, element: <Navigate to="dashboard" replace /> },
+              { path: "dashboard", element: <StudentDashboardPage /> },
+              { path: "exams", element: <StudentExamListPage /> },
+              { path: "exams/:examId/lobby", element: <StudentExamLobbyPage /> },
+              { path: "live-quizzes", element: <StudentLiveQuizJoinPage /> },
+              { path: "live-quizzes/:roomId/lobby", element: <StudentLiveQuizLobbyPage /> },
+              { path: "live-quizzes/:roomId/play", element: <StudentLiveQuizPlayPage /> },
+              { path: "live-quizzes/:roomId/result", element: <StudentLiveQuizResultPage /> },
+              { path: "results", element: <StudentResultsPage /> },
+              { path: "results/:examId", element: <StudentResultDetailPage /> },
+              { path: "profile", element: <ProfilePage /> },
+            ],
+          },
+          { path: "/student/exams/:examId/session", element: <StudentExamRuntimePage /> },
+        ],
       },
       { path: "*", element: <NotFoundPage /> },
     ],

@@ -27,7 +27,7 @@ export function WorkspaceShell({ homePath, workspaceLabel, roleLabel, navigation
   const role = session?.claims.userRole;
   const profilePath = role === "TEACHER" ? "/teacher/profile" : role === "STUDENT" ? "/student/profile" : undefined;
 
-  // Khoi tao trang thai thu gon tu localStorage, mac dinh la mo rong (false)
+  // Khởi tạo trạng thái thu gọn từ localStorage, mặc định là mở rộng (false).
   const [isCollapsed, setIsCollapsed] = useState(() => {
     try {
       return localStorage.getItem("sahara_sidebar_collapsed") === "true";
@@ -42,7 +42,7 @@ export function WorkspaceShell({ homePath, workspaceLabel, roleLabel, navigation
       try {
         localStorage.setItem("sahara_sidebar_collapsed", String(next));
       } catch {
-        // Bo qua neu loi localStorage
+        // Bỏ qua nếu lỗi localStorage.
       }
       return next;
     });
@@ -50,7 +50,6 @@ export function WorkspaceShell({ homePath, workspaceLabel, roleLabel, navigation
 
   const renderSidebar = (collapsed: boolean) => (
     <aside className={cn("relative flex h-full flex-col border-r border-line bg-surface p-5 transition-all duration-300", collapsed ? "w-18 items-center px-2" : "w-72")}>
-      {/* Nut toggle thu gon sidebar chi hien thi tren desktop (lg) */}
       <button
         onClick={toggleCollapse}
         className="absolute top-5 -right-4 z-50 hidden lg:flex h-8 w-8 items-center justify-center rounded-full border border-line bg-surface shadow-md hover:bg-primary hover:border-primary hover:text-white transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer text-muted"
@@ -129,7 +128,7 @@ export function WorkspaceShell({ homePath, workspaceLabel, roleLabel, navigation
               <div className="hidden sm:block text-left"><p className="m-0 text-sm font-semibold">{name}</p><p className="m-0 text-xs text-muted">{roleLabel}</p></div>
               <ChevronDown className={cn("h-4 w-4 text-muted transition-transform duration-200", showUserDropdown && "rotate-180")} />
             </button>
-            
+
             {showUserDropdown && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowUserDropdown(false)} />
@@ -164,4 +163,3 @@ export function WorkspaceShell({ homePath, workspaceLabel, roleLabel, navigation
     </div>
   );
 }
-

@@ -99,6 +99,21 @@ class AdminGatewaySecurityTests {
     }
 
     @Test
+    void monitorWebSocketRouteAcceptsAccessTokenQueryToken() {
+        client.get().uri("/v1/api/examruntime-service/ws?access_token=" + token("STUDENT"))
+                .exchange()
+                .expectStatus()
+                .value(status -> assertThat(status).isNotIn(401, 403));
+    }
+
+    @Test
+    void accessTokenQueryIsIgnoredOutsideMonitorWebSocketRoute() {
+        client.get().uri("/v1/api/examruntime-service/student/exams/123/join?access_token=" + token("STUDENT"))
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
     void publicRuntimeRouteAllowsUnauthenticatedRequests() {
         // Kiem tra route public cua examruntime cho phep request khong co JWT di qua
         client.get().uri("/v1/api/examruntime-service/public/status")

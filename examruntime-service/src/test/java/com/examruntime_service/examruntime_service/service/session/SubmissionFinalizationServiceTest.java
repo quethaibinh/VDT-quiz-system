@@ -22,6 +22,7 @@ import com.examruntime_service.examruntime_service.service.activation.RuntimeAct
 import com.examruntime_service.examruntime_service.service.paper.RuntimePaperPoolLoader;
 import com.examruntime_service.examruntime_service.service.session.resume.AnswerSnapshotReader;
 import com.examruntime_service.examruntime_service.service.session.submit.SubmissionFinalizationService;
+import com.examruntime_service.examruntime_service.service.monitor.MonitorStateService;
 import com.examruntime_service.examruntime_service.util.exception.ConflictException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,6 +57,7 @@ class SubmissionFinalizationServiceTest {
     private RuntimePaperPoolLoader paperPoolLoader;
     private RuntimeActivationCache activationCache;
     private ExamServiceSnapshotClient snapshotClient;
+    private MonitorStateService monitorStateService;
     private SubmissionFinalizationService service;
 
     private final UUID sessionId = UUID.randomUUID();
@@ -76,6 +78,7 @@ class SubmissionFinalizationServiceTest {
         paperPoolLoader = mock(RuntimePaperPoolLoader.class);
         activationCache = mock(RuntimeActivationCache.class);
         snapshotClient = mock(ExamServiceSnapshotClient.class);
+        monitorStateService = mock(MonitorStateService.class);
         when(paperPoolLoader.load(eq(examId), eq(3), any())).thenReturn(paperPool());
         when(snapshotClient.getAnswerKey(examId)).thenReturn(answerKey());
         service = new SubmissionFinalizationService(
@@ -87,6 +90,7 @@ class SubmissionFinalizationServiceTest {
                 activationCache,
                 snapshotClient,
                 new ObjectMapper(),
+                monitorStateService,
                 Clock.fixed(fixedInstant, ZoneId.of("UTC"))
         );
     }

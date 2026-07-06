@@ -11,6 +11,29 @@ public record QuestionSnapshotItem(
         String content,
         String contentFormat,
         Double defaultScore,
+        Integer estimatedSecond,
         List<QuestionSnapshotOption> options
 ) {
+    public QuestionSnapshotItem(
+            UUID questionId,
+            long questionVersion,
+            String difficulty,
+            String type,
+            String content,
+            String contentFormat,
+            Double defaultScore,
+            List<QuestionSnapshotOption> options
+    ) {
+        this(
+                questionId,
+                questionVersion,
+                difficulty,
+                type,
+                content,
+                contentFormat,
+                defaultScore,
+                null,
+                options
+        );
+    }
 }

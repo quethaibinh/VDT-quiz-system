@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   examKeys,
@@ -54,7 +55,10 @@ export function ExamInlineDetails({
 }
 
 function DetailContent({ exam }: { exam: ExamDetail }) {
+  const location = useLocation();
   const totalQuestions = exam.easyCount + exam.mediumCount + exam.hardCount;
+  const backTo = `${location.pathname}${location.search}`;
+
   return (
     <div className="space-y-5">
       <section>
@@ -94,6 +98,16 @@ function DetailContent({ exam }: { exam: ExamDetail }) {
           <Detail label="Xử lý vi phạm" value={violationLabels[exam.handleViolation]} />
         </dl>
       </section>
+
+      <div className="flex justify-end border-t border-line pt-4">
+        <Link
+          to={`/teacher/exams/${exam.id}/results`}
+          state={{ backTo, examTitle: exam.title }}
+          className="inline-flex min-h-10 items-center justify-center rounded-lg border border-primary bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
+        >
+          Xem kết quả
+        </Link>
+      </div>
     </div>
   );
 }

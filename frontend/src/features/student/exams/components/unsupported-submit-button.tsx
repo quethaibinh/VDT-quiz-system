@@ -7,7 +7,6 @@ interface SubmitButtonProps {
   onSubmit: () => void;
 }
 
-// Nut nop bai cua hoc sinh voi trang thai dang gui/da nhan.
 export function SubmitButton({ disabled, pending, submitted, onSubmit }: SubmitButtonProps) {
   if (submitted) {
     return (

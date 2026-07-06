@@ -77,6 +77,7 @@ describe("SubjectExamListPage", () => {
     await user.click(trigger);
     expect(await screen.findByRole("region", { name: /Thi cuối kỳ/ })).toBeInTheDocument();
     expect(await screen.findByText("Bộ đề cuối kỳ")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Xem kết quả" })).toHaveAttribute("href", "/teacher/exams/exam-1/results");
     expect(detailRequests).toBe(1);
 
     await user.click(trigger);

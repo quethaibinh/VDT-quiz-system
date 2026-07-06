@@ -29,6 +29,8 @@ public class ExamAssignmentSnapshotService {
                 .map(assignment -> InternalExamAssignmentDTO.AssignmentDetail.builder()
                         .assignmentId(assignment.getId())
                         .studentId(assignment.getStudentId())
+                        .studentCode(assignment.getStudentCodeSnapshot())
+                        .studentName(assignment.getStudentNameSnapshot())
                         .build())
                 .collect(Collectors.toList());
 

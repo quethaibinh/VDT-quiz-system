@@ -10,6 +10,7 @@ import com.examruntime_service.examruntime_service.repository.ExamSessionRepo;
 import com.examruntime_service.examruntime_service.service.session.autoSave.AnswerDraftSaveResult;
 import com.examruntime_service.examruntime_service.service.session.autoSave.AnswerDraftStore;
 import com.examruntime_service.examruntime_service.service.session.autoSave.SessionAnswerCheckpointWriter;
+import com.examruntime_service.examruntime_service.service.monitor.MonitorStateService;
 import com.examruntime_service.examruntime_service.util.exception.ConflictException;
 import com.examruntime_service.examruntime_service.util.exception.NotFoundException;
 import com.examruntime_service.examruntime_service.util.exception.UnauthorizedException;
@@ -36,6 +37,7 @@ public class StudentAutosaveService {
     private final AnswerDraftStore answerDraftStore;
     private final SessionAnswerCheckpointWriter checkpointWriter;
     private final ObjectMapper objectMapper;
+    private final MonitorStateService monitorStateService;
     private final Clock clock;
 
     public StudentAutosaveService(
@@ -43,12 +45,14 @@ public class StudentAutosaveService {
             AnswerDraftStore answerDraftStore,
             SessionAnswerCheckpointWriter checkpointWriter,
             ObjectMapper objectMapper,
+            MonitorStateService monitorStateService,
             Clock clock
     ) {
         this.examSessionRepo = examSessionRepo;
         this.answerDraftStore = answerDraftStore;
         this.checkpointWriter = checkpointWriter;
         this.objectMapper = objectMapper;
+        this.monitorStateService = monitorStateService;
         this.clock = clock;
     }
 
@@ -88,6 +92,9 @@ public class StudentAutosaveService {
             saveResult = checkpointWriter.writeAutosaveFallback(session, requestedAnswers, clientSeq, now);
             storeMode = AnswerStoreMode.DB_FALLBACK;
         }
+        // Autosave la nguon cap nhat answeredCount cho teacher monitor.
+        // Gia tri nay lay tu store result de dung ca Redis hot path va DB fallback.
+        monitorStateService.updateAnsweredCount(session, saveResult.answeredCount(), saveResult.lastAutosaveAt());
 
         return AutosaveResponseDTO.builder()
                 .sessionId(sessionId)

@@ -11,6 +11,7 @@ import com.exam_service.exam_service.model.entity.ExamQuestion;
 import com.exam_service.exam_service.model.entity.OutboxEvent;
 import com.exam_service.exam_service.model.entity.enums.AssignmentStatus;
 import com.exam_service.exam_service.model.entity.enums.ExamStatus;
+import com.exam_service.exam_service.model.entity.enums.ExamType;
 import com.exam_service.exam_service.model.entity.enums.OutboxStatus;
 import com.exam_service.exam_service.model.entity.enums.QuestionDifficulty;
 import com.exam_service.exam_service.repository.ExamAssignmentRepo;
@@ -72,6 +73,9 @@ public class ExamSchedulingTransactionService {
         if (exam.getStatus() == ExamStatus.SCHEDULED && questionRepo.existsByExamId(examId)) {
             return exam;
         }
+        if (exam.getExamType() != ExamType.STANDARD_EXAM) {
+            throw new ConflictException("LIVE_QUIZ_CANNOT_USE_EXAM_SCHEDULE");
+        }
         if (exam.getStatus() != ExamStatus.DRAFT) {
             throw new ConflictException("EXAM_NOT_EDITABLE");
         }
@@ -102,6 +106,7 @@ public class ExamSchedulingTransactionService {
             row.setQuestionVersion(Math.toIntExact(item.questionVersion()));
             row.setDifficulty(QuestionDifficulty.valueOf(item.difficulty()));
             row.setScore(item.defaultScore().floatValue());
+            row.setTimeLimitSeconds(item.estimatedSecond());
             row.setSortOrder(order++);
             row.setRequired(true);
             row.setQuestionSnapshot(toJson(toPaperQuestion(item)));
@@ -163,6 +168,7 @@ public class ExamSchedulingTransactionService {
                 item.content(),
                 item.contentFormat(),
                 item.defaultScore(),
+                item.estimatedSecond(),
                 item.options().stream()
                         .map(option -> new PaperOptionDTO(
                                 option.optionId(),

@@ -1,0 +1,17 @@
+info:
+  name: teacher prepare live quiz
+  type: http
+  seq: 32
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/exam-service/teacher/subjects/{{subjectId}}/live-quizzes/{{quizId}}/prepare"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

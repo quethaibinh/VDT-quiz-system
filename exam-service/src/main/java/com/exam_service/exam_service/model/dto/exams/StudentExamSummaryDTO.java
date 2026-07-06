@@ -13,6 +13,7 @@ public record StudentExamSummaryDTO(
         UUID examId,
         String code,
         String title,
+        UUID subjectId,
         String subjectName,
         OffsetDateTime startAt,
         OffsetDateTime endAt,

@@ -1,5 +1,6 @@
 package com.gateway.gateway.filter;
 
+import com.gateway.gateway.config.JwtTokenResolver;
 import com.gateway.gateway.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -20,19 +21,20 @@ public class HeaderEnhancerFilter implements GlobalFilter, Ordered {
 
     private final JwtUtil jwtUtil;
     private final String trustedGatewaySecret;
+    private final JwtTokenResolver tokenResolver;
 
     public HeaderEnhancerFilter(
             JwtUtil jwtUtil,
+            JwtTokenResolver tokenResolver,
             @Value("${gateway.trusted-secret}") String trustedGatewaySecret
     ) {
         this.jwtUtil = jwtUtil;
+        this.tokenResolver = tokenResolver;
         this.trustedGatewaySecret = trustedGatewaySecret;
     }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-
         // Luon xoa identity header cua client de ngan gia mao nguoi dung.
         ServerHttpRequest sanitizedRequest = exchange.getRequest().mutate()
                 .headers(headers -> {
@@ -44,8 +46,8 @@ public class HeaderEnhancerFilter implements GlobalFilter, Ordered {
                 .build();
         ServerWebExchange sanitizedExchange = exchange.mutate().request(sanitizedRequest).build();
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
+        String token = tokenResolver.resolve(sanitizedExchange);
+        if (token != null) {
             try {
                 Claims claims = jwtUtil.getClaims(token);
                 String userId = claims.get("userId", String.class);

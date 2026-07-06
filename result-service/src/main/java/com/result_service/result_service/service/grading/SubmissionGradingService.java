@@ -8,6 +8,7 @@ import com.result_service.result_service.model.entity.ResultAnswer;
 import com.result_service.result_service.model.entity.enums.ExamStatus;
 import com.result_service.result_service.model.entity.enums.GradingJobStatus;
 import com.result_service.result_service.model.entity.enums.InboxMessageStatus;
+import com.result_service.result_service.model.entity.enums.ResultType;
 import com.result_service.result_service.repository.ExamResultRepo;
 import com.result_service.result_service.repository.GradingJobRepo;
 import com.result_service.result_service.repository.InboxMessageRepo;
@@ -177,6 +178,7 @@ public class SubmissionGradingService {
     private ExamResult buildResult(SubmissionCreatedEvent event, GradeComputation computed, OffsetDateTime startedAt) {
         OffsetDateTime gradedAt = OffsetDateTime.now(clock);
         ExamResult result = new ExamResult();
+        result.setResultType(ResultType.STANDARD_EXAM);
         result.setExamId(event.examId());
         result.setStudentId(event.studentId());
         result.setSessionId(event.sessionId());

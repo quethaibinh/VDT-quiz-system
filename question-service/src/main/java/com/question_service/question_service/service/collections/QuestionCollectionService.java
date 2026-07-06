@@ -145,6 +145,24 @@ public class QuestionCollectionService {
             UUID collectionId,
             UUID teacherId
     ) {
+        return getSnapshot(subjectId, collectionId, teacherId, false);
+    }
+
+    @Transactional(readOnly = true)
+    public ExamCollectionSnapshotDTO getLiveQuizSnapshot(
+            UUID subjectId,
+            UUID collectionId,
+            UUID teacherId
+    ) {
+        return getSnapshot(subjectId, collectionId, teacherId, true);
+    }
+
+    private ExamCollectionSnapshotDTO getSnapshot(
+            UUID subjectId,
+            UUID collectionId,
+            UUID teacherId,
+            boolean requireTimeLimit
+    ) {
         Subject subject = subjectAccessService.requireActiveAssignment(subjectId, teacherId);
         QuestionCollection collection = loadReadable(subjectId, collectionId, teacherId);
         if (collection.getStatus() != CollectionStatus.ACTIVE) {
@@ -162,9 +180,11 @@ public class QuestionCollectionService {
         }
 
         List<ExamQuestionSnapshotDTO> snapshots = questions.stream()
-                .map(question -> toExamSnapshot(question, optionsByQuestion.getOrDefault(
-                        question.getId(), List.of()
-                )))
+                .map(question -> toExamSnapshot(
+                        question,
+                        optionsByQuestion.getOrDefault(question.getId(), List.of()),
+                        requireTimeLimit
+                ))
                 .toList();
         return new ExamCollectionSnapshotDTO(
                 collection.getId(),
@@ -329,7 +349,8 @@ public class QuestionCollectionService {
 
     private ExamQuestionSnapshotDTO toExamSnapshot(
             Question question,
-            List<QuestionOption> options
+            List<QuestionOption> options,
+            boolean requireTimeLimit
     ) {
         if (question.getContent() == null || question.getContent().isBlank() || options.size() < 2) {
             throw error(HttpStatus.BAD_REQUEST, "INVALID_EXAM_QUESTION");
@@ -356,6 +377,9 @@ public class QuestionCollectionService {
         if (question.getDefaultScore() == null || question.getDefaultScore() <= 0) {
             throw error(HttpStatus.BAD_REQUEST, "INVALID_EXAM_QUESTION_SCORE");
         }
+        if (requireTimeLimit && question.getEstimatedSecond() <= 0) {
+            throw error(HttpStatus.BAD_REQUEST, "INVALID_EXAM_QUESTION_TIME_LIMIT");
+        }
 
         return new ExamQuestionSnapshotDTO(
                 question.getId(),
@@ -365,6 +389,7 @@ public class QuestionCollectionService {
                 question.getContent(),
                 question.getContentFormat(),
                 question.getDefaultScore(),
+                question.getEstimatedSecond(),
                 options.stream()
                         .map(option -> new ExamOptionSnapshotDTO(
                                 option.getId(),

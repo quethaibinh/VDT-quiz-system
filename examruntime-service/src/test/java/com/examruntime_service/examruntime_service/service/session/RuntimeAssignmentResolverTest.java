@@ -78,7 +78,8 @@ class RuntimeAssignmentResolverTest {
         when(redisTemplate.hasKey(setKey)).thenReturn(false);
 
         // Mock API fallback
-        InternalExamAssignmentDTO.AssignmentDetail detail = new InternalExamAssignmentDTO.AssignmentDetail(assignmentId, studentId);
+        InternalExamAssignmentDTO.AssignmentDetail detail =
+                new InternalExamAssignmentDTO.AssignmentDetail(assignmentId, studentId, "S001", "Student One");
         InternalExamAssignmentDTO fallbackDto = new InternalExamAssignmentDTO(examId, List.of(detail));
         when(client.getAssignments(examId)).thenReturn(fallbackDto);
 
@@ -104,7 +105,8 @@ class RuntimeAssignmentResolverTest {
         when(setOps.isMember(setKey, studentId.toString())).thenReturn(true);
         when(hashOps.get(hashKey, studentId.toString())).thenReturn(null);
 
-        InternalExamAssignmentDTO.AssignmentDetail detail = new InternalExamAssignmentDTO.AssignmentDetail(assignmentId, studentId);
+        InternalExamAssignmentDTO.AssignmentDetail detail =
+                new InternalExamAssignmentDTO.AssignmentDetail(assignmentId, studentId, "S001", "Student One");
         InternalExamAssignmentDTO fallbackDto = new InternalExamAssignmentDTO(examId, List.of(detail));
         when(client.getAssignments(examId)).thenReturn(fallbackDto);
 

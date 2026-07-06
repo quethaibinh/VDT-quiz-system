@@ -1,0 +1,17 @@
+meta:
+  name: student join live quiz
+  type: http
+  seq: 0
+
+post:
+  url: {{baseUrl}}/v1/api/examruntime-service/student/live-quizzes/join
+  body: json
+  auth: bearer
+
+auth:bearer:
+  token: {{studentToken}}
+
+body:json:
+  {
+    "code": "{{roomCode}}"
+  }

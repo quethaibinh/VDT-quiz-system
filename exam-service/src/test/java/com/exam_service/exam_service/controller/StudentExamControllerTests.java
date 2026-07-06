@@ -37,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class StudentExamControllerTests {
 
     private static final UUID STUDENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000202");
+    private static final UUID SUBJECT_ID = UUID.fromString("00000000-0000-0000-0000-000000000303");
 
     @Autowired
     private MockMvc mockMvc;
@@ -68,6 +69,7 @@ class StudentExamControllerTests {
                 UUID.randomUUID(),
                 "EX001",
                 "Triet hoc",
+                SUBJECT_ID,
                 "Triet hoc dai cuong",
                 OffsetDateTime.now(),
                 OffsetDateTime.now().plusHours(1),
@@ -89,6 +91,7 @@ class StudentExamControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.serverTime").exists())
                 .andExpect(jsonPath("$.data.content[0].code").value("EX001"))
+                .andExpect(jsonPath("$.data.content[0].subjectId").value(SUBJECT_ID.toString()))
                 .andExpect(jsonPath("$.data.content[0].studentAvailability").value("UPCOMING"));
 
         verify(studentExamReadService).list(STUDENT_ID, "UPCOMING", 0, 20);
@@ -104,6 +107,7 @@ class StudentExamControllerTests {
                 "EX001",
                 "Triet hoc",
                 "Mo ta",
+                SUBJECT_ID,
                 "Triet hoc dai cuong",
                 OffsetDateTime.now(),
                 OffsetDateTime.now().plusHours(1),
@@ -119,6 +123,7 @@ class StudentExamControllerTests {
         mockMvc.perform(get(path, examId).headers(studentHeaders()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.examId").value(examId.toString()))
+                .andExpect(jsonPath("$.data.subjectId").value(SUBJECT_ID.toString()))
                 .andExpect(jsonPath("$.data.code").value("EX001"));
 
         verify(studentExamReadService).get(examId, STUDENT_ID);

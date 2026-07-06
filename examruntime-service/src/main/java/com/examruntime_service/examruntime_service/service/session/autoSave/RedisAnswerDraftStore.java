@@ -67,7 +67,8 @@ public class RedisAnswerDraftStore implements AnswerDraftStore {
 
         redisTemplate.opsForHash().put(stateKey(sessionId), "lastAutosaveAt", now.toString());
         redisTemplate.opsForHash().put(stateKey(sessionId), "autosaveSeq", Long.toString(serverSeq));
-        redisTemplate.opsForHash().put(stateKey(sessionId), "answeredCount", Long.toString(countAnswered(sessionId)));
+        int answeredCount = countAnswered(sessionId);
+        redisTemplate.opsForHash().put(stateKey(sessionId), "answeredCount", Integer.toString(answeredCount));
         redisTemplate.opsForSet().add(DIRTY_SESSIONS_KEY, sessionId.toString());
         redisTemplate.expire(answersKey(sessionId), ttl);
         redisTemplate.expire(stateKey(sessionId), ttl);
@@ -75,6 +76,7 @@ public class RedisAnswerDraftStore implements AnswerDraftStore {
         return AnswerDraftSaveResult.builder()
                 .savedCount(savedCount)
                 .skippedCount(skippedCount)
+                .answeredCount(answeredCount)
                 .serverSeq(serverSeq)
                 .lastAutosaveAt(now)
                 .build();
@@ -159,12 +161,12 @@ public class RedisAnswerDraftStore implements AnswerDraftStore {
         return null;
     }
 
-    private long countAnswered(UUID sessionId) {
+    private int countAnswered(UUID sessionId) {
         return countAnsweredRecords(findAll(sessionId));
     }
 
-    private long countAnsweredRecords(List<AnswerDraftRecord> records) {
-        return records.stream()
+    private int countAnsweredRecords(List<AnswerDraftRecord> records) {
+        return (int) records.stream()
                 .filter(record -> (record.getSelectedOptionIds() != null && !record.getSelectedOptionIds().isEmpty())
                         || (record.getAnswerText() != null && !record.getAnswerText().isBlank()))
                 .count();

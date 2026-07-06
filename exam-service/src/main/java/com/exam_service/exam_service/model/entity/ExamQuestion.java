@@ -37,6 +37,7 @@ public class ExamQuestion extends BaseEntity{
     @Enumerated(jakarta.persistence.EnumType.STRING)
     private QuestionDifficulty difficulty;
     private Float score; // diem mac dinh cua 1 cau
+    private Integer timeLimitSeconds;
     // Chi la thu tu dong bang ky thuat, khong phai thu tu de cua hoc sinh.
     private int sortOrder;
     private boolean required = true;

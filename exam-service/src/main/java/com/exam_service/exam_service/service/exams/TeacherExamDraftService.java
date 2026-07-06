@@ -9,6 +9,7 @@ import com.exam_service.exam_service.model.dto.exams.ExamSummaryDTO;
 import com.exam_service.exam_service.model.entity.Exam;
 import com.exam_service.exam_service.model.entity.enums.AssignmentStatus;
 import com.exam_service.exam_service.model.entity.enums.ExamStatus;
+import com.exam_service.exam_service.model.entity.enums.ExamType;
 import com.exam_service.exam_service.model.entity.enums.HandleViolation;
 import com.exam_service.exam_service.model.entity.enums.ShowResultPolicy;
 import com.exam_service.exam_service.repository.ExamAssignmentRepo;
@@ -64,6 +65,7 @@ public class TeacherExamDraftService {
         exam.setSubjectId(subjectId);
         exam.setCreatedByTeacherId(teacherId);
         exam.setStatus(ExamStatus.DRAFT);
+        exam.setExamType(ExamType.STANDARD_EXAM);
         apply(exam, request, metadata);
         return toDetail(examRepo.save(exam));
     }
@@ -83,7 +85,8 @@ public class TeacherExamDraftService {
     ) {
         Specification<Exam> specification = (root, query, cb) -> cb.and(
                 cb.equal(root.get("subjectId"), subjectId),
-                cb.equal(root.get("createdByTeacherId"), teacherId)
+                cb.equal(root.get("createdByTeacherId"), teacherId),
+                cb.equal(root.get("examType"), ExamType.STANDARD_EXAM)
         );
         if (status != null && !status.isBlank()) {
             ExamStatus parsed = parse(status, ExamStatus.class, "INVALID_EXAM_STATUS");
@@ -240,7 +243,7 @@ public class TeacherExamDraftService {
                 exam.getCollectionId(),
                 exam.getCollectionNameSnapshot(),
                 exam.getStartAt(),
-                exam.getDurationMinutes(),
+                exam.getDurationMinutes() != null ? exam.getDurationMinutes() : 0,
                 exam.getEasyCount() + exam.getMediumCount() + exam.getHardCount(),
                 assignmentRepo.countByExamIdAndStatus(exam.getId(), AssignmentStatus.ASSIGNED),
                 exam.getStatus(),
@@ -263,7 +266,7 @@ public class TeacherExamDraftService {
                 exam.getHardCount(),
                 exam.getStartAt(),
                 exam.getEndAt(),
-                exam.getDurationMinutes(),
+                exam.getDurationMinutes() != null ? exam.getDurationMinutes() : 0,
                 exam.getJoinBeforeMinutes(),
                 exam.getJoinAfterMinutes(),
                 exam.isShuffleQuestions(),

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ClipboardList, Database } from "lucide-react";
+import { ClipboardList, Database, Zap } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { DataState } from "@/components/shared/data-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -26,9 +26,15 @@ export function SubjectDashboardPage() {
           />
           <SubjectWorkspaceAction
             title="Bộ câu hỏi"
-            description="Tổ chức câu hỏi thành các bộ dùng làm nguồn tạo đề và ca thi."
+            description="Tổ chức câu hỏi thành các bộ dùng làm nguồn tạo đề, ca thi và quiz."
             to={`/teacher/subjects/${subjectId}/collections`}
             icon={ClipboardList}
+          />
+          <SubjectWorkspaceAction
+            title="Quiz"
+            description="Tạo quiz trực tiếp từ bộ câu hỏi, chuẩn bị mã phòng và mở phòng khi lớp sẵn sàng."
+            to={`/teacher/subjects/${subjectId}/live-quizzes`}
+            icon={Zap}
           />
         </div>
       </div>}

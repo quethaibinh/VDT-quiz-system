@@ -10,12 +10,12 @@ http:
     type: json
     data: |-
       {
-        "username": "thanh2",
+        "username": "thanh1",
         "password": "123456",
         "fullName": "vu duc thanh",
-        "email": "thanh2@gmail.com",
-        "studentCode": "B22DCCN803",
-        "phone": "8888888888",
+        "email": "thanh1@gmail.com",
+        "studentCode": "B22DCCN801",
+        "phone": "8888888886",
         "nationalId": "888888888886",
         "birthDate": "2004-07-03",
         "gender": "MALE"

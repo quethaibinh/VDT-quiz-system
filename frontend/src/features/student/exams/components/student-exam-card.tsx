@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { StatusChip } from "@/components/ui/status-chip";
 import type { StudentExamSummary } from "../model/student-exam-contracts";
 
-// Format thoi gian hien thi bang dinh dang Viet Nam
 function formatDateTime(isoString: string) {
   return new Date(isoString).toLocaleString("vi-VN", {
     hour: "2-digit",
@@ -19,7 +18,6 @@ interface StudentExamCardProps {
   exam: StudentExamSummary;
 }
 
-// Hien thi card thong tin tung ca thi cho hoc sinh
 export function StudentExamCard({ exam }: StudentExamCardProps) {
   const { examId, title, subjectName, startAt, durationMinutes, questionCount, studentAvailability } = exam;
 
@@ -60,12 +58,12 @@ export function StudentExamCard({ exam }: StudentExamCardProps) {
 
       <div className="flex gap-2 pt-2">
         {studentAvailability === "UPCOMING" && (
-          <Link to={`${examId}/lobby`} className="w-full">
+          <Link to={`/student/exams/${examId}/lobby`} className="w-full">
             <Button variant="secondary" className="w-full">Vào phòng chờ</Button>
           </Link>
         )}
         {studentAvailability === "OPEN" && (
-          <Link to={`${examId}/lobby`} className="w-full">
+          <Link to={`/student/exams/${examId}/lobby`} className="w-full">
             <Button variant="primary" className="w-full">Vào thi</Button>
           </Link>
         )}

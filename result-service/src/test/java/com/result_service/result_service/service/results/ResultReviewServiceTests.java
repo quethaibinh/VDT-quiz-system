@@ -37,6 +37,7 @@ class ResultReviewServiceTests {
     private UUID teacherId;
     private UUID studentId;
     private UUID examId;
+    private UUID subjectId;
 
     @BeforeEach
     void setUp() {
@@ -45,6 +46,7 @@ class ResultReviewServiceTests {
         teacherId = UUID.randomUUID();
         studentId = UUID.randomUUID();
         examId = UUID.randomUUID();
+        subjectId = UUID.randomUUID();
     }
 
     @Test
@@ -53,12 +55,14 @@ class ResultReviewServiceTests {
 
         var hidden = resultReviewService.studentResult(studentId, examId);
         assertThat(hidden.visibilityState()).isEqualTo(ResultVisibilityStateDTO.PENDING_REVIEW);
+        assertThat(hidden.subjectId()).isEqualTo(subjectId);
         assertThat(hidden.score()).isNull();
 
         resultReviewService.publish(teacherId, examId, java.util.List.of(result.getId()));
 
         var visible = resultReviewService.studentResult(studentId, examId);
         assertThat(visible.visibilityState()).isEqualTo(ResultVisibilityStateDTO.READY);
+        assertThat(visible.subjectId()).isEqualTo(subjectId);
         assertThat(visible.score()).isEqualByComparingTo(new BigDecimal("8.0000"));
     }
 
@@ -110,6 +114,7 @@ class ResultReviewServiceTests {
                 "examId", examId,
                 "snapshotVersion", 1,
                 "title", "Midterm",
+                "subjectId", subjectId,
                 "subjectName", "Math",
                 "ownerTeacherId", teacherId,
                 "endAt", endAt,

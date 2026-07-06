@@ -9,6 +9,7 @@ import com.examruntime_service.examruntime_service.repository.SessionAnswerRepo;
 import com.examruntime_service.examruntime_service.service.paper.StudentPaperGenerator;
 import com.examruntime_service.examruntime_service.service.paper.StudentPaperMapper;
 import com.examruntime_service.examruntime_service.service.paper.RuntimePaperPoolLoader;
+import com.examruntime_service.examruntime_service.service.monitor.MonitorStateService;
 import com.examruntime_service.examruntime_service.util.exception.ConflictException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ class StudentExamStartServiceTest {
     private RuntimePaperPoolLoader paperPoolLoader;
     private StudentPaperGenerator paperGenerator;
     private StudentPaperMapper paperMapper;
+    private MonitorStateService monitorStateService;
     private Clock clock;
     private StudentExamStartService startService;
 
@@ -54,6 +56,7 @@ class StudentExamStartServiceTest {
         paperPoolLoader = mock(RuntimePaperPoolLoader.class);
         paperGenerator = mock(StudentPaperGenerator.class);
         paperMapper = mock(StudentPaperMapper.class);
+        monitorStateService = mock(MonitorStateService.class);
         clock = Clock.fixed(fixedInstant, ZoneId.of("UTC"));
 
         startService = new StudentExamStartService(
@@ -64,6 +67,7 @@ class StudentExamStartServiceTest {
                 paperGenerator,
                 paperMapper,
                 new ObjectMapper(),
+                monitorStateService,
                 clock
         );
     }
