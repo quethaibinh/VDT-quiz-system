@@ -28,12 +28,14 @@ class LiveQuizRoomServiceTests {
     private final ExamServiceSnapshotClient snapshotClient = mock(ExamServiceSnapshotClient.class);
     private final LiveQuizRoomCache roomCache = mock(LiveQuizRoomCache.class);
     private final LiveQuizRealtimePublisher realtimePublisher = mock(LiveQuizRealtimePublisher.class);
+    private final LiveQuizCloseFinalizationService closeFinalizationService = mock(LiveQuizCloseFinalizationService.class);
     private final LiveQuizRoomService service = new LiveQuizRoomService(
             roomRepo,
             codeGenerator,
             snapshotClient,
             roomCache,
-            realtimePublisher
+            realtimePublisher,
+            closeFinalizationService
     );
 
     @Test
@@ -56,6 +58,7 @@ class LiveQuizRoomServiceTests {
         assertThat(created.ownerTeacherId()).isEqualTo(teacherId);
         assertThat(created.roomCode()).isEqualTo("A7K2Q9");
         assertThat(created.quizTitle()).isEqualTo("Quiz demo");
+        assertThat(created.subjectId()).isNotNull();
         assertThat(created.subjectName()).isEqualTo("Mon demo");
         assertThat(created.questionCount()).isEqualTo(10);
         assertThat(created.status()).isEqualTo(LiveQuizRoomStatus.PREPARING);
@@ -89,12 +92,20 @@ class LiveQuizRoomServiceTests {
         var openedAgain = service.open(room.getId(), teacherId);
         assertThat(openedAgain.status()).isEqualTo(LiveQuizRoomStatus.OPEN);
 
+        when(closeFinalizationService.closeAndFinalize(room.getId())).thenAnswer(invocation -> {
+            // Unit test nay chi kiem tra routing/quyen cua RoomService.
+            // Toan bo logic chot diem, rank va outbox duoc bao phu boi service finalization rieng.
+            room.setStatus(LiveQuizRoomStatus.CLOSED);
+            room.setClosedAt(java.time.OffsetDateTime.now());
+            return room;
+        });
         var closed = service.close(room.getId(), teacherId);
         assertThat(closed.status()).isEqualTo(LiveQuizRoomStatus.CLOSED);
         assertThat(closed.closedAt()).isNotNull();
 
         var closedAgain = service.close(room.getId(), teacherId);
         assertThat(closedAgain.status()).isEqualTo(LiveQuizRoomStatus.CLOSED);
+        verify(closeFinalizationService, times(2)).closeAndFinalize(room.getId());
     }
 
     @Test
@@ -155,6 +166,7 @@ class LiveQuizRoomServiceTests {
         room.setOwnerTeacherId(teacherId);
         room.setRoomCode("A7K2Q9");
         room.setQuizTitle("Quiz demo");
+        room.setSubjectId(UUID.randomUUID());
         room.setSubjectName("Mon demo");
         room.setQuestionCount(10);
         room.setShowLeaderboard(true);
@@ -169,6 +181,7 @@ class LiveQuizRoomServiceTests {
                 1,
                 joinPolicy,
                 "Quiz demo",
+                UUID.randomUUID(),
                 "Mon demo",
                 10,
                 true

@@ -43,6 +43,9 @@ public class LiveQuizRoom extends BaseEntity {
     @Column(name = "quiz_title", length = 255)
     private String quizTitle;
 
+    @Column(name = "subject_id")
+    private UUID subjectId;
+
     @Column(name = "subject_name", length = 255)
     private String subjectName;
 

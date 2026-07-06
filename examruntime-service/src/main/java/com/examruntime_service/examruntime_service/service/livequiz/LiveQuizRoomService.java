@@ -6,6 +6,7 @@ import com.examruntime_service.examruntime_service.model.dto.cache.ExamPaperPool
 import com.examruntime_service.examruntime_service.model.dto.livequiz.CreateLiveQuizRoomRequestDTO;
 import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizRealtimeMessageDTO;
 import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizRoomDTO;
+import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizRoomLookupDTO;
 import com.examruntime_service.examruntime_service.model.entity.LiveQuizRoom;
 import com.examruntime_service.examruntime_service.model.entity.enums.LiveQuizRoomStatus;
 import com.examruntime_service.examruntime_service.repository.LiveQuizRoomRepo;
@@ -17,7 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -38,6 +41,7 @@ public class LiveQuizRoomService {
     private final ExamServiceSnapshotClient snapshotClient;
     private final LiveQuizRoomCache roomCache;
     private final LiveQuizRealtimePublisher realtimePublisher;
+    private final LiveQuizCloseFinalizationService closeFinalizationService;
 
     /**
      * Inject repository, snapshot client, cache va realtime publisher cho room lifecycle.
@@ -47,13 +51,15 @@ public class LiveQuizRoomService {
             LiveQuizRoomCodeGenerator codeGenerator,
             ExamServiceSnapshotClient snapshotClient,
             LiveQuizRoomCache roomCache,
-            LiveQuizRealtimePublisher realtimePublisher
+            LiveQuizRealtimePublisher realtimePublisher,
+            LiveQuizCloseFinalizationService closeFinalizationService
     ) {
         this.roomRepo = roomRepo;
         this.codeGenerator = codeGenerator;
         this.snapshotClient = snapshotClient;
         this.roomCache = roomCache;
         this.realtimePublisher = realtimePublisher;
+        this.closeFinalizationService = closeFinalizationService;
     }
 
     /**
@@ -75,6 +81,27 @@ public class LiveQuizRoomService {
     public LiveQuizRoomDTO get(UUID roomId, UUID teacherId) {
         LiveQuizRoom room = requireOwned(roomId, teacherId);
         return toDto(room);
+    }
+
+    /**
+     * Lay room moi nhat theo examId de Exam Service hien action dung tren danh sach quiz.
+     */
+    @Transactional(readOnly = true)
+    public List<LiveQuizRoomLookupDTO> latestRoomsByExamIds(List<UUID> examIds) {
+        if (examIds == null || examIds.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, LiveQuizRoomLookupDTO> latestByExam = new LinkedHashMap<>();
+        roomRepo.findByExamIdInOrderByCreatedAtDesc(examIds).forEach(room -> {
+            // Query da sort moi nhat truoc, nen record dau tien cua moi examId la room can dung.
+            latestByExam.putIfAbsent(room.getExamId(), new LiveQuizRoomLookupDTO(
+                    room.getExamId(),
+                    room.getId(),
+                    room.getRoomCode(),
+                    room.getStatus()
+            ));
+        });
+        return List.copyOf(latestByExam.values());
     }
 
     /**
@@ -105,18 +132,9 @@ public class LiveQuizRoomService {
     @Transactional
     public LiveQuizRoomDTO close(UUID roomId, UUID teacherId) {
         LiveQuizRoom room = requireOwned(roomId, teacherId);
-        if (room.getStatus() == LiveQuizRoomStatus.CLOSED) {
-            // Close lap lai cung idempotent de nut UI/HTTP retry khong gay loi.
-            return toDto(room);
-        }
-        if (room.getStatus() != LiveQuizRoomStatus.PREPARING
-                && room.getStatus() != LiveQuizRoomStatus.OPEN
-                && room.getStatus() != LiveQuizRoomStatus.STARTED) {
-            throw new ConflictException("LIVE_QUIZ_ROOM_NOT_CLOSABLE");
-        }
-        room.setStatus(LiveQuizRoomStatus.CLOSED);
-        room.setClosedAt(OffsetDateTime.now());
-        return toDto(roomRepo.save(room));
+        // Viec dong phong live quiz dong thoi la moc chot ket qua chinh thuc.
+        // Service rieng se dong bang diem/rank va ghi outbox ma khong dung luong exam thuong.
+        return toDto(closeFinalizationService.closeAndFinalize(room.getId()));
     }
 
     /**
@@ -162,6 +180,7 @@ public class LiveQuizRoomService {
         room.setExamId(request.examId());
         room.setOwnerTeacherId(request.ownerTeacherId());
         room.setQuizTitle(blankToDefault(request.quizTitle(), "Live quiz"));
+        room.setSubjectId(request.subjectId());
         room.setSubjectName(blankToDefault(request.subjectName(), "Mon hoc"));
         room.setQuestionCount(Math.max(0, request.questionCount()));
         room.setShowLeaderboard(request.showLeaderboard());
@@ -254,6 +273,7 @@ public class LiveQuizRoomService {
                 room.getExamId(),
                 room.getRoomCode(),
                 room.getQuizTitle(),
+                room.getSubjectId(),
                 room.getSubjectName(),
                 room.getQuestionCount(),
                 room.isShowLeaderboard(),

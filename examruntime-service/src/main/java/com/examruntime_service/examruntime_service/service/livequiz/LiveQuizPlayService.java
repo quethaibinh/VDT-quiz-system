@@ -8,6 +8,8 @@ import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizAn
 import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizAnswerResponseDTO;
 import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizCurrentQuestionDTO;
 import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizRealtimeMessageDTO;
+import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizSelectedOptionResult;
+import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizSelectedOptionResultDTO;
 import com.examruntime_service.examruntime_service.model.dto.livequiz.StudentLiveQuizStateDTO;
 import com.examruntime_service.examruntime_service.model.entity.LiveQuizAnswer;
 import com.examruntime_service.examruntime_service.model.entity.LiveQuizParticipant;
@@ -271,7 +273,7 @@ public class LiveQuizPlayService {
         OffsetDateTime receivedAt = now();
         LiveQuizAnswer answer = baseAnswer(room, participant, question, receivedAt);
         List<UUID> selectedIds = request.selectedOptionIds() != null ? request.selectedOptionIds() : List.of();
-        boolean correct = isCorrect(room, request.questionId(), selectedIds);
+        boolean correct = isCorrect(answerEntry(room, request.questionId()), selectedIds);
         LiveQuizScoreResult score = scoringPolicy.score(
                 BigDecimal.valueOf(question.score()),
                 participant.getCurrentQuestionStartedAt(),
@@ -364,6 +366,7 @@ public class LiveQuizPlayService {
                 answer.getQuestionPosition(),
                 answer.getAnswerStatus(),
                 answer.isCorrect(),
+                selectedOptionResults(answer),
                 answer.getScoreAwarded(),
                 answer.getMaxScore(),
                 answer.getResponseTimeMs(),
@@ -425,19 +428,49 @@ public class LiveQuizPlayService {
         ));
     }
 
-    /**
-     * So sanh selected option voi answer key trong Redis de cham dung/sai.
-     */
-    private boolean isCorrect(LiveQuizRoom room, UUID questionId, List<UUID> selectedIds) {
-        ExamAnswerKeyDTO answerKey = roomCache.getAnswerKey(room.getId());
+    private AnswerEntryDTO answerEntry(LiveQuizRoom room, UUID questionId) {
+        return answerEntry(room.getId(), questionId);
+    }
+
+    private AnswerEntryDTO answerEntry(UUID roomId, UUID questionId) {
+        ExamAnswerKeyDTO answerKey = roomCache.getAnswerKey(roomId);
         if (answerKey == null || answerKey.answers() == null) {
             throw new ConflictException("LIVE_QUIZ_ANSWER_KEY_NOT_READY");
         }
-        AnswerEntryDTO entry = answerKey.answers().stream()
+        return answerKey.answers().stream()
                 .filter(answer -> answer.questionId().equals(questionId))
                 .findFirst()
                 .orElseThrow(() -> new ConflictException("LIVE_QUIZ_ANSWER_KEY_NOT_FOUND"));
+    }
+
+    /**
+     * So sanh selected option voi answer key trong Redis de cham dung/sai.
+     */
+    private boolean isCorrect(AnswerEntryDTO entry, List<UUID> selectedIds) {
         return new HashSet<>(entry.correctOptionIds()).equals(new HashSet<>(selectedIds));
+    }
+
+    private List<LiveQuizSelectedOptionResultDTO> selectedOptionResults(LiveQuizAnswer answer) {
+        if (answer.getAnswerStatus() != LiveQuizAnswerStatus.ANSWERED) {
+            return List.of();
+        }
+        AnswerEntryDTO entry = answerEntry(answer.getRoomId(), answer.getQuestionId());
+        List<UUID> selectedIds = readSelectedOptionIds(answer);
+        HashSet<UUID> correctIds = new HashSet<>(entry.correctOptionIds());
+        boolean wholeCorrect = correctIds.equals(new HashSet<>(selectedIds));
+        return selectedIds.stream()
+                .map(optionId -> new LiveQuizSelectedOptionResultDTO(
+                        optionId,
+                        selectedOptionResult(optionId, correctIds, wholeCorrect)
+                ))
+                .toList();
+    }
+
+    private LiveQuizSelectedOptionResult selectedOptionResult(UUID optionId, HashSet<UUID> correctIds, boolean wholeCorrect) {
+        if (!correctIds.contains(optionId)) {
+            return LiveQuizSelectedOptionResult.WRONG;
+        }
+        return wholeCorrect ? LiveQuizSelectedOptionResult.CORRECT : LiveQuizSelectedOptionResult.PARTIAL_CORRECT;
     }
 
     /**
@@ -473,6 +506,17 @@ public class LiveQuizPlayService {
             return objectMapper.writeValueAsString(selectedIds);
         } catch (Exception exception) {
             throw new IllegalStateException("LIVE_QUIZ_SELECTED_OPTIONS_WRITE_FAILED", exception);
+        }
+    }
+
+    private List<UUID> readSelectedOptionIds(LiveQuizAnswer answer) {
+        if (answer.getSelectedOptionIds() == null || answer.getSelectedOptionIds().isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(answer.getSelectedOptionIds(), new TypeReference<List<UUID>>() {});
+        } catch (Exception exception) {
+            throw new IllegalStateException("LIVE_QUIZ_SELECTED_OPTIONS_READ_FAILED", exception);
         }
     }
 

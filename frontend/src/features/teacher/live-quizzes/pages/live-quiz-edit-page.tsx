@@ -30,7 +30,7 @@ export function LiveQuizEditPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Chinh sua quiz" description={detail.data?.title ?? "Dang tai ban nhap..."} />
+      <PageHeader title="Chỉnh sửa quiz" description={detail.data?.title ?? "Đang tải bản nháp..."} />
       <DataState
         loading={detail.isLoading}
         error={detail.error ? getApiErrorMessage(detail.error) : null}
@@ -42,7 +42,7 @@ export function LiveQuizEditPage() {
             key={detail.data.id}
             subjectId={subjectId}
             initial={detail.data}
-            submitLabel="Luu thay doi"
+            submitLabel="Lưu thay đổi"
             submitting={save.isPending}
             error={save.error ? getApiErrorMessage(save.error) : null}
             onSubmit={(input) => save.mutate(input)}

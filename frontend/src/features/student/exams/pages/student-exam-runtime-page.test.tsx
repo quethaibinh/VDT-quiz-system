@@ -111,7 +111,7 @@ test("flushes dirty answers before submit and locks editing after acceptance", a
   const user = userEvent.setup();
   renderPage();
 
-  const option = await screen.findByRole("button", { name: /A\. Alpha/ });
+  const option = await screen.findByRole("button", { name: /A Alpha/ });
   await user.click(option);
   await user.click(screen.getByRole("button", { name: "Nộp bài" }));
   await user.click(screen.getByRole("button", { name: "Xác nhận nộp" }));

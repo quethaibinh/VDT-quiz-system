@@ -10,4 +10,6 @@ public interface ResultAnswerRepo extends JpaRepository<ResultAnswer, UUID> {
     List<ResultAnswer> findByResultId(UUID resultId);
 
     List<ResultAnswer> findByResultIdOrderByQuestionOrderAsc(UUID resultId);
+
+    List<ResultAnswer> findByResultIdOrderByQuestionPositionAsc(UUID resultId);
 }

@@ -41,7 +41,7 @@ export function StudentLiveQuizLobbyPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <PageHeader title={state.data?.quizTitle ?? "Phong cho live quiz"} description={state.data?.subjectName ?? "Dang tai thong tin phong"} />
+      <PageHeader title={state.data?.quizTitle ?? "Phòng chờ live quiz"} description={state.data?.subjectName ?? "Đang tải thông tin phòng"} />
       <DataState
         loading={state.isLoading}
         error={state.error ? getApiErrorMessage(state.error) : null}
@@ -51,23 +51,23 @@ export function StudentLiveQuizLobbyPage() {
         {state.data && (
           <section className="rounded-xl border border-line bg-surface p-6 text-center shadow-soft md:p-8">
             <StatusChip tone={state.data.roomStatus === "OPEN" ? "success" : "warning"}>
-              {state.data.roomStatus === "OPEN" ? "Dang cho bat dau" : state.data.roomStatus}
+              {state.data.roomStatus === "OPEN" ? "Đang chờ bắt đầu" : state.data.roomStatus}
             </StatusChip>
             <div className="mx-auto mt-6 grid h-16 w-16 place-items-center rounded-full bg-primary/10 text-primary">
               <Clock size={30} />
             </div>
-            <h2 className="mt-5 text-2xl font-black text-ink">Ban da vao phong</h2>
+            <h2 className="mt-5 text-2xl font-black text-ink">Bạn đã vào phòng</h2>
             <p className="mx-auto max-w-md text-sm leading-6 text-muted">
-              Giu man hinh nay mo. Khi giao vien bat dau, bai quiz se tu dong hien ra.
+              Giữ màn hình này mở. Khi giáo viên bắt đầu, bài quiz sẽ tự động hiện ra.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <Info label="Ma phong" value={state.data.roomCode} />
-              <Info label="So cau" value={state.data.totalQuestions} />
-              <Info label="Hoc sinh" value={state.data.participantCount} icon={<Users size={16} />} />
+              <Info label="Mã phòng" value={state.data.roomCode} />
+              <Info label="Số câu" value={state.data.totalQuestions} />
+              <Info label="Học sinh" value={state.data.participantCount} icon={<Users size={16} />} />
             </div>
             <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-muted">
               <Wifi size={16} />
-              Dang lang nghe tin hieu bat dau
+              Đang lắng nghe tín hiệu bắt đầu
             </div>
           </section>
         )}

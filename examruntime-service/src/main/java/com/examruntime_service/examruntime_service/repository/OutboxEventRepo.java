@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface OutboxEventRepo extends JpaRepository<OutboxEvent, UUID> {
@@ -39,6 +40,12 @@ public interface OutboxEventRepo extends JpaRepository<OutboxEvent, UUID> {
             @Param("eventType") String eventType,
             @Param("publishedBefore") LocalDateTime publishedBefore,
             Pageable pageable
+    );
+
+    Optional<OutboxEvent> findFirstByAggregateTypeAndAggregateIdAndEventType(
+            String aggregateType,
+            UUID aggregateId,
+            String eventType
     );
 
     @Modifying

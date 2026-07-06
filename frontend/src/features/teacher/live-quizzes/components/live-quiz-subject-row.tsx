@@ -15,12 +15,12 @@ export function LiveQuizSubjectRow({ subject }: { subject: Subject }) {
         <span className="min-w-0">
           <span className="block text-2xl font-bold text-ink">{subject.name}</span>
           <span className="mt-1 block text-sm text-muted">
-            {subject.code} · Tao va dieu khien quiz truc tiep trong lop
+            {subject.code} · Tạo và điều khiển quiz trực tiếp trong lớp
           </span>
         </span>
       </span>
       <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
-        Mo danh sach
+        Mở danh sách
         <ChevronRight className="h-4 w-4" />
       </span>
     </Link>

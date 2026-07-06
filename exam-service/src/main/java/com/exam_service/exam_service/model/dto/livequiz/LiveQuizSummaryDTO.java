@@ -20,6 +20,9 @@ public record LiveQuizSummaryDTO(
         LiveQuizJoinPolicy joinPolicy,
         ExamStatus status,
         int snapshotVersion,
-        long version
+        long version,
+        UUID roomId,
+        String roomCode,
+        String roomStatus
 ) {
 }

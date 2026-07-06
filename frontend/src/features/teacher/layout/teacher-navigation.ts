@@ -10,12 +10,12 @@ export interface TeacherNavigationItem {
 }
 
 export const teacherNavigationItems: TeacherNavigationItem[] = [
-  { label: "Mon hoc", icon: BookOpen, path: "/teacher/subjects", section: "subjects" },
+  { label: "Môn học", icon: BookOpen, path: "/teacher/subjects", section: "subjects" },
   { label: "Ca thi", icon: CalendarDays, path: "/teacher/exams", section: "exams" },
   { label: "Quiz", icon: Zap, path: "/teacher/live-quizzes", section: "live-quizzes" },
-  { label: "Giam sat ca thi", icon: Activity, path: "/teacher/monitoring", section: "monitoring" },
-  { label: "Ket qua", icon: ChartNoAxesColumn, path: "/teacher/results", section: "results" },
-  { label: "Trang ca nhan", icon: User, path: "/teacher/profile", section: "profile" },
+  { label: "Giám sát ca thi", icon: Activity, path: "/teacher/monitoring", section: "monitoring" },
+  { label: "Kết quả", icon: ChartNoAxesColumn, path: "/teacher/results", section: "results" },
+  { label: "Trang cá nhân", icon: User, path: "/teacher/profile", section: "profile" },
 ];
 
 export function getTeacherSection(pathname: string): TeacherSection {

@@ -11,10 +11,10 @@ export interface StudentNavigationItem {
 }
 
 export const studentNavigationItems: StudentNavigationItem[] = [
-  { label: "Tong quan", icon: LayoutDashboard, path: "/student/dashboard", section: "dashboard" },
+  { label: "Tổng quan", icon: LayoutDashboard, path: "/student/dashboard", section: "dashboard" },
   { label: "Ca thi", icon: CalendarDays, path: "/student/exams", section: "exams" },
-  { label: "Quiz truc tiep", icon: Zap, path: "/student/live-quizzes", section: "live-quizzes" },
-  { label: "Ket qua", icon: Award, path: "/student/results", section: "results" },
+  { label: "Quiz trực tiếp", icon: Zap, path: "/student/live-quizzes", section: "live-quizzes" },
+  { label: "Kết quả", icon: Award, path: "/student/results", section: "results" },
   { label: "Trang ca nhan", icon: User, path: "/student/profile", section: "profile" },
 ];
 

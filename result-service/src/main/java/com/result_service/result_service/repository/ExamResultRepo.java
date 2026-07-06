@@ -60,6 +60,14 @@ public interface ExamResultRepo extends JpaRepository<ExamResult, UUID> {
 
     List<ExamResult> findByResultTypeAndRoomId(ResultType resultType, UUID roomId);
 
+    List<ExamResult> findByResultType(ResultType resultType);
+
+    Optional<ExamResult> findByResultTypeAndRoomIdAndParticipantId(ResultType resultType, UUID roomId, UUID participantId);
+
+    Optional<ExamResult> findByResultTypeAndRoomIdAndStudentId(ResultType resultType, UUID roomId, UUID studentId);
+
+    List<ExamResult> findByResultTypeAndStudentIdOrderByReleasedAtDesc(ResultType resultType, UUID studentId);
+
     @Query("select r.submissionId from ExamResult r where r.submissionId in :submissionIds")
     List<UUID> findExistingSubmissionIds(@Param("submissionIds") Collection<UUID> submissionIds);
 }

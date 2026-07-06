@@ -361,7 +361,7 @@ export function StudentExamRuntimePage() {
       }
       setFullscreenActive(Boolean(document.fullscreenElement));
     } catch {
-      setFullscreenError("Khong the bat che do toan man hinh. Vui long cho phep fullscreen de tiep tuc lam bai.");
+      setFullscreenError("Không thể bật chế độ toàn màn hình. Vui lòng cho phép fullscreen để tiếp tục làm bài.");
     }
   };
 
@@ -396,16 +396,16 @@ export function StudentExamRuntimePage() {
                     <Maximize2 size={24} />
                   </div>
                   <div className="space-y-2">
-                    <h2 className="m-0 text-xl font-bold text-ink">Can quay lai che do toan man hinh</h2>
+                    <h2 className="m-0 text-xl font-bold text-ink">Cần quay lại chế độ toàn màn hình</h2>
                     <p className="m-0 text-sm leading-6 text-muted">
-                      Bai thi dang duoc giam sat. Ban phai o che do toan man hinh de tiep tuc thao tac.
+                      Bài thi đang được giám sát. Bạn phải ở chế độ toàn màn hình để tiếp tục thao tác.
                     </p>
                   </div>
                   {fullscreenError && (
                     <p role="alert" className="rounded-lg bg-danger/10 p-3 text-sm text-danger">{fullscreenError}</p>
                   )}
                   <Button onClick={() => void requestRuntimeFullscreen()}>
-                    <Maximize2 size={16} /> Quay lai fullscreen
+                    <Maximize2 size={16} /> Quay lại fullscreen
                   </Button>
                 </div>
               </div>
@@ -442,13 +442,13 @@ export function StudentExamRuntimePage() {
             )}
 
             <div className="border-b border-line bg-surface px-4 py-2 text-center text-xs font-semibold text-muted">
-              Giam sat realtime: {proctoringConnectionStatus === "connected"
-                ? "Da ket noi"
+              Giám sát realtime: {proctoringConnectionStatus === "connected"
+                ? "Đã kết nối"
                 : proctoringConnectionStatus === "error"
-                  ? "Loi ket noi"
+                  ? "Lỗi kết nối"
                   : proctoringConnectionStatus === "reconnecting"
-                    ? "Dang noi lai"
-                    : "Dang ket noi"}
+                    ? "Đang nối lại"
+                    : "Đang kết nối"}
             </div>
 
             {(isTimeUp || submitError || submittedResponse) && (

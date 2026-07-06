@@ -6,6 +6,7 @@ import com.examruntime_service.examruntime_service.model.dto.cache.ExamPaperPool
 import com.examruntime_service.examruntime_service.model.dto.cache.PaperOptionDTO;
 import com.examruntime_service.examruntime_service.model.dto.cache.PaperQuestionDTO;
 import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizAnswerRequestDTO;
+import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizSelectedOptionResult;
 import com.examruntime_service.examruntime_service.model.entity.LiveQuizAnswer;
 import com.examruntime_service.examruntime_service.model.entity.LiveQuizParticipant;
 import com.examruntime_service.examruntime_service.model.entity.LiveQuizParticipantPaper;
@@ -44,6 +45,7 @@ class LiveQuizPlayServiceTest {
     private final UUID questionId = UUID.randomUUID();
     private final UUID optionAId = UUID.randomUUID();
     private final UUID optionBId = UUID.randomUUID();
+    private final UUID optionCId = UUID.randomUUID();
     private final OffsetDateTime now = OffsetDateTime.parse("2026-07-03T10:00:05Z");
 
     private LiveQuizRoomRepo roomRepo;
@@ -106,6 +108,10 @@ class LiveQuizPlayServiceTest {
         assertThat(response.responseTimeMs()).isEqualTo(5000);
         assertThat(response.scoreRatio()).isEqualByComparingTo("0.7500");
         assertThat(response.totalScore()).isEqualByComparingTo("7.5000");
+        assertThat(response.selectedOptionResults()).singleElement().satisfies(result -> {
+            assertThat(result.optionId()).isEqualTo(optionAId);
+            assertThat(result.result()).isEqualTo(LiveQuizSelectedOptionResult.CORRECT);
+        });
         assertThat(participant.getAnsweredCount()).isEqualTo(1);
         assertThat(participant.getCorrectCount()).isEqualTo(1);
     }
@@ -123,7 +129,64 @@ class LiveQuizPlayServiceTest {
         assertThat(response.scoreAwarded()).isEqualByComparingTo("0.0000");
         assertThat(response.responseTimeMs()).isEqualTo(5000);
         assertThat(response.totalScore()).isEqualByComparingTo("0.0000");
+        assertThat(response.selectedOptionResults()).singleElement().satisfies(result -> {
+            assertThat(result.optionId()).isEqualTo(optionBId);
+            assertThat(result.result()).isEqualTo(LiveQuizSelectedOptionResult.WRONG);
+        });
         assertThat(participant.getWrongCount()).isEqualTo(1);
+    }
+
+    @Test
+    void multiChoiceCompleteSelectionMarksSelectedOptionsCorrect() {
+        LiveQuizParticipant participant = participant(now.minusSeconds(5), now.plusSeconds(5));
+        when(participantRepo.findByRoomIdAndStudentIdForUpdate(roomId, studentId)).thenReturn(Optional.of(participant));
+        when(answerRepo.findByRoomIdAndParticipantIdAndQuestionId(roomId, participantId, questionId)).thenReturn(Optional.empty());
+        when(roomCache.getAnswerKey(roomId)).thenReturn(multiAnswerKey());
+
+        var response = service.answer(roomId, studentId, new LiveQuizAnswerRequestDTO(questionId, List.of(optionAId, optionBId)));
+
+        assertThat(response.correct()).isTrue();
+        assertThat(response.selectedOptionResults()).hasSize(2);
+        assertThat(response.selectedOptionResults())
+                .allSatisfy(result -> assertThat(result.result()).isEqualTo(LiveQuizSelectedOptionResult.CORRECT));
+    }
+
+    @Test
+    void multiChoiceIncompleteSelectionMarksSelectedCorrectOptionPartial() {
+        LiveQuizParticipant participant = participant(now.minusSeconds(5), now.plusSeconds(5));
+        when(participantRepo.findByRoomIdAndStudentIdForUpdate(roomId, studentId)).thenReturn(Optional.of(participant));
+        when(answerRepo.findByRoomIdAndParticipantIdAndQuestionId(roomId, participantId, questionId)).thenReturn(Optional.empty());
+        when(roomCache.getAnswerKey(roomId)).thenReturn(multiAnswerKey());
+
+        var response = service.answer(roomId, studentId, new LiveQuizAnswerRequestDTO(questionId, List.of(optionAId)));
+
+        assertThat(response.correct()).isFalse();
+        assertThat(response.selectedOptionResults()).singleElement().satisfies(result -> {
+            assertThat(result.optionId()).isEqualTo(optionAId);
+            assertThat(result.result()).isEqualTo(LiveQuizSelectedOptionResult.PARTIAL_CORRECT);
+        });
+    }
+
+    @Test
+    void multiChoiceMixedSelectionMarksCorrectPartialAndWrongRed() {
+        LiveQuizParticipant participant = participant(now.minusSeconds(5), now.plusSeconds(5));
+        when(participantRepo.findByRoomIdAndStudentIdForUpdate(roomId, studentId)).thenReturn(Optional.of(participant));
+        when(answerRepo.findByRoomIdAndParticipantIdAndQuestionId(roomId, participantId, questionId)).thenReturn(Optional.empty());
+        when(roomCache.getAnswerKey(roomId)).thenReturn(multiAnswerKey());
+
+        var response = service.answer(roomId, studentId, new LiveQuizAnswerRequestDTO(questionId, List.of(optionAId, optionCId)));
+
+        assertThat(response.correct()).isFalse();
+        assertThat(response.selectedOptionResults()).hasSize(2);
+        assertThat(response.selectedOptionResults())
+                .anySatisfy(result -> {
+                    assertThat(result.optionId()).isEqualTo(optionAId);
+                    assertThat(result.result()).isEqualTo(LiveQuizSelectedOptionResult.PARTIAL_CORRECT);
+                })
+                .anySatisfy(result -> {
+                    assertThat(result.optionId()).isEqualTo(optionCId);
+                    assertThat(result.result()).isEqualTo(LiveQuizSelectedOptionResult.WRONG);
+                });
     }
 
     @Test
@@ -139,6 +202,7 @@ class LiveQuizPlayServiceTest {
         assertThat(response.scoreAwarded()).isEqualByComparingTo("0");
         assertThat(response.responseTimeMs()).isNull();
         assertThat(response.totalScore()).isEqualByComparingTo("0");
+        assertThat(response.selectedOptionResults()).isEmpty();
         assertThat(participant.getTimeoutCount()).isEqualTo(1);
     }
 
@@ -156,6 +220,7 @@ class LiveQuizPlayServiceTest {
         existing.setCorrect(true);
         existing.setScoreAwarded(BigDecimal.valueOf(7.5));
         existing.setMaxScore(BigDecimal.TEN);
+        existing.setSelectedOptionIds("[\"" + optionAId + "\"]");
         existing.setResponseTimeMs(5000);
         existing.setQuestionStartedAt(now.minusSeconds(5));
         existing.setQuestionEndsAt(now.plusSeconds(5));
@@ -167,6 +232,10 @@ class LiveQuizPlayServiceTest {
 
         assertThat(response.scoreAwarded()).isEqualByComparingTo("7.5");
         assertThat(response.totalScore()).isEqualByComparingTo("7.5");
+        assertThat(response.selectedOptionResults()).singleElement().satisfies(result -> {
+            assertThat(result.optionId()).isEqualTo(optionAId);
+            assertThat(result.result()).isEqualTo(LiveQuizSelectedOptionResult.CORRECT);
+        });
         assertThat(participant.getAnsweredCount()).isZero();
     }
 
@@ -226,7 +295,8 @@ class LiveQuizPlayServiceTest {
                         10,
                         List.of(
                                 new PaperOptionDTO(optionAId, "A", "A", "TEXT"),
-                                new PaperOptionDTO(optionBId, "B", "B", "TEXT")
+                                new PaperOptionDTO(optionBId, "B", "B", "TEXT"),
+                                new PaperOptionDTO(optionCId, "C", "C", "TEXT")
                         )
                 ))
         );
@@ -237,6 +307,14 @@ class LiveQuizPlayServiceTest {
                 examId,
                 1,
                 List.of(new AnswerEntryDTO(questionId, List.of(optionAId), 10))
+        );
+    }
+
+    private ExamAnswerKeyDTO multiAnswerKey() {
+        return new ExamAnswerKeyDTO(
+                examId,
+                1,
+                List.of(new AnswerEntryDTO(questionId, List.of(optionAId, optionBId), 10))
         );
     }
 }

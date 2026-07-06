@@ -29,8 +29,8 @@ const collections: QuestionCollection[] = [
     id: "collection-1",
     subjectId: "sub-1",
     ownerTeacherId: "teacher-1",
-    name: "Bo cau hoi mau",
-    description: "Du lieu mau cho live quiz.",
+    name: "B? c?u h?i m?u",
+    description: "D? li?u m?u cho live quiz.",
     visibility: "PRIVATE",
     status: "ACTIVE",
     editable: true,
@@ -42,8 +42,8 @@ const collections: QuestionCollection[] = [
 const subjects: Subject[] = [{
   id: "sub-1",
   code: "SUB001",
-  name: "Mon hoc mau",
-  description: "Du lieu mau cho giao vien.",
+  name: "M?n h?c m?u",
+  description: "D? li?u m?u cho gi?o vi?n.",
   status: "ACTIVE",
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
@@ -131,10 +131,12 @@ function ensureSubjectCollections(subjectId: string) {
 function ensureSubjectLiveQuizzes(subjectId: string) {
   if (liveQuizzes.some((quiz) => quiz.subjectId === subjectId)) return;
   ensureSubjectCollections(subjectId);
+  const prepared = makeLiveQuiz(subjectId, `${subjectId}-quiz-prepared`, "Quiz ?? chu?n b?", "PREPARED");
   liveQuizzes.push(
-    makeLiveQuiz(subjectId, `${subjectId}-quiz-draft`, "Quiz on tap nhanh", "DRAFT"),
-    makeLiveQuiz(subjectId, `${subjectId}-quiz-prepared`, "Quiz da chuan bi", "PREPARED"),
+    makeLiveQuiz(subjectId, `${subjectId}-quiz-draft`, "Quiz ?n t?p nhanh", "DRAFT"),
+    prepared,
   );
+  getOrCreateLiveQuizRoom(prepared);
 }
 
 function makeExam(
@@ -211,7 +213,7 @@ function makeLiveQuiz(
     title,
     description: input?.description ?? "",
     subjectId,
-    subjectName: "Mon hoc da chon",
+    subjectName: "M?n h?c ?? ch?n",
     collectionId: collection.id,
     collectionName: collection.name,
     questionCount: collection.stats.questionCount,
@@ -223,10 +225,16 @@ function makeLiveQuiz(
     snapshotVersion: status === "PREPARED" ? 1 : 0,
     preparedAt: status === "PREPARED" ? new Date().toISOString() : null,
     version: 0,
+    roomId: null,
+    roomCode: null,
+    roomStatus: null,
   };
 }
 
 function toLiveQuizSummary(quiz: LiveQuizDetail): LiveQuizSummary {
+  const latestRoom = Array.from(liveQuizRooms.values())
+    .filter((room) => room.examId === quiz.id)
+    .sort((left, right) => roomTime(right) - roomTime(left))[0];
   return {
     id: quiz.id,
     code: quiz.code,
@@ -243,7 +251,15 @@ function toLiveQuizSummary(quiz: LiveQuizDetail): LiveQuizSummary {
     status: quiz.status,
     snapshotVersion: quiz.snapshotVersion,
     version: quiz.version,
+    roomId: latestRoom?.roomId ?? null,
+    roomCode: latestRoom?.roomCode ?? null,
+    roomStatus: latestRoom?.status ?? null,
   };
+}
+
+function roomTime(room: LiveQuizRoom) {
+  // Mock khong co createdAt cua backend, nen dung moc lifecycle moi nhat de sap xep room.
+  return new Date(room.closedAt ?? room.startedAt ?? room.openedAt ?? 0).getTime();
 }
 
 function findLiveQuiz(subjectId: unknown, quizId: unknown) {
@@ -262,6 +278,7 @@ function getOrCreateLiveQuizRoom(quiz: LiveQuizDetail): LiveQuizRoom {
     examId: quiz.id,
     roomCode: "QZ" + String(liveQuizRooms.size + 1).padStart(4, "0"),
     quizTitle: quiz.title,
+    subjectId: quiz.subjectId,
     subjectName: quiz.subjectName,
     questionCount: quiz.questionCount,
     showLeaderboard: quiz.showLeaderboard,
@@ -317,6 +334,92 @@ function liveQuizSnapshot(room: LiveQuizRoom): LiveQuizTeacherSnapshot {
   };
 }
 
+function liveQuizResultRows(room: LiveQuizRoom) {
+  const snapshot = liveQuizSnapshot(room);
+  const total = Math.min(room.questionCount, 10);
+  const participants = snapshot.participants.length > 0
+    ? snapshot.participants
+    : [{
+        participantId: "mock-participant",
+        studentId: "student-mock",
+        studentCode: "SV0001",
+        studentName: "H?c sinh demo",
+        status: "FINISHED" as const,
+        answeredCount: liveQuizProgress.get(room.roomId)?.index ?? total,
+        totalQuestions: total,
+        correctCount: Math.min(total, Math.max(0, Math.round(liveQuizProgress.get(room.roomId)?.score ?? 0))),
+        wrongCount: Math.max(0, (liveQuizProgress.get(room.roomId)?.index ?? total) - Math.round(liveQuizProgress.get(room.roomId)?.score ?? 0)),
+        timeoutCount: 0,
+        totalScore: liveQuizProgress.get(room.roomId)?.score ?? total * 0.7,
+        maxScore: total,
+        averageResponseMs: 5200,
+        currentRank: 1,
+        joinedAt: new Date().toISOString(),
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
+      }];
+  return participants
+    .slice()
+    .sort((a, b) => b.totalScore - a.totalScore || b.correctCount - a.correctCount)
+    .map((participant, index) => ({
+      resultId: `result-${participant.participantId}`,
+      roomId: room.roomId,
+      examId: room.examId,
+      participantId: participant.participantId,
+      studentId: participant.studentId,
+      studentCode: participant.studentCode,
+      studentName: participant.studentName,
+      finalRank: index + 1,
+      score: participant.totalScore,
+      maxScore: participant.maxScore,
+      percentage: participant.maxScore > 0 ? Math.round((participant.totalScore / participant.maxScore) * 10000) / 100 : 0,
+      answeredCount: participant.answeredCount,
+      totalQuestions: participant.totalQuestions,
+      correctCount: participant.correctCount,
+      wrongCount: participant.wrongCount,
+      timeoutCount: participant.timeoutCount,
+      notReachedCount: Math.max(0, participant.totalQuestions - participant.answeredCount),
+      averageResponseMs: participant.averageResponseMs,
+      finishedAt: participant.finishedAt,
+      releasedAt: room.closedAt ?? new Date().toISOString(),
+    }));
+}
+
+function liveQuizResultDetail(room: LiveQuizRoom, resultId: string) {
+  const row = liveQuizResultRows(room).find((item) => item.resultId === resultId) ?? liveQuizResultRows(room)[0];
+  if (!row) return null;
+  return {
+    summary: row,
+    answers: Array.from({ length: row.totalQuestions }, (_, index) => {
+      const position = index + 1;
+      const answered = position <= row.answeredCount;
+      return {
+        questionId: `live-${room.roomId}-q-${position}`,
+        questionPosition: position,
+        selectedOptionIds: answered ? [`live-${room.roomId}-q-${position}-A`] : [],
+        correctOptionIds: [`live-${room.roomId}-q-${position}-A`],
+        correct: answered && position <= row.correctCount,
+        scoreAwarded: answered && position <= row.correctCount ? 1 : 0,
+        maxScore: 1,
+        answerStatus: answered ? "ANSWERED" : "NOT_REACHED",
+        responseTimeMs: answered ? 5000 + position * 100 : null,
+        answeredAt: answered ? row.finishedAt : null,
+        questionSnapshot: {
+          content: `C?u h?i live quiz s? ${position}`,
+          type: position % 3 === 0 ? "MULTI_CHOICE" : "SINGLE_CHOICE",
+          difficulty: "MEDIUM",
+          options: ["A", "B", "C", "D"].map((key) => ({
+            optionId: `live-${room.roomId}-q-${position}-${key}`,
+            key,
+            content: `L?a ch?n ${key}`,
+          })),
+        },
+      };
+    }),
+  };
+}
+
 function mockCurrentQuestion(room: LiveQuizRoom, progress: { index: number; score: number }) {
   const position = progress.index + 1;
   const multipleChoice = position % 3 === 0;
@@ -331,12 +434,12 @@ function mockCurrentQuestion(room: LiveQuizRoom, progress: { index: number; scor
     maxScore: Math.min(room.questionCount, 10),
     currentRank: 1,
     type: multipleChoice ? "MULTI_CHOICE" : "SINGLE_CHOICE",
-    content: `Cau hoi live quiz so ${position}: ${multipleChoice ? "Hay chon cac dap an dung." : "Hay chon dap an dung nhat."}`,
+    content: `C?u h?i live quiz s? ${position}: ${multipleChoice ? "H?y ch?n c?c ??p ?n ??ng." : "H?y ch?n ??p ?n ??ng nh?t."}`,
     contentFormat: "TEXT",
     options: ["A", "B", "C", "D"].map((key) => ({
       optionId: `live-${room.roomId}-q-${position}-${key}`,
       key,
-      content: `Lua chon ${key}`,
+      content: `L?a ch?n ${key}`,
       contentFormat: "TEXT",
     })),
     startedAt,
@@ -379,7 +482,7 @@ export const handlers = [
     const subject = subjects.find((item) => item.id === String(params.subjectId));
     return subject
       ? HttpResponse.json(envelope(subject))
-      : HttpResponse.json({ message: "Khong tim thay mon hoc." }, { status: 404 });
+      : HttpResponse.json({ message: "Kh?ng t?m th?y m?n h?c." }, { status: 404 });
   }),
 
   http.get("*/v1/api/auth-service/teacher/students", ({ request }) => {
@@ -429,14 +532,14 @@ export const handlers = [
     const quiz = findLiveQuiz(params.subjectId, params.quizId);
     return quiz
       ? HttpResponse.json(envelope(quiz))
-      : HttpResponse.json({ message: "Khong tim thay quiz." }, { status: 404 });
+      : HttpResponse.json({ message: "Kh?ng t?m th?y quiz." }, { status: 404 });
   }),
 
   http.put("*/v1/api/exam-service/teacher/subjects/:subjectId/live-quizzes/:quizId", async ({ params, request }) => {
     const index = liveQuizzes.findIndex((quiz) => quiz.id === params.quizId && quiz.subjectId === params.subjectId);
-    if (index < 0) return HttpResponse.json({ message: "Khong tim thay quiz." }, { status: 404 });
+    if (index < 0) return HttpResponse.json({ message: "Kh?ng t?m th?y quiz." }, { status: 404 });
     if (liveQuizzes[index].status !== "DRAFT") {
-      return HttpResponse.json({ message: "Quiz khong con co the chinh sua." }, { status: 409 });
+      return HttpResponse.json({ message: "Quiz kh?ng c?n c? th? ch?nh s?a." }, { status: 409 });
     }
     const input = await request.json() as LiveQuizRequest;
     liveQuizzes[index] = {
@@ -448,7 +551,7 @@ export const handlers = [
 
   http.post("*/v1/api/exam-service/teacher/subjects/:subjectId/live-quizzes/:quizId/prepare", ({ params }) => {
     const quiz = findLiveQuiz(params.subjectId, params.quizId);
-    if (!quiz) return HttpResponse.json({ message: "Khong tim thay quiz." }, { status: 404 });
+    if (!quiz) return HttpResponse.json({ message: "Kh?ng t?m th?y quiz." }, { status: 404 });
     quiz.status = "PREPARED";
     quiz.snapshotVersion = 1;
     quiz.preparedAt = quiz.preparedAt ?? new Date().toISOString();
@@ -466,13 +569,13 @@ export const handlers = [
     const room = liveQuizRooms.get(String(params.roomId));
     return room
       ? HttpResponse.json(envelope(room))
-      : HttpResponse.json({ message: "Khong tim thay phong quiz." }, { status: 404 });
+      : HttpResponse.json({ message: "Kh?ng t?m th?y ph?ng quiz." }, { status: 404 });
   }),
 
   http.post("*/v1/api/examruntime-service/teacher/live-quizzes/:roomId/open", ({ params }) => {
     const room = liveQuizRooms.get(String(params.roomId));
-    if (!room) return HttpResponse.json({ message: "Khong tim thay phong quiz." }, { status: 404 });
-    if (room.status === "CLOSED") return HttpResponse.json({ message: "Phong quiz da dong." }, { status: 409 });
+    if (!room) return HttpResponse.json({ message: "Kh?ng t?m th?y ph?ng quiz." }, { status: 404 });
+    if (room.status === "CLOSED") return HttpResponse.json({ message: "Ph?ng quiz ?? ??ng." }, { status: 409 });
     room.status = "OPEN";
     room.openedAt = room.openedAt ?? new Date().toISOString();
     return HttpResponse.json(envelope(room));
@@ -480,8 +583,8 @@ export const handlers = [
 
   http.post("*/v1/api/examruntime-service/teacher/live-quizzes/:roomId/start", ({ params }) => {
     const room = liveQuizRooms.get(String(params.roomId));
-    if (!room) return HttpResponse.json({ message: "Khong tim thay phong quiz." }, { status: 404 });
-    if (room.status !== "OPEN" && room.status !== "STARTED") return HttpResponse.json({ message: "Phong quiz chua mo lobby." }, { status: 409 });
+    if (!room) return HttpResponse.json({ message: "Kh?ng t?m th?y ph?ng quiz." }, { status: 404 });
+    if (room.status !== "OPEN" && room.status !== "STARTED") return HttpResponse.json({ message: "Ph?ng quiz ch?a m? lobby." }, { status: 409 });
     room.status = "STARTED";
     room.startedAt = room.startedAt ?? new Date().toISOString();
     const participants = liveQuizParticipants.get(room.roomId) ?? [];
@@ -493,29 +596,173 @@ export const handlers = [
     const room = liveQuizRooms.get(String(params.roomId));
     return room
       ? HttpResponse.json(envelope(liveQuizSnapshot(room)))
-      : HttpResponse.json({ message: "Khong tim thay phong quiz." }, { status: 404 });
+      : HttpResponse.json({ message: "Kh?ng t?m th?y ph?ng quiz." }, { status: 404 });
   }),
 
   http.post("*/v1/api/examruntime-service/teacher/live-quizzes/:roomId/close", ({ params }) => {
     const room = liveQuizRooms.get(String(params.roomId));
-    if (!room) return HttpResponse.json({ message: "Khong tim thay phong quiz." }, { status: 404 });
+    if (!room) return HttpResponse.json({ message: "Kh?ng t?m th?y ph?ng quiz." }, { status: 404 });
     room.status = "CLOSED";
     room.closedAt = room.closedAt ?? new Date().toISOString();
     return HttpResponse.json(envelope(room));
   }),
 
+  http.get("*/v1/api/result-service/teacher/live-quizzes/:roomId/results/export", ({ params }) => {
+    const room = liveQuizRooms.get(String(params.roomId));
+    if (!room || room.status !== "CLOSED") {
+      return HttpResponse.json({ message: "K?t qu? live quiz ch?a s?n s?ng." }, { status: 404 });
+    }
+    const rows = liveQuizResultRows(room);
+    const csv = [
+      "rank,studentCode,studentName,score,maxScore,percentage",
+      ...rows.map((row) => [row.finalRank, row.studentCode ?? "", row.studentName, row.score, row.maxScore, row.percentage].join(",")),
+    ].join("\n");
+    return new HttpResponse(csv, {
+      status: 200,
+      headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    });
+  }),
+
+  http.get("*/v1/api/result-service/teacher/live-quizzes/:roomId/results/:resultId", ({ params }) => {
+    const room = liveQuizRooms.get(String(params.roomId));
+    if (!room || room.status !== "CLOSED") {
+      return HttpResponse.json({ message: "K?t qu? live quiz ch?a s?n s?ng." }, { status: 404 });
+    }
+    const detail = liveQuizResultDetail(room, String(params.resultId));
+    return detail
+      ? HttpResponse.json(envelope(detail))
+      : HttpResponse.json({ message: "Kh?ng t?m th?y k?t qu?." }, { status: 404 });
+  }),
+
+  http.get("*/v1/api/result-service/teacher/live-quizzes/:roomId/results", ({ params, request }) => {
+    const room = liveQuizRooms.get(String(params.roomId));
+    if (!room || room.status !== "CLOSED") {
+      return HttpResponse.json({ message: "K?t qu? live quiz ch?a s?n s?ng." }, { status: 404 });
+    }
+    const { page, size } = getPageParams(request);
+    const rows = liveQuizResultRows(room);
+    return HttpResponse.json(envelope({
+      roomId: room.roomId,
+      examId: room.examId,
+      roomCode: room.roomCode,
+      quizTitle: room.quizTitle,
+      subjectId: room.subjectId,
+      subjectName: room.subjectName,
+      closedAt: room.closedAt,
+      releasedAt: room.closedAt,
+      participantCount: rows.length,
+      averageScore: rows.length ? rows.reduce((sum, row) => sum + row.score, 0) / rows.length : 0,
+      highestScore: rows.length ? Math.max(...rows.map((row) => row.score)) : 0,
+      lowestScore: rows.length ? Math.min(...rows.map((row) => row.score)) : 0,
+      rows: pageOf(rows, page, size),
+    }));
+  }),
+
+  http.get("*/v1/api/result-service/teacher/subjects/:subjectId/live-quiz-results", ({ params, request }) => {
+    const subjectId = String(params.subjectId);
+    const { page, size } = getPageParams(request);
+    const rows = Array.from(liveQuizRooms.values())
+      .filter((room) => room.subjectId === subjectId && room.status === "CLOSED")
+      .map((room) => {
+        const resultRows = liveQuizResultRows(room);
+        return {
+          roomId: room.roomId,
+          examId: room.examId,
+          subjectId: room.subjectId,
+          subjectName: room.subjectName,
+          roomCode: room.roomCode,
+          quizTitle: room.quizTitle,
+          closedAt: room.closedAt,
+          releasedAt: room.closedAt,
+          participantCount: resultRows.length,
+          averageScore: resultRows.length ? resultRows.reduce((sum, row) => sum + row.score, 0) / resultRows.length : 0,
+          highestScore: resultRows.length ? Math.max(...resultRows.map((row) => row.score)) : 0,
+          lowestScore: resultRows.length ? Math.min(...resultRows.map((row) => row.score)) : 0,
+        };
+      });
+    return HttpResponse.json(envelope(pageOf(rows, page, size)));
+  }),
+
+  http.get("*/v1/api/result-service/student/live-quizzes/:roomId/result", ({ params }) => {
+    const room = liveQuizRooms.get(String(params.roomId));
+    if (!room || room.status !== "CLOSED") {
+      return HttpResponse.json({ message: "K?t qu? live quiz ch?a s?n s?ng." }, { status: 404 });
+    }
+    const row = liveQuizResultRows(room).find((item) => item.participantId === "mock-participant") ?? liveQuizResultRows(room)[0];
+    if (!row) return HttpResponse.json({ message: "Kh?ng t?m th?y k?t qu?." }, { status: 404 });
+    return HttpResponse.json(envelope({
+      roomId: room.roomId,
+      examId: room.examId,
+      roomCode: room.roomCode,
+      quizTitle: room.quizTitle,
+      subjectId: room.subjectId,
+      subjectName: room.subjectName,
+      finalRank: row.finalRank,
+      participantCount: liveQuizResultRows(room).length,
+      score: row.score,
+      maxScore: row.maxScore,
+      percentage: row.percentage,
+      answeredCount: row.answeredCount,
+      totalQuestions: row.totalQuestions,
+      correctCount: row.correctCount,
+      wrongCount: row.wrongCount,
+      timeoutCount: row.timeoutCount,
+      notReachedCount: row.notReachedCount,
+      averageResponseMs: row.averageResponseMs,
+      finishedAt: row.finishedAt,
+      closedAt: room.closedAt,
+      releasedAt: row.releasedAt,
+    }));
+  }),
+
+  http.get("*/v1/api/result-service/student/live-quiz-results", ({ request }) => {
+    const subjectId = new URL(request.url).searchParams.get("subjectId");
+    const rows = Array.from(liveQuizRooms.values())
+      .filter((room) => room.status === "CLOSED")
+      .filter((room) => !subjectId || room.subjectId === subjectId)
+      .map((room) => {
+        const row = liveQuizResultRows(room).find((item) => item.participantId === "mock-participant") ?? liveQuizResultRows(room)[0];
+        if (!row) return null;
+        return {
+          roomId: room.roomId,
+          examId: room.examId,
+          subjectId: room.subjectId,
+          subjectName: room.subjectName,
+          roomCode: room.roomCode,
+          quizTitle: room.quizTitle,
+          finalRank: row.finalRank,
+          participantCount: liveQuizResultRows(room).length,
+          score: row.score,
+          maxScore: row.maxScore,
+          percentage: row.percentage,
+          answeredCount: row.answeredCount,
+          totalQuestions: row.totalQuestions,
+          correctCount: row.correctCount,
+          wrongCount: row.wrongCount,
+          timeoutCount: row.timeoutCount,
+          notReachedCount: row.notReachedCount,
+          averageResponseMs: row.averageResponseMs,
+          finishedAt: row.finishedAt,
+          closedAt: room.closedAt,
+          releasedAt: row.releasedAt,
+        };
+      })
+      .filter((row) => row !== null);
+    return HttpResponse.json(envelope(rows));
+  }),
+
   http.post("*/v1/api/examruntime-service/student/live-quizzes/join", async ({ request }) => {
     const body = await request.json() as { code: string };
     const room = Array.from(liveQuizRooms.values()).find((item) => item.roomCode === body.code?.trim().toUpperCase());
-    if (!room) return HttpResponse.json({ message: "Ma phong khong dung." }, { status: 404 });
+    if (!room) return HttpResponse.json({ message: "M? ph?ng kh?ng ??ng." }, { status: 404 });
     const existing = (liveQuizParticipants.get(room.roomId) ?? []).find((item) => item.studentId === "student-mock");
-    if (!existing && room.status !== "OPEN") return HttpResponse.json({ message: "Phong chua cho vao hoac da khoa." }, { status: 409 });
+    if (!existing && room.status !== "OPEN") return HttpResponse.json({ message: "Ph?ng ch?a cho v?o ho?c ?? kh?a." }, { status: 409 });
     const participants = liveQuizParticipants.get(room.roomId) ?? [];
     const participant = existing ?? {
       participantId: "mock-participant",
       studentId: "student-mock",
       studentCode: "SV0001",
-      studentName: "Hoc sinh demo",
+      studentName: "H?c sinh demo",
       status: "JOINED" as const,
       answeredCount: 0,
       totalQuestions: Math.min(room.questionCount, 10),
@@ -551,7 +798,7 @@ export const handlers = [
 
   http.get("*/v1/api/examruntime-service/student/live-quizzes/:roomId/state", ({ params }) => {
     const room = liveQuizRooms.get(String(params.roomId));
-    if (!room) return HttpResponse.json({ message: "Khong tim thay phong quiz." }, { status: 404 });
+    if (!room) return HttpResponse.json({ message: "Kh?ng t?m th?y ph?ng quiz." }, { status: 404 });
     const progress = liveQuizProgress.get(room.roomId) ?? { index: 0, score: 0 };
     const total = Math.min(room.questionCount, 10);
     return HttpResponse.json(envelope({
@@ -576,24 +823,32 @@ export const handlers = [
 
   http.get("*/v1/api/examruntime-service/student/live-quizzes/:roomId/current-question", ({ params }) => {
     const room = liveQuizRooms.get(String(params.roomId));
-    if (!room) return HttpResponse.json({ message: "Khong tim thay phong quiz." }, { status: 404 });
-    if (room.status !== "STARTED") return HttpResponse.json({ message: "Quiz chua bat dau." }, { status: 409 });
+    if (!room) return HttpResponse.json({ message: "Kh?ng t?m th?y ph?ng quiz." }, { status: 404 });
+    if (room.status !== "STARTED") return HttpResponse.json({ message: "Quiz ch?a b?t ??u." }, { status: 409 });
     const progress = liveQuizProgress.get(room.roomId) ?? { index: 0, score: 0 };
-    if (progress.index >= Math.min(room.questionCount, 10)) return HttpResponse.json({ message: "Da hoan thanh." }, { status: 409 });
+    if (progress.index >= Math.min(room.questionCount, 10)) return HttpResponse.json({ message: "?? ho?n th?nh." }, { status: 409 });
     return HttpResponse.json(envelope(mockCurrentQuestion(room, progress)));
   }),
 
   http.post("*/v1/api/examruntime-service/student/live-quizzes/:roomId/answer", async ({ params, request }) => {
     const room = liveQuizRooms.get(String(params.roomId));
-    if (!room) return HttpResponse.json({ message: "Khong tim thay phong quiz." }, { status: 404 });
+    if (!room) return HttpResponse.json({ message: "Kh?ng t?m th?y ph?ng quiz." }, { status: 404 });
     const body = await request.json() as { questionId: string; selectedOptionIds: string[] };
     const progress = liveQuizProgress.get(room.roomId) ?? { index: 0, score: 0 };
     const position = progress.index + 1;
     const multipleChoice = position % 3 === 0;
     const selectedKeys = body.selectedOptionIds.map((optionId) => optionId.slice(-1)).sort();
+    const correctKeys = multipleChoice ? ["A", "B"] : ["A"];
     const correct = multipleChoice
-      ? selectedKeys.length === 2 && selectedKeys[0] === "A" && selectedKeys[1] === "B"
-      : selectedKeys.length === 1 && selectedKeys[0] === "A";
+      ? selectedKeys.length === correctKeys.length && selectedKeys.every((key, index) => key === correctKeys[index])
+      : selectedKeys.length === correctKeys.length && selectedKeys[0] === correctKeys[0];
+    const selectedOptionResults = body.selectedOptionIds.map((optionId) => {
+      const key = optionId.slice(-1);
+      return {
+        optionId,
+        result: !correctKeys.includes(key) ? "WRONG" : correct ? "CORRECT" : "PARTIAL_CORRECT",
+      };
+    });
     const total = Math.min(room.questionCount, 10);
     const scoreAwarded = correct ? 0.75 : 0;
     const next = { index: progress.index + 1, score: progress.score + scoreAwarded };
@@ -616,6 +871,7 @@ export const handlers = [
       questionPosition: position,
       answerStatus: "ANSWERED",
       correct,
+      selectedOptionResults,
       scoreAwarded,
       maxScore: 1,
       responseTimeMs: 5000,

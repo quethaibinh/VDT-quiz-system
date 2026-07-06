@@ -8,7 +8,7 @@ import { ResultExamRow } from "@/features/teacher/results/components/result-exam
 import { subjectDetailQuery } from "@/features/teacher/subjects";
 import { getApiErrorMessage } from "@/lib/http/api-error";
 
-export function SubjectResultListPage() {
+export function SubjectExamResultListPage() {
   const { subjectId = "" } = useParams();
   const subject = useQuery(subjectDetailQuery(subjectId));
   const exams = useQuery({
@@ -22,15 +22,15 @@ export function SubjectResultListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={subject.data ? `Kết quả · ${subject.data.name}` : "Kết quả"}
-        description="Danh sách ca thi đã kết thúc và sẵn sàng xem báo cáo."
-        action={<Link to="/teacher/results"><Button variant="secondary">Đổi môn</Button></Link>}
+        title={subject.data ? `Kết quả - ${subject.data.name}` : "Kết quả"}
+        description="Chỉ hiển thị các ca thi đã kết thúc trong môn học này."
+        action={<Link to="/teacher/results"><Button variant="secondary">Doi mon</Button></Link>}
       />
       <DataState
         loading={subject.isLoading || exams.isLoading}
         error={error ? getApiErrorMessage(error) : null}
         empty={subject.isSuccess && !exams.data?.content.length}
-        emptyMessage="Môn học này chưa có ca thi đã kết thúc."
+        emptyMessage="Môn học này chưa có kết quả ca thi."
         onRetry={() => { void subject.refetch(); void exams.refetch(); }}
       >
         <div className="space-y-3">{exams.data?.content.map((exam) => <ResultExamRow key={exam.id} exam={exam} backTo={backTo} />)}</div>

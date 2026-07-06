@@ -74,15 +74,15 @@ export function LiveQuizListPage() {
     <div className="space-y-6">
       <PageHeader
         title={subject.data ? `Quiz · ${subject.data.name}` : "Quiz"}
-        description="Tao ban nhap, prepare cau hoi va mo phong quiz truc tiep cho lop."
+        description="Tạo bản nháp, prepare câu hỏi và mở phòng quiz trực tiếp cho lớp."
         action={
           <div className="flex flex-wrap gap-2">
             <Link to="/teacher/live-quizzes" className="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold">
-              Doi mon
+              Đổi môn
             </Link>
             <Link to="new" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">
               <Plus className="h-4 w-4" />
-              Tao quiz
+              Tạo quiz
             </Link>
           </div>
         }
@@ -90,25 +90,25 @@ export function LiveQuizListPage() {
 
       <FilterBar>
         <label className="relative min-w-60 flex-1 text-sm font-semibold">
-          Tim kiem
+          Tìm kiếm
           <Search className="absolute left-3 top-10 h-5 w-5 text-muted" />
           <Input
             className="mt-2 pl-10"
             value={keyword}
-            placeholder="Ten hoac ma quiz"
+            placeholder="Tên hoặc mã quiz"
             onChange={(event) => updateSearchParam("keyword", event.target.value, true)}
           />
         </label>
         <label className="flex flex-col text-sm font-semibold">
-          Trang thai
+          Trạng thái
           <Select
             className="mt-2 min-w-44"
             value={status}
             onChange={(event) => updateSearchParam("status", event.target.value, true)}
           >
-            <option value="">Tat ca</option>
-            <option value="DRAFT">Ban nhap</option>
-            <option value="PREPARED">Da chuan bi</option>
+            <option value="">Tất cả</option>
+            <option value="DRAFT">Bản nháp</option>
+            <option value="PREPARED">Đã chuẩn bị</option>
           </Select>
         </label>
       </FilterBar>
@@ -123,7 +123,7 @@ export function LiveQuizListPage() {
         loading={subject.isLoading || quizzes.isLoading}
         error={error ? getApiErrorMessage(error) : null}
         empty={subject.isSuccess && quizzes.data?.content.length === 0}
-        emptyMessage={noFilterResult ? "Khong co quiz phu hop bo loc." : "Mon hoc nay chua co quiz."}
+        emptyMessage={noFilterResult ? "Không có quiz phù hợp bộ lọc." : "Môn học này chưa có quiz."}
         onRetry={() => {
           void subject.refetch();
           void quizzes.refetch();

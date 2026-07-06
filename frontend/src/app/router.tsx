@@ -25,6 +25,7 @@ import { LiveQuizDashboardPage } from "@/features/teacher/live-quizzes/pages/liv
 import { LiveQuizEditPage } from "@/features/teacher/live-quizzes/pages/live-quiz-edit-page";
 import { LiveQuizLobbyPage } from "@/features/teacher/live-quizzes/pages/live-quiz-lobby-page";
 import { LiveQuizListPage } from "@/features/teacher/live-quizzes/pages/live-quiz-list-page";
+import { LiveQuizResultsPage } from "@/features/teacher/live-quizzes/pages/live-quiz-results-page";
 import { LiveQuizRoomPage } from "@/features/teacher/live-quizzes/pages/live-quiz-room-page";
 import { LiveQuizSubjectPickerPage } from "@/features/teacher/live-quizzes/pages/live-quiz-subject-picker-page";
 import { MonitoringExamPickerPage } from "@/features/teacher/monitoring/pages/monitoring-exam-picker-page";
@@ -32,7 +33,7 @@ import { ExamMonitorPage } from "@/features/teacher/monitoring/pages/exam-monito
 import { QuestionBankPage } from "@/features/teacher/questions/pages/question-bank-page";
 import { ExamResultsPage } from "@/features/teacher/results/pages/exam-results-page";
 import { ResultSubjectPickerPage } from "@/features/teacher/results/pages/result-subject-picker-page";
-import { SubjectResultListPage } from "@/features/teacher/results/pages/subject-result-list-page";
+import { SubjectExamResultListPage } from "@/features/teacher/results/pages/subject-result-list-page";
 import { SubjectDashboardPage } from "@/features/teacher/subjects/pages/subject-dashboard-page";
 import { SubjectListPage } from "@/features/teacher/subjects/pages/subject-list-page";
 import { StudentGuard } from "@/features/auth/components/student-guard";
@@ -44,6 +45,7 @@ import { StudentExamRuntimePage } from "@/features/student/exams/pages/student-e
 import { StudentLiveQuizJoinPage } from "@/features/student/live-quizzes/pages/student-live-quiz-join-page";
 import { StudentLiveQuizLobbyPage } from "@/features/student/live-quizzes/pages/student-live-quiz-lobby-page";
 import { StudentLiveQuizPlayPage } from "@/features/student/live-quizzes/pages/student-live-quiz-play-page";
+import { StudentLiveQuizResultPage } from "@/features/student/live-quizzes/pages/student-live-quiz-result-page";
 import { StudentResultDetailPage } from "@/features/student/results/pages/student-result-detail-page";
 import { StudentResultsPage } from "@/features/student/results/pages/student-results-page";
 import { ProfilePage } from "@/features/profile/pages/profile-page";
@@ -83,11 +85,14 @@ export const router = createBrowserRouter([
             { path: "subjects/:subjectId/live-quizzes/:quizId/edit", element: <LiveQuizEditPage /> },
             { path: "live-quizzes/:roomId/lobby", element: <LiveQuizLobbyPage /> },
             { path: "live-quizzes/:roomId/dashboard", element: <LiveQuizDashboardPage /> },
+            { path: "live-quizzes/:roomId/results", element: <LiveQuizResultsPage /> },
             { path: "live-quizzes/:roomId/room", element: <LiveQuizRoomPage /> },
             { path: "monitoring", element: <MonitoringExamPickerPage /> },
             { path: "exams/:examId/monitor", element: <ExamMonitorPage /> },
             { path: "results", element: <ResultSubjectPickerPage /> },
-            { path: "subjects/:subjectId/results", element: <SubjectResultListPage /> },
+            { path: "subjects/:subjectId/results", element: <SubjectExamResultListPage /> },
+            { path: "subjects/:subjectId/results/quizzes", element: <Navigate to=".." replace /> },
+            { path: "subjects/:subjectId/results/exams", element: <Navigate to=".." replace /> },
             { path: "exams/:examId/results", element: <ExamResultsPage /> },
             { path: "profile", element: <ProfilePage /> },
           ],
@@ -123,6 +128,7 @@ export const router = createBrowserRouter([
               { path: "live-quizzes", element: <StudentLiveQuizJoinPage /> },
               { path: "live-quizzes/:roomId/lobby", element: <StudentLiveQuizLobbyPage /> },
               { path: "live-quizzes/:roomId/play", element: <StudentLiveQuizPlayPage /> },
+              { path: "live-quizzes/:roomId/result", element: <StudentLiveQuizResultPage /> },
               { path: "results", element: <StudentResultsPage /> },
               { path: "results/:examId", element: <StudentResultDetailPage /> },
               { path: "profile", element: <ProfilePage /> },

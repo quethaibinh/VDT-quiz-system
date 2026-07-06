@@ -25,3 +25,36 @@ button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid #CF1F1F; outline-offset: 2px; }
 h1, h2, h3 { font-family: "EB Garamond", Georgia, serif; }
+
+@keyframes quiz-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.quiz-float {
+  animation: quiz-float 3.4s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes quiz-answer-flash {
+  0%, 100% { transform: translateY(0); filter: brightness(1); }
+  30% { transform: translateY(-3px); filter: brightness(1.08); }
+  60% { transform: translateY(0); filter: brightness(.96); }
+}
+
+.quiz-answer-flash {
+  animation: quiz-answer-flash 0.34s ease-in-out 3;
+  will-change: transform, filter;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quiz-float {
+    animation: none;
+    will-change: auto;
+  }
+
+  .quiz-answer-flash {
+    animation: none;
+    will-change: auto;
+  }
+}

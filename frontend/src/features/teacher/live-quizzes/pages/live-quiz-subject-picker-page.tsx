@@ -12,13 +12,13 @@ export function LiveQuizSubjectPickerPage() {
     <div className="space-y-7">
       <PageHeader
         title="Quiz"
-        description="Chon mon hoc de tao quiz truc tiep, chuan bi ma phong va mo phong khi lop san sang."
+        description="Chọn môn học để tạo quiz trực tiếp, chuẩn bị mã phòng và mở phòng khi lớp sẵn sàng."
       />
       <DataState
         loading={query.isLoading}
         error={query.error ? getApiErrorMessage(query.error) : null}
         empty={!query.data?.length}
-        emptyMessage="Ban chua duoc phan cong mon hoc de tao quiz."
+        emptyMessage="Bạn chưa được phân công môn học để tạo quiz."
         onRetry={() => query.refetch()}
       >
         <div className="space-y-3">{query.data?.map((subject) => <LiveQuizSubjectRow key={subject.id} subject={subject} />)}</div>

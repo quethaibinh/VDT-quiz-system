@@ -28,10 +28,10 @@ const statusTone = {
 } as const;
 
 const statusText = {
-  PREPARING: "Dang chuan bi",
-  OPEN: "Dang cho hoc sinh",
-  STARTED: "Dang dien ra",
-  CLOSED: "Da dong",
+  PREPARING: "Đang chuẩn bị",
+  OPEN: "Đang chờ học sinh",
+  STARTED: "Đang diễn ra",
+  CLOSED: "Đã đóng",
 } as const;
 
 export function LiveQuizLobbyPage() {
@@ -78,7 +78,21 @@ export function LiveQuizLobbyPage() {
   });
   const start = useMutation({
     mutationFn: () => startLiveQuizRoom(roomId),
-    onSuccess: () => navigate(`/teacher/live-quizzes/${roomId}/dashboard`, { replace: true }),
+    onSuccess: (startedRoom) => {
+      queryClient.setQueryData(liveQuizKeys.room(roomId), startedRoom);
+      queryClient.setQueryData<LiveQuizTeacherSnapshot | undefined>(
+        liveQuizKeys.snapshot(roomId),
+        (currentSnapshot) => currentSnapshot
+          ? { ...currentSnapshot, roomStatus: "STARTED" }
+          : currentSnapshot,
+      );
+      setLiveSnapshot((currentSnapshot) => {
+        const base = currentSnapshot ?? snapshot.data;
+        return base ? { ...base, roomStatus: "STARTED" } : base;
+      });
+      void queryClient.invalidateQueries({ queryKey: liveQuizKeys.snapshot(roomId) });
+      navigate(`/teacher/live-quizzes/${roomId}/dashboard`, { replace: true });
+    },
   });
   const close = useMutation({
     mutationFn: () => closeLiveQuizRoom(roomId),
@@ -105,8 +119,8 @@ export function LiveQuizLobbyPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={display?.quizTitle ?? current?.quizTitle ?? "Phong quiz"}
-        description={`${display?.subjectName ?? current?.subjectName ?? "Mon hoc"} · ${display?.questionCount ?? current?.questionCount ?? 0} cau`}
+        title={display?.quizTitle ?? current?.quizTitle ?? "Phòng quiz"}
+        description={`${display?.subjectName ?? current?.subjectName ?? "Môn học"} · ${display?.questionCount ?? current?.questionCount ?? 0} câu`}
       />
 
       <DataState
@@ -124,12 +138,12 @@ export function LiveQuizLobbyPage() {
               <StatusChip tone={statusTone[effectiveStatus]}>{statusText[effectiveStatus]}</StatusChip>
               <div className="flex items-center gap-2 text-sm font-semibold text-muted">
                 <Wifi size={16} />
-                {realtime.connectionStatus === "connected" ? "Realtime" : realtime.connectionStatus === "reconnecting" ? "Dang noi lai" : "Dang ket noi"}
+                {realtime.connectionStatus === "connected" ? "Realtime" : realtime.connectionStatus === "reconnecting" ? "Đang nối lại" : "Đang kết nối"}
               </div>
             </div>
 
             <div className="mx-auto mt-8 max-w-3xl text-center">
-              <p className="m-0 text-xs font-bold uppercase tracking-wide text-muted">Ma phong</p>
+              <p className="m-0 text-xs font-bold uppercase tracking-wide text-muted">Mã phòng</p>
               <div className="mt-3 break-all font-mono text-5xl font-black tracking-[0.12em] text-ink sm:text-7xl md:text-8xl">
                 {code}
               </div>
@@ -143,23 +157,23 @@ export function LiveQuizLobbyPage() {
                   }}
                 >
                   {copied ? <Check size={16} /> : <Clipboard size={16} />}
-                  {copied ? "Da copy" : "Copy ma"}
+                  {copied ? "Đã copy" : "Copy mã"}
                 </Button>
                 {effectiveStatus === "PREPARING" && (
                   <Button loading={open.isPending} onClick={() => open.mutate()}>
                     <DoorOpen size={16} />
-                    Mo phong
+                    Mở phòng
                   </Button>
                 )}
                 {effectiveStatus === "OPEN" && (
                   <Button loading={start.isPending} onClick={() => start.mutate()}>
                     <Play size={16} />
-                    Bat dau ca thi
+                    Bắt đầu quiz
                   </Button>
                 )}
                 <Button variant="danger" loading={close.isPending} disabled={effectiveStatus === "CLOSED"} onClick={() => close.mutate()}>
                   <DoorClosed size={16} />
-                  Dong phong
+                  Đóng phòng
                 </Button>
               </div>
             </div>
@@ -173,14 +187,14 @@ export function LiveQuizLobbyPage() {
 
           <aside className="rounded-xl border border-line bg-surface p-5 shadow-soft">
             <div className="flex items-center justify-between">
-              <h2 className="m-0 text-xl">Lop dang vao</h2>
+              <h2 className="m-0 text-xl">Lớp đang vào</h2>
               <Button variant="ghost" onClick={() => snapshot.refetch()}>
                 <RefreshCw size={16} />
               </Button>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <Metric label="Da vao" value={participants.length} />
-              <Metric label="San sang" value={display?.summary.joined ?? participants.length} />
+              <Metric label="Đã vào" value={participants.length} />
+              <Metric label="Sẵn sàng" value={display?.summary.joined ?? participants.length} />
             </div>
           </aside>
         </div>
@@ -188,11 +202,11 @@ export function LiveQuizLobbyPage() {
         <section className="rounded-xl border border-line bg-surface p-5 shadow-soft">
           <div className="flex items-center gap-2">
             <Users size={18} />
-            <h2 className="m-0 text-xl">Hoc sinh trong phong</h2>
+            <h2 className="m-0 text-xl">Học sinh trong phòng</h2>
           </div>
           {participants.length === 0 ? (
             <p className="mt-5 rounded-lg border border-dashed border-line p-6 text-center text-muted">
-              Chua co hoc sinh nao vao phong.
+              Chưa có học sinh nào vào phòng.
             </p>
           ) : (
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

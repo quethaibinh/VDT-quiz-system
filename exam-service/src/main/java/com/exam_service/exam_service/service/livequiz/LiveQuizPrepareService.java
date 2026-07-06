@@ -70,6 +70,7 @@ public class LiveQuizPrepareService {
                         ? LiveQuizJoinPolicy.CODE_ONLY
                         : prepared.getLiveQuizJoinPolicy(),
                 prepared.getTitle(),
+                subjectId,
                 prepared.getSubjectNameSnapshot(),
                 liveQuizService.toDetail(prepared).questionCount(),
                 Boolean.TRUE.equals(prepared.getLiveQuizShowLeaderboard())

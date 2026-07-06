@@ -2,6 +2,7 @@ package com.exam_service.exam_service.service.livequiz;
 
 import com.exam_service.exam_service.client.QuestionCollectionMetadata;
 import com.exam_service.exam_service.client.QuestionServiceClient;
+import com.exam_service.exam_service.client.RuntimeLiveQuizClient;
 import com.exam_service.exam_service.model.dto.common.PageResponseDTO;
 import com.exam_service.exam_service.model.dto.livequiz.LiveQuizDetailDTO;
 import com.exam_service.exam_service.model.dto.livequiz.LiveQuizRequestDTO;
@@ -22,8 +23,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 /**
@@ -40,15 +45,18 @@ public class TeacherLiveQuizService {
     private final ExamRepo examRepo;
     private final ExamQuestionRepo questionRepo;
     private final QuestionServiceClient questionServiceClient;
+    private final RuntimeLiveQuizClient runtimeLiveQuizClient;
 
     public TeacherLiveQuizService(
             ExamRepo examRepo,
             ExamQuestionRepo questionRepo,
-            QuestionServiceClient questionServiceClient
+            QuestionServiceClient questionServiceClient,
+            RuntimeLiveQuizClient runtimeLiveQuizClient
     ) {
         this.examRepo = examRepo;
         this.questionRepo = questionRepo;
         this.questionServiceClient = questionServiceClient;
+        this.runtimeLiveQuizClient = runtimeLiveQuizClient;
     }
 
     public LiveQuizDetailDTO create(UUID subjectId, UUID teacherId, LiveQuizRequestDTO request) {
@@ -87,8 +95,9 @@ public class TeacherLiveQuizService {
                     cb.like(cb.lower(root.get("code")), pattern)
             ));
         }
-        Page<LiveQuizSummaryDTO> result = examRepo.findAll(specification, pageable(page, size, sort))
-                .map(this::toSummary);
+        Page<Exam> quizzes = examRepo.findAll(specification, pageable(page, size, sort));
+        Map<UUID, RuntimeLiveQuizClient.LiveQuizRoomLookupResponse> roomsByExamId = latestRoomsByExamId(quizzes);
+        Page<LiveQuizSummaryDTO> result = quizzes.map(quiz -> toSummary(quiz, roomsByExamId.get(quiz.getId())));
         return PageResponseDTO.from(result);
     }
 
@@ -182,7 +191,10 @@ public class TeacherLiveQuizService {
         );
     }
 
-    private LiveQuizSummaryDTO toSummary(Exam quiz) {
+    private LiveQuizSummaryDTO toSummary(
+            Exam quiz,
+            RuntimeLiveQuizClient.LiveQuizRoomLookupResponse room
+    ) {
         return new LiveQuizSummaryDTO(
                 quiz.getId(),
                 quiz.getCode(),
@@ -198,8 +210,25 @@ public class TeacherLiveQuizService {
                 quiz.getLiveQuizJoinPolicy() == null ? LiveQuizJoinPolicy.CODE_ONLY : quiz.getLiveQuizJoinPolicy(),
                 quiz.getStatus(),
                 quiz.getSnapshotVersion(),
-                quiz.getVersion()
+                quiz.getVersion(),
+                room == null ? null : room.roomId(),
+                room == null ? null : room.roomCode(),
+                room == null ? null : room.status()
         );
+    }
+
+    private Map<UUID, RuntimeLiveQuizClient.LiveQuizRoomLookupResponse> latestRoomsByExamId(Page<Exam> quizzes) {
+        // Chi PREPARED moi co room runtime. DRAFT khong can lookup de tranh goi service thua.
+        List<UUID> preparedQuizIds = quizzes.getContent().stream()
+                .filter(quiz -> quiz.getStatus() == ExamStatus.PREPARED)
+                .map(Exam::getId)
+                .toList();
+        return runtimeLiveQuizClient.latestRooms(preparedQuizIds).stream()
+                .collect(Collectors.toMap(
+                        RuntimeLiveQuizClient.LiveQuizRoomLookupResponse::examId,
+                        Function.identity(),
+                        (first, ignored) -> first
+                ));
     }
 
     private int questionCount(Exam quiz) {

@@ -24,15 +24,15 @@ export function StudentLiveQuizJoinPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
-        title="Vao quiz truc tiep"
-        description="Nhap ma phong giao vien dang hien thi de vao phong cho."
+        title="Vào quiz trực tiếp"
+        description="Nhập mã phòng giáo viên đang hiển thị để vào phòng chờ."
       />
       <section className="rounded-xl border border-line bg-surface p-6 text-center shadow-soft md:p-8">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary">
           <Zap size={28} />
         </div>
         <label htmlFor="live-quiz-code" className="mt-6 block text-sm font-bold uppercase tracking-wide text-muted">
-          Ma phong
+          Mã phòng
         </label>
         <input
           id="live-quiz-code"
@@ -47,7 +47,7 @@ export function StudentLiveQuizJoinPage() {
         />
         <Button className="mt-5" loading={join.isPending} disabled={normalized.length < 4} onClick={() => join.mutate()}>
           <LogIn size={16} />
-          Vao phong
+          Vào phòng
         </Button>
         {join.error && (
           <p role="alert" className="mx-auto mt-4 max-w-sm rounded-lg bg-danger/10 p-3 text-sm text-danger">

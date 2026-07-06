@@ -47,7 +47,7 @@ export function LiveQuizForm({
       loading={collections.isLoading}
       error={collections.error ? getApiErrorMessage(collections.error) : null}
       empty={collections.data?.content.length === 0}
-      emptyMessage="Mon hoc nay chua co bo cau hoi dang hoat dong de tao quiz."
+      emptyMessage="Môn học này chưa có bộ câu hỏi đang hoạt động để tạo quiz."
       onRetry={() => collections.refetch()}
     >
       <form
@@ -68,29 +68,29 @@ export function LiveQuizForm({
       >
         <section className="grid gap-5 rounded-xl border border-line bg-surface p-5 shadow-soft lg:grid-cols-2">
           <label className="flex flex-col text-sm font-semibold lg:col-span-2">
-            Ten quiz
+            Tên quiz
             <Input
               className="mt-2"
               value={title}
               maxLength={255}
-              placeholder="Vi du: On tap chuong 3"
+              placeholder="Ví dụ: Ôn tập chương 3"
               onChange={(event) => setTitle(event.target.value)}
             />
           </label>
 
           <label className="flex flex-col text-sm font-semibold lg:col-span-2">
-            Mo ta
+            Mô tả
             <textarea
               className="mt-2 min-h-28 rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               value={description}
               maxLength={4000}
-              placeholder="Ghi chu ngan cho giao vien..."
+              placeholder="Ghi chú ngắn cho giáo viên..."
               onChange={(event) => setDescription(event.target.value)}
             />
           </label>
 
           <label className="flex flex-col text-sm font-semibold">
-            Bo cau hoi
+            Bộ câu hỏi
             <Select
               className="mt-2"
               value={effectiveCollectionId}
@@ -105,35 +105,35 @@ export function LiveQuizForm({
           </label>
 
           <div className="rounded-lg border border-line p-4 text-sm">
-            <p className="m-0 font-semibold text-ink">Snapshot cau hoi</p>
+            <p className="m-0 font-semibold text-ink">Snapshot câu hỏi</p>
             <p className="m-0 mt-2 text-muted">
               {selectedCollection
-                ? `${selectedCollection.stats.questionCount} cau · De ${selectedCollection.stats.easy} · TB ${selectedCollection.stats.medium} · Kho ${selectedCollection.stats.hard}`
-                : "Chon bo cau hoi de xem thong ke."}
+                ? `${selectedCollection.stats.questionCount} câu · Dễ ${selectedCollection.stats.easy} · TB ${selectedCollection.stats.medium} · Khó ${selectedCollection.stats.hard}`
+                : "Chọn bộ câu hỏi để xem thống kê."}
             </p>
           </div>
 
           <Toggle
-            label="Tron thu tu cau hoi"
-            description="Moi lan choi co the nhan thu tu cau hoi khac nhau."
+            label="Trộn thứ tự câu hỏi"
+            description="Mỗi lần chơi có thể nhận thứ tự câu hỏi khác nhau."
             checked={shuffleQuestions}
             onChange={setShuffleQuestions}
           />
           <Toggle
-            label="Hien bang xep hang"
-            description="Dung cho lop hoc muon xem diem theo thoi gian thuc."
+            label="Hiện bảng xếp hạng"
+            description="Dùng cho lớp học muốn xem điểm theo thời gian thực."
             checked={showLeaderboard}
             onChange={setShowLeaderboard}
           />
           <Toggle
-            label="Hien dap an dung"
-            description="Phase nay chi luu cau hinh, student play se xu ly sau."
+            label="Hiện đáp án đúng"
+            description="Phase này chỉ lưu cấu hình, student play sẽ xử lý sau."
             checked={showCorrectAnswer}
             onChange={setShowCorrectAnswer}
           />
           <div className="rounded-lg border border-line p-4 text-sm">
             <p className="m-0 font-semibold text-ink">Join policy</p>
-            <p className="m-0 mt-2 text-muted">CODE_ONLY · Hoc sinh vao phong bang ma 6 ky tu.</p>
+            <p className="m-0 mt-2 text-muted">CODE_ONLY · Học sinh vào phòng bằng mã 6 ký tự.</p>
           </div>
         </section>
 

@@ -9,6 +9,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -41,6 +42,7 @@ public class RuntimeLiveQuizClient {
             int snapshotVersion,
             LiveQuizJoinPolicy joinPolicy,
             String quizTitle,
+            UUID subjectId,
             String subjectName,
             int questionCount,
             boolean showLeaderboard
@@ -55,6 +57,7 @@ public class RuntimeLiveQuizClient {
                             snapshotVersion,
                             joinPolicy.name(),
                             quizTitle,
+                            subjectId,
                             subjectName,
                             questionCount,
                             showLeaderboard
@@ -81,12 +84,40 @@ public class RuntimeLiveQuizClient {
         }
     }
 
+    public List<LiveQuizRoomLookupResponse> latestRooms(List<UUID> examIds) {
+        if (examIds == null || examIds.isEmpty()) {
+            return List.of();
+        }
+        try {
+            String body = client.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/v1/internal/examruntime-service/live-quizzes/rooms/latest")
+                            .queryParam("examIds", examIds.toArray())
+                            .build())
+                    .header("X-Internal-Api-Key", internalApiKey)
+                    .retrieve()
+                    .body(String.class);
+            JsonNode data = objectMapper.readTree(body).path("data");
+            if (data.isMissingNode() || data.isNull()) {
+                data = objectMapper.readTree(body);
+            }
+            LiveQuizRoomLookupResponse[] rooms = objectMapper.treeToValue(data, LiveQuizRoomLookupResponse[].class);
+            return rooms == null ? List.of() : List.of(rooms);
+        } catch (RestClientResponseException | ResourceAccessException exception) {
+            // Lookup nay chi phuc vu UI action. Neu Runtime tam loi, van tra danh sach quiz de giao vien khong bi chan.
+            return List.of();
+        } catch (Exception exception) {
+            return List.of();
+        }
+    }
+
     private record LiveQuizRoomRequest(
             UUID examId,
             UUID ownerTeacherId,
             int snapshotVersion,
             String joinPolicy,
             String quizTitle,
+            UUID subjectId,
             String subjectName,
             int questionCount,
             boolean showLeaderboard
@@ -98,9 +129,18 @@ public class RuntimeLiveQuizClient {
             UUID examId,
             String roomCode,
             String quizTitle,
+            UUID subjectId,
             String subjectName,
             int questionCount,
             boolean showLeaderboard,
+            String status
+    ) {
+    }
+
+    public record LiveQuizRoomLookupResponse(
+            UUID examId,
+            UUID roomId,
+            String roomCode,
             String status
     ) {
     }

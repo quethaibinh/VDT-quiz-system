@@ -26,4 +26,21 @@ public class KafkaTopicConfig {
                 .replicas(replicationFactor)
                 .build();
     }
+
+    @Bean
+    @ConditionalOnProperty(
+            name = "examruntime.kafka.topic.auto-create",
+            havingValue = "true",
+            matchIfMissing = true
+    )
+    public NewTopic liveQuizResultTopic(
+            @Value("${examruntime.kafka.topic.live-quiz-result:live-quiz-result-events}") String topicName,
+            @Value("${examruntime.kafka.topic.live-quiz-result.partitions:3}") int partitions,
+            @Value("${examruntime.kafka.topic.live-quiz-result.replication-factor:1}") short replicationFactor
+    ) {
+        return TopicBuilder.name(topicName)
+                .partitions(partitions)
+                .replicas(replicationFactor)
+                .build();
+    }
 }

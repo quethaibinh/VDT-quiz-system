@@ -16,6 +16,7 @@ public record CreateLiveQuizRoomRequestDTO(
         @NotBlank(message = "joinPolicy is required")
         String joinPolicy,
         String quizTitle,
+        UUID subjectId,
         String subjectName,
         int questionCount,
         boolean showLeaderboard

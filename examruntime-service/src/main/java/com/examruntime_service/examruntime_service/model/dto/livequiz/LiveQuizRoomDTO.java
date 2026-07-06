@@ -10,6 +10,7 @@ public record LiveQuizRoomDTO(
         UUID examId,
         String roomCode,
         String quizTitle,
+        UUID subjectId,
         String subjectName,
         int questionCount,
         boolean showLeaderboard,

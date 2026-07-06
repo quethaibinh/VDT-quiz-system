@@ -21,12 +21,12 @@ export function LiveQuizBuilderPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tao quiz"
-        description="Cau hinh quiz truc tiep tu mot bo cau hoi. Tat ca cau hoi trong bo se duoc dong bang khi prepare."
+        title="Tạo quiz"
+        description="Cấu hình quiz trực tiếp từ một bộ câu hỏi. Tất cả câu hỏi trong bộ sẽ được đóng băng khi prepare."
       />
       <LiveQuizForm
         subjectId={subjectId}
-        submitLabel="Tao quiz"
+        submitLabel="Tạo quiz"
         submitting={save.isPending}
         error={save.error ? getApiErrorMessage(save.error) : null}
         onSubmit={(input) => save.mutate(input)}
