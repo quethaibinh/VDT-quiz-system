@@ -31,5 +31,13 @@ public interface LiveQuizParticipantRepo extends JpaRepository<LiveQuizParticipa
 
     List<LiveQuizParticipant> findByRoomId(UUID roomId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select participant
+            from LiveQuizParticipant participant
+            where participant.roomId = :roomId
+            """)
+    List<LiveQuizParticipant> findByRoomIdForUpdate(@Param("roomId") UUID roomId);
+
     boolean existsByRoomIdAndStudentId(UUID roomId, UUID studentId);
 }

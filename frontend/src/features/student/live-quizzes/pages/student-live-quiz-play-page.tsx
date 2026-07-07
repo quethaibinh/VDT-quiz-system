@@ -1,9 +1,12 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { CheckCircle, XCircle } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle, Trophy, Users, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { DataState } from "@/components/shared/data-state";
 import { Button } from "@/components/ui/button";
+import { LiveQuizLeaderboard, type LiveQuizMetric } from "@/features/live-quizzes/components/live-quiz-leaderboard";
+import { mapLeaderboardEntries } from "@/features/live-quizzes/lib/live-quiz-leaderboard-mappers";
+import { useLiveQuizRealtime } from "@/features/live-quizzes/realtime/use-live-quiz-realtime";
 import { RuntimeClock } from "@/features/student/exams/lib/runtime-clock";
 import { LiveQuizQuestionStage } from "@/features/student/live-quizzes/components/live-quiz-question-stage";
 import {
@@ -16,22 +19,30 @@ import {
   type StudentLiveQuizAnswerResponse,
   type StudentLiveQuizCurrentQuestion,
 } from "@/features/student/live-quizzes";
+import type { LiveQuizLeaderboardEntry } from "@/features/teacher/live-quizzes";
 import { getApiErrorMessage } from "@/lib/http/api-error";
 
 export function StudentLiveQuizPlayPage() {
   const { roomId = "" } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [leaderboardOverride, setLeaderboardOverride] = useState<{ roomId: string; entries: LiveQuizLeaderboardEntry[] } | null>(null);
+  const [closedRealtimeRoomId, setClosedRealtimeRoomId] = useState<string | null>(null);
 
   const state = useQuery({
     queryKey: studentLiveQuizKeys.state(roomId),
     queryFn: () => getStudentLiveQuizState(roomId),
     enabled: Boolean(roomId),
-    refetchInterval: 5000,
+    refetchInterval: (query) => query.state.data?.participantStatus === "FINISHED" ? false : 5000,
   });
+  const effectiveRoomStatus = closedRealtimeRoomId === roomId || state.data?.roomStatus === "CLOSED" ? "CLOSED" : state.data?.roomStatus;
+  const displayLeaderboard = state.data?.showLeaderboard
+    ? leaderboardOverride?.roomId === roomId ? leaderboardOverride.entries : state.data.leaderboard
+    : [];
   const question = useQuery({
     queryKey: studentLiveQuizKeys.currentQuestion(roomId),
     queryFn: () => getStudentLiveQuizCurrentQuestion(roomId),
-    enabled: Boolean(roomId) && state.data?.roomStatus === "STARTED" && state.data.participantStatus !== "FINISHED",
+    enabled: Boolean(roomId) && effectiveRoomStatus === "STARTED" && state.data?.participantStatus !== "FINISHED",
     retry: (failureCount, error) => (
       failureCount < 2 && getApiErrorMessage(error) === "CONCURRENT_OR_DUPLICATE_UPDATE"
     ),
@@ -42,10 +53,41 @@ export function StudentLiveQuizPlayPage() {
     queryFn: () => getStudentLiveQuizFinalResult(roomId),
     // Hoc sinh lam xong chua co ket qua chinh thuc ngay.
     // Chi khi giao vien dong phong thi Result Service moi co ban rank/score da chot.
-    enabled: Boolean(roomId) && state.data?.participantStatus === "FINISHED" && state.data.roomStatus === "CLOSED",
+    enabled: Boolean(roomId) && state.data?.participantStatus === "FINISHED" && effectiveRoomStatus === "CLOSED",
     refetchInterval: (query) => query.state.data ? false : 3000,
     retry: true,
   });
+
+  const realtimeTopics = useMemo(() => {
+    const topics = [`/user/queue/live-quizzes/${roomId}`];
+    if (state.data?.showLeaderboard) {
+      topics.push(`/topic/live-quizzes/${roomId}/leaderboard`);
+    }
+    return topics;
+  }, [roomId, state.data?.showLeaderboard]);
+
+  const realtime = useLiveQuizRealtime({
+    roomId,
+    topics: realtimeTopics,
+    enabled: Boolean(roomId && state.data),
+    onReconnect: () => {
+      void state.refetch();
+      if (state.data?.participantStatus !== "FINISHED" && effectiveRoomStatus === "STARTED") {
+        void question.refetch();
+      }
+    },
+    onMessage: (message) => {
+      if (message.leaderboard) {
+        setLeaderboardOverride({ roomId, entries: message.leaderboard });
+      }
+      if (message.type === "ROOM_CLOSED" || message.roomStatus === "CLOSED") {
+        setClosedRealtimeRoomId(roomId);
+        void queryClient.invalidateQueries({ queryKey: studentLiveQuizKeys.state(roomId) });
+        void finalResult.refetch();
+      }
+    },
+  });
+
   if (state.data?.roomStatus === "OPEN") {
     return <Navigate to={`/student/live-quizzes/${roomId}/lobby`} replace />;
   }
@@ -66,16 +108,16 @@ export function StudentLiveQuizPlayPage() {
         {state.data && (
           <>
             {finished ? (
-              <main className="mx-auto grid min-h-[70vh] max-w-2xl place-items-center p-4">
-                <section className="w-full rounded-xl border border-line bg-surface p-8 text-center shadow-soft">
+              <main className="mx-auto w-full max-w-6xl p-4 sm:p-6">
+                <section className="mx-auto mb-6 max-w-2xl rounded-xl border border-line bg-surface p-6 text-center shadow-soft sm:p-8">
                   <CheckCircle className="mx-auto text-success" size={44} />
-                  <h1 className="mt-4 text-3xl font-black text-ink">{state.data.roomStatus === "CLOSED" ? "Đang chốt kết quả" : "Đã hoàn thành"}</h1>
+                  <h1 className="mt-4 text-3xl font-black text-ink">{effectiveRoomStatus === "CLOSED" ? "Đang chốt kết quả" : "Đã hoàn thành"}</h1>
                   <p className="text-muted">
                     Điểm tạm thời: <strong className="text-ink">{formatScore(state.data.totalScore)}</strong>
                     {state.data.currentRank ? ` - Hạng tạm thời #${state.data.currentRank}` : ""}
                   </p>
                   <p className="text-sm text-muted">
-                    {state.data.roomStatus === "CLOSED"
+                    {effectiveRoomStatus === "CLOSED"
                       ? "Giáo viên đã kết thúc quiz. Hệ thống đang lấy kết quả chính thức."
                       : "Vui lòng chờ giáo viên kết thúc quiz để chốt điểm và thứ hạng cuối cùng."}
                   </p>
@@ -89,6 +131,18 @@ export function StudentLiveQuizPlayPage() {
                     }}>Làm mới</Button>
                   )}
                 </section>
+                {state.data.showLeaderboard ? (
+                  <LiveQuizLeaderboard
+                    leaderboard={mapLeaderboardEntries(displayLeaderboard, state.data.totalQuestions, state.data.participantId)}
+                    leaderboardBadge={realtime.realtimeActive ? "Live" : "Snapshot"}
+                    leaderboardEmptyText="Chưa có dữ liệu xếp hạng."
+                    leaderboardTitle="Bảng xếp hạng tạm thời"
+                    metrics={studentLeaderboardMetrics(state.data)}
+                    podiumTitle="Top học sinh hiện tại"
+                    progressRows={mapLeaderboardEntries(displayLeaderboard, state.data.totalQuestions, state.data.participantId)}
+                    progressTitle="Tiến độ học sinh"
+                  />
+                ) : null}
               </main>
             ) : question.data ? (
               <QuestionSession
@@ -105,6 +159,17 @@ export function StudentLiveQuizPlayPage() {
       </DataState>
     </div>
   );
+}
+
+function studentLeaderboardMetrics(
+  state: NonNullable<Awaited<ReturnType<typeof getStudentLiveQuizState>>>,
+): LiveQuizMetric[] {
+  return [
+    { label: "Điểm tạm thời", value: formatScore(state.totalScore), icon: <Trophy size={17} /> },
+    { label: "Hạng tạm thời", value: state.currentRank ? `#${state.currentRank}` : "...", icon: <Trophy size={17} /> },
+    { label: "Đã trả lời", value: `${state.answeredCount}/${state.totalQuestions}` },
+    { label: "Người tham gia", value: String(state.participantCount), icon: <Users size={17} /> },
+  ];
 }
 
 function QuestionSession({

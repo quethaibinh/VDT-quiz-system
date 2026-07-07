@@ -14,6 +14,8 @@ import com.examruntime_service.examruntime_service.repository.SessionMonitorStat
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
+import com.examruntime_service.examruntime_service.service.session.RuntimeActivationResolver;
+import com.examruntime_service.examruntime_service.model.dto.runtime.RuntimeActivationMetadata;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -31,7 +33,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 class ProctoringEventServiceTest {
 
     private ExamSessionRepo examSessionRepo;
@@ -39,6 +40,7 @@ class ProctoringEventServiceTest {
     private ProctoringEventRepo proctoringEventRepo;
     private MonitorStateService monitorStateService;
     private MonitorEventPublisher publisher;
+    private RuntimeActivationResolver activationResolver;
     private ProctoringEventService service;
 
     private final UUID examId = UUID.randomUUID();
@@ -55,6 +57,7 @@ class ProctoringEventServiceTest {
         publisher = mock(MonitorEventPublisher.class);
         MonitorStateMapper mapper = new MonitorStateMapper();
         MonitorRiskPolicy riskPolicy = new MonitorRiskPolicy(2);
+        activationResolver = mock(RuntimeActivationResolver.class);
 
         service = new ProctoringEventService(
                 examSessionRepo,
@@ -67,6 +70,7 @@ class ProctoringEventServiceTest {
                 new SessionLockService(),
                 new ObjectMapper(),
                 Clock.fixed(fixedInstant, ZoneId.of("UTC")),
+                activationResolver,
                 4096
         );
     }
@@ -86,6 +90,27 @@ class ProctoringEventServiceTest {
             event.setId(UUID.randomUUID());
             return event;
         });
+
+        RuntimeActivationMetadata metadata = new RuntimeActivationMetadata(
+                examId,
+                1,
+                null,
+                null,
+                null,
+                null,
+                null,
+                OffsetDateTime.now(),
+                OffsetDateTime.now().plusHours(1),
+                0,
+                0,
+                null,
+                2,
+                "LOCK",
+                RuntimeActivationMetadata.STATUS_READY,
+                OffsetDateTime.now(),
+                RuntimeActivationMetadata.SOURCE_REDIS
+        );
+        when(activationResolver.getReadyActivation(examId)).thenReturn(metadata);
 
         var message = service.recordEvent(examId, sessionId, studentId, request("event-1"));
 

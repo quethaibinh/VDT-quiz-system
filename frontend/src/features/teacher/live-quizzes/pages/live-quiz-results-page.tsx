@@ -7,10 +7,10 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { StatusChip } from "@/components/ui/status-chip";
 import {
-  TeacherLiveQuizLeaderboard,
-  type TeacherQuizMetric,
-  type TeacherQuizRankEntry,
-} from "@/features/teacher/live-quizzes/components/teacher-live-quiz-leaderboard";
+  LiveQuizLeaderboard,
+  type LiveQuizMetric,
+  type LiveQuizRankEntry,
+} from "@/features/live-quizzes/components/live-quiz-leaderboard";
 import {
   exportTeacherLiveQuizResults,
   getTeacherLiveQuizResultDetail,
@@ -73,7 +73,7 @@ export function LiveQuizResultsPage() {
       <DataState loading={query.isLoading} error={query.error ? getApiErrorMessage(query.error) : null} empty={query.data?.rows.content.length === 0} onRetry={() => query.refetch()}>
         {query.data && (
           <>
-            <TeacherLiveQuizLeaderboard
+            <LiveQuizLeaderboard
               leaderboard={mapResultLeaderboard(query.data, selectedResultId, setSelectedResultId)}
               leaderboardBadge="Final"
               leaderboardTitle="Bảng xếp hạng"
@@ -98,7 +98,7 @@ export function LiveQuizResultsPage() {
   );
 }
 
-function mapResultMetrics(results: TeacherLiveQuizResults): TeacherQuizMetric[] {
+function mapResultMetrics(results: TeacherLiveQuizResults): LiveQuizMetric[] {
   return [
     { label: "Tổng học sinh", value: String(results.participantCount), icon: <Users size={17} /> },
     { label: "Trung bình", value: score(results.averageScore), icon: <Target size={17} /> },
@@ -111,7 +111,7 @@ function mapResultLeaderboard(
   results: TeacherLiveQuizResults,
   selectedResultId: string | null,
   onSelect: (resultId: string) => void,
-): TeacherQuizRankEntry[] {
+): LiveQuizRankEntry[] {
   return results.rows.content
     .slice()
     .sort((a, b) => a.finalRank - b.finalRank)
@@ -122,7 +122,7 @@ function mapResultProgress(
   results: TeacherLiveQuizResults,
   selectedResultId: string | null,
   onSelect: (resultId: string) => void,
-): TeacherQuizRankEntry[] {
+): LiveQuizRankEntry[] {
   return mapResultLeaderboard(results, selectedResultId, onSelect);
 }
 
@@ -130,7 +130,7 @@ function mapResultRow(
   row: TeacherLiveQuizResultRow,
   selectedResultId: string | null,
   onSelect: (resultId: string) => void,
-): TeacherQuizRankEntry {
+): LiveQuizRankEntry {
   return {
     id: row.resultId,
     rank: row.finalRank,

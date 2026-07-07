@@ -91,6 +91,24 @@ class StompAuthorizationInterceptorTest {
     }
 
     @Test
+    void authorizesLiveQuizTeacherLeaderboardOnlyForOwnedRoom() {
+        UUID roomId = UUID.randomUUID();
+        UUID teacherId = UUID.randomUUID();
+        LiveQuizRoom room = new LiveQuizRoom();
+        room.setOwnerTeacherId(teacherId);
+        when(liveQuizRoomRepo.findById(roomId)).thenReturn(Optional.of(room));
+
+        assertThatNoException().isThrownBy(() ->
+                interceptor.preSend(message(StompCommand.SUBSCRIBE, "/topic/live-quizzes/%s/leaderboard".formatted(roomId), teacher(teacherId)), channel)
+        );
+
+        assertThatThrownBy(() ->
+                interceptor.preSend(message(StompCommand.SUBSCRIBE, "/topic/live-quizzes/%s/leaderboard".formatted(roomId), teacher(UUID.randomUUID())), channel)
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("SUBSCRIBE_FORBIDDEN");
+    }
+
+    @Test
     void authorizesLiveQuizStudentQueueOnlyForJoinedParticipant() {
         UUID roomId = UUID.randomUUID();
         UUID studentId = UUID.randomUUID();
@@ -102,6 +120,52 @@ class StompAuthorizationInterceptorTest {
 
         assertThatThrownBy(() ->
                 interceptor.preSend(message(StompCommand.SUBSCRIBE, "/user/queue/live-quizzes/%s".formatted(roomId), student(UUID.randomUUID())), channel)
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("SUBSCRIBE_FORBIDDEN");
+    }
+
+    @Test
+    void authorizesLiveQuizStudentLeaderboardOnlyForJoinedParticipantWhenEnabled() {
+        UUID roomId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        LiveQuizRoom room = new LiveQuizRoom();
+        room.setShowLeaderboard(true);
+        when(liveQuizRoomRepo.findById(roomId)).thenReturn(Optional.of(room));
+        when(liveQuizParticipantRepo.existsByRoomIdAndStudentId(roomId, studentId)).thenReturn(true);
+
+        assertThatNoException().isThrownBy(() ->
+                interceptor.preSend(message(StompCommand.SUBSCRIBE, "/topic/live-quizzes/%s/leaderboard".formatted(roomId), student(studentId)), channel)
+        );
+
+        UUID otherStudentId = UUID.randomUUID();
+        assertThatThrownBy(() ->
+                interceptor.preSend(message(StompCommand.SUBSCRIBE, "/topic/live-quizzes/%s/leaderboard".formatted(roomId), student(otherStudentId)), channel)
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("SUBSCRIBE_FORBIDDEN");
+    }
+
+    @Test
+    void rejectsLiveQuizStudentLeaderboardWhenRoomDisablesLeaderboard() {
+        UUID roomId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        LiveQuizRoom room = new LiveQuizRoom();
+        room.setShowLeaderboard(false);
+        when(liveQuizRoomRepo.findById(roomId)).thenReturn(Optional.of(room));
+        when(liveQuizParticipantRepo.existsByRoomIdAndStudentId(roomId, studentId)).thenReturn(true);
+
+        assertThatThrownBy(() ->
+                interceptor.preSend(message(StompCommand.SUBSCRIBE, "/topic/live-quizzes/%s/leaderboard".formatted(roomId), student(studentId)), channel)
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("SUBSCRIBE_FORBIDDEN");
+    }
+
+    @Test
+    void rejectsLiveQuizStudentTeacherProgressTopic() {
+        UUID roomId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        assertThatThrownBy(() ->
+                interceptor.preSend(message(StompCommand.SUBSCRIBE, "/topic/live-quizzes/%s/teacher-progress".formatted(roomId), student(studentId)), channel)
         ).isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("SUBSCRIBE_FORBIDDEN");
     }

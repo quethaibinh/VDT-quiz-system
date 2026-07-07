@@ -29,7 +29,7 @@ public class LiveQuizRedisSubscriber {
                 return;
             }
             String type = message.type() != null ? message.type() : "";
-            if (type.equals("PARTICIPANT_JOINED") || type.equals("ROOM_STARTED")) {
+            if (type.equals("PARTICIPANT_JOINED") || type.equals("ROOM_STARTED") || type.equals("ROOM_CLOSED")) {
                 // Lobby chi can su kien join va bat dau phong.
                 messagingTemplate.convertAndSend(LiveQuizDestinations.lobbyTopic(message.roomId()), message);
             }
@@ -37,7 +37,8 @@ public class LiveQuizRedisSubscriber {
                     || type.equals("ANSWER_SUBMITTED")
                     || type.equals("QUESTION_TIMEOUT")
                     || type.equals("PARTICIPANT_FINISHED")
-                    || type.equals("ROOM_STARTED")) {
+                    || type.equals("ROOM_STARTED")
+                    || type.equals("ROOM_CLOSED")) {
                 // Teacher progress nhan cac su kien lam bai theo thoi gian thuc.
                 messagingTemplate.convertAndSend(LiveQuizDestinations.teacherProgressTopic(message.roomId()), message);
             }

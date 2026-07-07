@@ -51,7 +51,10 @@ public class StudentExamReadService {
             parsedFilter = availabilityFilter.trim().toUpperCase();
         }
 
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("startAt").ascending());
+        Sort.Direction direction = "UPCOMING".equalsIgnoreCase(parsedFilter)
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(direction, "startAt"));
         Page<StudentExamSummaryDTO> dtoPage = examRepo.findAssignedExamsForStudent(
                 studentId,
                 parsedFilter,

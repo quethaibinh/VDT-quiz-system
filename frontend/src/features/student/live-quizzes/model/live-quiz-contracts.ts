@@ -1,3 +1,5 @@
+import type { LiveQuizLeaderboardEntry } from "@/features/teacher/live-quizzes";
+
 export type StudentLiveQuizRoomStatus = "PREPARING" | "OPEN" | "STARTED" | "CLOSED";
 export type StudentLiveQuizParticipantStatus = "JOINED" | "IN_PROGRESS" | "FINISHED" | "DISCONNECTED";
 export type LiveQuizAnswerStatus = "ANSWERED" | "TIMEOUT" | "NOT_REACHED";
@@ -38,6 +40,8 @@ export interface StudentLiveQuizState {
   maxScore: number;
   currentRank: number | null;
   participantCount: number;
+  showLeaderboard: boolean;
+  leaderboard: LiveQuizLeaderboardEntry[];
   serverTime: string;
   currentQuestionEndsAt: string | null;
 }

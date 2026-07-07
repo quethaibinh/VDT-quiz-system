@@ -51,8 +51,12 @@ public class MonitorRiskPolicy {
     }
 
     public RiskLevel level(BigDecimal score, int totalViolationCount) {
+        return level(score, totalViolationCount, this.maxViolationAllowed);
+    }
+
+    public RiskLevel level(BigDecimal score, int totalViolationCount, int maxViolation) {
         // Risk level cho dashboard; lock decision van nam rieng trong shouldLock.
-        if (totalViolationCount >= maxViolationAllowed || score.compareTo(BigDecimal.valueOf(maxViolationAllowed)) >= 0) {
+        if (totalViolationCount >= maxViolation || score.compareTo(BigDecimal.valueOf(maxViolation)) >= 0) {
             return RiskLevel.CRITICAL;
         }
         if (score.compareTo(BigDecimal.valueOf(3)) >= 0) {
@@ -65,8 +69,15 @@ public class MonitorRiskPolicy {
     }
 
     public boolean shouldLock(BigDecimal score, int totalViolationCount) {
+        return shouldLock(score, totalViolationCount, this.maxViolationAllowed, "LOCK");
+    }
+
+    public boolean shouldLock(BigDecimal score, int totalViolationCount, int maxViolation, String handleViolation) {
+        if (!"LOCK".equalsIgnoreCase(handleViolation)) {
+            return false;
+        }
         // Dieu kien lock dung ca count lan score de ho tro ca luat don gian va luat co trong so.
-        return totalViolationCount >= maxViolationAllowed
-                || score.compareTo(BigDecimal.valueOf(maxViolationAllowed)) >= 0;
+        return totalViolationCount >= maxViolation
+                || score.compareTo(BigDecimal.valueOf(maxViolation)) >= 0;
     }
 }

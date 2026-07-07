@@ -19,6 +19,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
+import com.examruntime_service.examruntime_service.service.session.RuntimeActivationResolver;
+import com.examruntime_service.examruntime_service.model.dto.runtime.RuntimeActivationMetadata;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -49,6 +51,7 @@ public class ProctoringEventService {
     private final SessionLockService lockService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final RuntimeActivationResolver activationResolver;
     private final int metadataMaxBytes;
     private final String instanceId = UUID.randomUUID().toString();
 
@@ -63,6 +66,7 @@ public class ProctoringEventService {
             SessionLockService lockService,
             ObjectMapper objectMapper,
             Clock clock,
+            RuntimeActivationResolver activationResolver,
             @Value("${examruntime.monitor.metadata-max-bytes:4096}") int metadataMaxBytes
     ) {
         this.examSessionRepo = examSessionRepo;
@@ -75,6 +79,7 @@ public class ProctoringEventService {
         this.lockService = lockService;
         this.objectMapper = objectMapper;
         this.clock = clock;
+        this.activationResolver = activationResolver;
         this.metadataMaxBytes = metadataMaxBytes;
     }
 
@@ -118,6 +123,18 @@ public class ProctoringEventService {
                             .orElseThrow(() -> new NotFoundException("MONITOR_STATE_NOT_FOUND"));
                 });
 
+        int maxViolation = 5;
+        String handleViolation = "LOCK";
+        try {
+            RuntimeActivationMetadata activation = activationResolver.getReadyActivation(examId);
+            if (activation != null) {
+                maxViolation = activation.maxViolationAllowed();
+                handleViolation = activation.handleViolation();
+            }
+        } catch (Exception e) {
+            // Keep default values
+        }
+
         ProctoringEventType type = request.getEventType();
         boolean violation = isViolation(type);
         if (type == ProctoringEventType.ONLINE) {
@@ -136,7 +153,7 @@ public class ProctoringEventService {
             incrementTypeCount(state, type);
             state.setTotalViolationCount(state.getTotalViolationCount() + 1);
             state.setRiskScore(state.getRiskScore().add(riskPolicy.weight(type)));
-            state.setRiskLevel(riskPolicy.level(state.getRiskScore(), state.getTotalViolationCount()));
+            state.setRiskLevel(riskPolicy.level(state.getRiskScore(), state.getTotalViolationCount(), maxViolation));
             session.setViolationCount(state.getTotalViolationCount());
         }
         state.setLastEventAt(now);
@@ -157,7 +174,7 @@ public class ProctoringEventService {
         ProctoringEvent savedEvent = proctoringEventRepo.save(event);
 
         StudentAlertDTO alert = null;
-        if (riskPolicy.shouldLock(state.getRiskScore(), state.getTotalViolationCount())) {
+        if (riskPolicy.shouldLock(state.getRiskScore(), state.getTotalViolationCount(), maxViolation, handleViolation)) {
             // Lock chi thuc hien mot lan. Cac event sau khi session LOCKED se bi reject o dau ham.
             boolean locked = lockService.lock(session, state, "MAX_VIOLATION_REACHED");
             if (locked) {

@@ -82,6 +82,8 @@ public class ExamActivationTransactionService {
                 exam.getJoinBeforeMinutes(),
                 exam.getJoinAfterMinutes(),
                 exam.getShowResultPolicy() != null ? exam.getShowResultPolicy().name() : null,
+                exam.getMaxViolationAllowed(),
+                exam.getHandleViolation() != null ? exam.getHandleViolation().name() : "LOCK",
                 now
         );
 

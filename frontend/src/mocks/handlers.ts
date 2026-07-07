@@ -816,6 +816,8 @@ export const handlers = [
       maxScore: total,
       currentRank: 1,
       participantCount: liveQuizParticipants.get(room.roomId)?.length ?? 1,
+      showLeaderboard: room.showLeaderboard,
+      leaderboard: room.showLeaderboard ? liveQuizSnapshot(room).leaderboard : [],
       serverTime: new Date().toISOString(),
       currentQuestionEndsAt: room.status === "STARTED" ? new Date(Date.now() + 30_000).toISOString() : null,
     }));

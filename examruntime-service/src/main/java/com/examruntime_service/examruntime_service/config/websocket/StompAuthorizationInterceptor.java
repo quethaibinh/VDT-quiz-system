@@ -34,7 +34,9 @@ public class StompAuthorizationInterceptor implements ChannelInterceptor {
     private static final Pattern STUDENT_SEND =
             Pattern.compile("^/app/exams/([0-9a-fA-F\\-]{36})/sessions/([0-9a-fA-F\\-]{36})/events$");
     private static final Pattern LIVE_QUIZ_TEACHER_TOPIC =
-            Pattern.compile("^/topic/live-quizzes/([0-9a-fA-F\\-]{36})/(lobby|teacher-progress|leaderboard)$");
+            Pattern.compile("^/topic/live-quizzes/([0-9a-fA-F\\-]{36})/(lobby|teacher-progress)$");
+    private static final Pattern LIVE_QUIZ_LEADERBOARD_TOPIC =
+            Pattern.compile("^/topic/live-quizzes/([0-9a-fA-F\\-]{36})/leaderboard$");
     private static final Pattern LIVE_QUIZ_STUDENT_QUEUE =
             Pattern.compile("^/user/queue/live-quizzes/([0-9a-fA-F\\-]{36})$");
 
@@ -113,6 +115,25 @@ public class StompAuthorizationInterceptor implements ChannelInterceptor {
                     .map(room -> room.getOwnerTeacherId().equals(teacherId))
                     .orElse(false);
             if (!principal.hasRole("TEACHER") || !ownsRoom) {
+                throw new IllegalArgumentException("SUBSCRIBE_FORBIDDEN");
+            }
+            return;
+        }
+        Matcher liveQuizLeaderboardTopic = LIVE_QUIZ_LEADERBOARD_TOPIC.matcher(destination);
+        if (liveQuizLeaderboardTopic.matches()) {
+            UUID roomId = UUID.fromString(liveQuizLeaderboardTopic.group(1));
+            UUID principalId = UUID.fromString(principal.getName());
+            boolean allowed = liveQuizRoomRepo.findById(roomId)
+                    .map(room -> {
+                        if (principal.hasRole("TEACHER")) {
+                            return room.getOwnerTeacherId().equals(principalId);
+                        }
+                        return principal.hasRole("STUDENT")
+                                && room.isShowLeaderboard()
+                                && liveQuizParticipantRepo.existsByRoomIdAndStudentId(roomId, principalId);
+                    })
+                    .orElse(false);
+            if (!allowed) {
                 throw new IllegalArgumentException("SUBSCRIBE_FORBIDDEN");
             }
             return;

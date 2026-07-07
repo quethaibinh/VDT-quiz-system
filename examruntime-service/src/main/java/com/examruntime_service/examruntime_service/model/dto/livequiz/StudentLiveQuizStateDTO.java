@@ -5,6 +5,7 @@ import com.examruntime_service.examruntime_service.model.entity.enums.LiveQuizRo
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record StudentLiveQuizStateDTO(
@@ -22,6 +23,8 @@ public record StudentLiveQuizStateDTO(
         BigDecimal maxScore,
         Integer currentRank,
         int participantCount,
+        boolean showLeaderboard,
+        List<LiveQuizLeaderboardEntryDTO> leaderboard,
         OffsetDateTime serverTime,
         OffsetDateTime currentQuestionEndsAt
 ) {
