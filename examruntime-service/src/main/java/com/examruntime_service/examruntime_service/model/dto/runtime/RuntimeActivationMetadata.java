@@ -20,6 +20,8 @@ public record RuntimeActivationMetadata(
         int joinBeforeMinutes,
         int joinAfterMinutes,
         String showResultPolicy,
+        int maxViolationAllowed,
+        String handleViolation,
         String status,
         OffsetDateTime readyAt,
         String snapshotSource
@@ -27,6 +29,28 @@ public record RuntimeActivationMetadata(
     public static final String STATUS_READY = "READY";
     public static final String SOURCE_REDIS = "REDIS";
     public static final String SOURCE_EXAM_SERVICE_FALLBACK = "EXAM_SERVICE_FALLBACK";
+
+    public RuntimeActivationMetadata(
+            UUID examId,
+            int snapshotVersion,
+            String code,
+            String title,
+            UUID subjectId,
+            String subjectName,
+            UUID ownerTeacherId,
+            OffsetDateTime startAt,
+            OffsetDateTime endAt,
+            int joinBeforeMinutes,
+            int joinAfterMinutes,
+            String showResultPolicy,
+            String status,
+            OffsetDateTime readyAt,
+            String snapshotSource
+    ) {
+        this(examId, snapshotVersion, code, title, subjectId, subjectName, ownerTeacherId,
+                startAt, endAt, joinBeforeMinutes, joinAfterMinutes, showResultPolicy,
+                5, "LOCK", status, readyAt, snapshotSource);
+    }
 
     public RuntimeActivationMetadata(
             UUID examId,
@@ -41,6 +65,6 @@ public record RuntimeActivationMetadata(
     ) {
         this(examId, snapshotVersion, null, null, null, null, null,
                 startAt, endAt, joinBeforeMinutes, joinAfterMinutes, null,
-                status, readyAt, snapshotSource);
+                5, "LOCK", status, readyAt, snapshotSource);
     }
 }

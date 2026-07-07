@@ -53,7 +53,6 @@ public class RuntimeActivationWarmupService {
 
         try {
             PaperPoolSnapshot snapshot = ensurePaperPool(event, ttl);
-            // Metadata toi thieu cho join window sau nay; paper ca nhan van sinh on demand.
             RuntimeActivationMetadata metadata = new RuntimeActivationMetadata(
                     event.examId(),
                     event.snapshotVersion(),
@@ -67,6 +66,8 @@ public class RuntimeActivationWarmupService {
                     event.joinBeforeMinutes(),
                     event.joinAfterMinutes(),
                     event.showResultPolicy(),
+                    event.maxViolationAllowed(),
+                    event.handleViolation(),
                     RuntimeActivationMetadata.STATUS_READY,
                     OffsetDateTime.now(clock),
                     snapshot.source()

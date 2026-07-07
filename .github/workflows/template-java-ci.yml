@@ -9,7 +9,7 @@ on:
         description: "The directory containing the Java Maven project"
     secrets:
       SONAR_TOKEN:
-        required: true
+        required: false
 
 jobs:
   build-and-test:

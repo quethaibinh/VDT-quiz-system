@@ -5,13 +5,13 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { DataState } from "@/components/shared/data-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import {
+  LiveQuizLeaderboard,
+  type LiveQuizMetric,
+  type LiveQuizRankEntry,
+} from "@/features/live-quizzes/components/live-quiz-leaderboard";
 import { applyLiveQuizRealtimeMessage } from "@/features/live-quizzes/realtime/live-quiz-reducer";
 import { useLiveQuizRealtime } from "@/features/live-quizzes/realtime/use-live-quiz-realtime";
-import {
-  TeacherLiveQuizLeaderboard,
-  type TeacherQuizMetric,
-  type TeacherQuizRankEntry,
-} from "@/features/teacher/live-quizzes/components/teacher-live-quiz-leaderboard";
 import {
   closeLiveQuizRoom,
   getLiveQuizRoom,
@@ -68,6 +68,7 @@ export function LiveQuizDashboardPage() {
       // Close da kich hoat finalization o runtime; invalidate snapshot de UI doi sang trang thai CLOSED.
       // Ket qua official se duoc query rieng tu result-service bang finalResults.
       await queryClient.invalidateQueries({ queryKey: liveQuizKeys.snapshot(roomId) });
+      await queryClient.invalidateQueries({ queryKey: liveQuizKeys.room(roomId) });
     },
   });
 
@@ -114,7 +115,7 @@ export function LiveQuizDashboardPage() {
                 </Link>
               </section>
             )}
-            <TeacherLiveQuizLeaderboard
+            <LiveQuizLeaderboard
               leaderboard={mapLiveLeaderboard(display)}
               leaderboardTitle="Bảng xếp hạng"
               metrics={mapLiveMetrics(display)}
@@ -134,11 +135,12 @@ function withRoomStatus(
   roomStatus: LiveQuizTeacherSnapshot["roomStatus"] | undefined,
 ): LiveQuizTeacherSnapshot | undefined {
   if (!snapshot || !roomStatus) return snapshot;
+  if (snapshot.roomStatus === "CLOSED") return snapshot;
   if (snapshot.roomStatus === roomStatus) return snapshot;
   return { ...snapshot, roomStatus };
 }
 
-function mapLiveMetrics(snapshot: LiveQuizTeacherSnapshot): TeacherQuizMetric[] {
+function mapLiveMetrics(snapshot: LiveQuizTeacherSnapshot): LiveQuizMetric[] {
   const total = snapshot.summary.joined + snapshot.summary.inProgress + snapshot.summary.finished + snapshot.summary.disconnected;
   return [
     { label: "Tổng học sinh", value: String(total), icon: <Users size={17} /> },
@@ -148,7 +150,7 @@ function mapLiveMetrics(snapshot: LiveQuizTeacherSnapshot): TeacherQuizMetric[] 
   ];
 }
 
-function mapLiveLeaderboard(snapshot: LiveQuizTeacherSnapshot): TeacherQuizRankEntry[] {
+function mapLiveLeaderboard(snapshot: LiveQuizTeacherSnapshot): LiveQuizRankEntry[] {
   return snapshot.leaderboard.map((entry) => ({
     id: entry.participantId,
     rank: entry.rank,
@@ -163,7 +165,7 @@ function mapLiveLeaderboard(snapshot: LiveQuizTeacherSnapshot): TeacherQuizRankE
   }));
 }
 
-function mapLiveProgress(snapshot: LiveQuizTeacherSnapshot): TeacherQuizRankEntry[] {
+function mapLiveProgress(snapshot: LiveQuizTeacherSnapshot): LiveQuizRankEntry[] {
   return [...snapshot.participants]
     .sort((a, b) => (a.currentRank ?? 9999) - (b.currentRank ?? 9999) || a.studentName.localeCompare(b.studentName))
     .map((participant) => ({

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MonitorParticipant, MonitorSnapshot } from "./monitor-contracts";
 import { applyMonitorRealtimeMessage, filterMonitorParticipants, getMonitorMetrics } from "./monitor-state";
+import { reconcileSnapshot } from "../hooks/use-monitor-realtime";
 
 describe("monitor state helpers", () => {
   it("filters warning participants and prioritizes locked/high risk first", () => {
@@ -107,6 +108,54 @@ describe("monitor state helpers", () => {
 
     expect(next.participants).toHaveLength(1);
     expect(next.participants[0]).toMatchObject({ sessionId: "s2", studentCode: "SV002", status: "ONLINE" });
+  });
+
+  it("reconciles snapshots by keeping the newest participant states and merging events", () => {
+    const current: MonitorSnapshot = {
+      examId: "exam-1",
+      serverTime: "2026-01-01T00:00:00Z",
+      participants: [
+        {
+          ...participant("s1", "An", "ONLINE", "LOW", false, 0),
+          lastSeenAt: "2026-01-01T00:05:00Z",
+          totalViolationCount: 1,
+        },
+        {
+          ...participant("s2", "Binh", "ONLINE", "LOW", false, 0),
+          lastSeenAt: "2026-01-01T00:01:00Z",
+        }
+      ],
+      events: [event("event-1", "TAB_HIDDEN")],
+    };
+
+    const next: MonitorSnapshot = {
+      examId: "exam-1",
+      serverTime: "2026-01-01T00:06:00Z",
+      participants: [
+        {
+          ...participant("s1", "An", "ONLINE", "LOW", false, 0),
+          lastSeenAt: "2026-01-01T00:02:00Z",
+          totalViolationCount: 0,
+        },
+        {
+          ...participant("s2", "Binh", "ONLINE", "LOW", false, 0),
+          lastSeenAt: "2026-01-01T00:03:00Z",
+          totalViolationCount: 2,
+        }
+      ],
+      events: [event("event-2", "FULLSCREEN_EXIT")],
+    };
+
+    const result = reconcileSnapshot(current, next);
+
+    const resS1 = result.participants.find(p => p.sessionId === "s1");
+    expect(resS1?.totalViolationCount).toBe(1);
+
+    const resS2 = result.participants.find(p => p.sessionId === "s2");
+    expect(resS2?.totalViolationCount).toBe(2);
+
+    expect(result.events.map(e => e.id)).toContain("event-1");
+    expect(result.events.map(e => e.id)).toContain("event-2");
   });
 });
 

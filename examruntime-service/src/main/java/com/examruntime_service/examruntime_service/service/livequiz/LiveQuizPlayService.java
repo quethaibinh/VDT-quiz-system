@@ -383,6 +383,7 @@ public class LiveQuizPlayService {
      * Map room va participant sang state nhe cho student polling/reconnect.
      */
     private StudentLiveQuizStateDTO toState(LiveQuizRoom room, LiveQuizParticipant participant) {
+        List<LiveQuizParticipant> participants = participantRepo.findByRoomId(room.getId());
         return new StudentLiveQuizStateDTO(
                 room.getId(),
                 room.getExamId(),
@@ -397,7 +398,9 @@ public class LiveQuizPlayService {
                 participant.getTotalScore(),
                 participant.getMaxScore(),
                 snapshotService.currentRank(room.getId(), participant.getId()),
-                participantRepo.findByRoomId(room.getId()).size(),
+                participants.size(),
+                room.isShowLeaderboard(),
+                room.isShowLeaderboard() ? snapshotService.leaderboard(participants) : List.of(),
                 now(),
                 participant.getCurrentQuestionEndsAt()
         );

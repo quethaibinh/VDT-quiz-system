@@ -97,6 +97,8 @@ public class RuntimeActivationResolver {
                 dto.joinBeforeMinutes(),
                 dto.joinAfterMinutes(),
                 dto.showResultPolicy(),
+                dto.maxViolationAllowed(),
+                dto.handleViolation(),
                 RuntimeActivationMetadata.STATUS_READY,
                 OffsetDateTime.now(clock),
                 RuntimeActivationMetadata.SOURCE_EXAM_SERVICE_FALLBACK

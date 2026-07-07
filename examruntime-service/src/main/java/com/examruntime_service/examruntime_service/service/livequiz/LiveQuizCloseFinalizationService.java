@@ -103,7 +103,7 @@ public class LiveQuizCloseFinalizationService {
         Map<UUID, AnswerEntryDTO> answerKeys = answerKey.answers().stream()
                 .collect(Collectors.toMap(AnswerEntryDTO::questionId, Function.identity(), (left, right) -> left));
 
-        List<LiveQuizParticipant> participants = participantRepo.findByRoomId(room.getId());
+        List<LiveQuizParticipant> participants = participantRepo.findByRoomIdForUpdate(room.getId());
         Map<UUID, Integer> notReachedCounts = new LinkedHashMap<>();
         Map<UUID, List<LiveQuizAnswer>> finalAnswers = new LinkedHashMap<>();
 

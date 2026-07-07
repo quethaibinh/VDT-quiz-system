@@ -6,6 +6,7 @@ import com.examruntime_service.examruntime_service.model.dto.cache.ExamPaperPool
 import com.examruntime_service.examruntime_service.model.dto.cache.PaperOptionDTO;
 import com.examruntime_service.examruntime_service.model.dto.cache.PaperQuestionDTO;
 import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizAnswerRequestDTO;
+import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizLeaderboardEntryDTO;
 import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizSelectedOptionResult;
 import com.examruntime_service.examruntime_service.model.entity.LiveQuizAnswer;
 import com.examruntime_service.examruntime_service.model.entity.LiveQuizParticipant;
@@ -86,6 +87,7 @@ class LiveQuizPlayServiceTest {
         when(participantRepo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(participantRepo.findByRoomId(roomId)).thenReturn(List.of(participant(now.minusSeconds(5), now.plusSeconds(5))));
         when(snapshotService.currentRank(roomId, participantId)).thenReturn(1);
+        when(snapshotService.leaderboard(any())).thenReturn(List.of(leaderboardEntry()));
         when(answerRepo.save(any())).thenAnswer(invocation -> {
             LiveQuizAnswer answer = invocation.getArgument(0);
             answer.setId(UUID.randomUUID());
@@ -239,6 +241,34 @@ class LiveQuizPlayServiceTest {
         assertThat(participant.getAnsweredCount()).isZero();
     }
 
+    @Test
+    void stateIncludesLeaderboardSnapshotWhenRoomAllowsLeaderboard() {
+        LiveQuizParticipant participant = participant(now.minusSeconds(5), now.plusSeconds(5));
+        when(participantRepo.findByRoomIdAndStudentIdForUpdate(roomId, studentId)).thenReturn(Optional.of(participant));
+
+        var response = service.state(roomId, studentId);
+
+        assertThat(response.showLeaderboard()).isTrue();
+        assertThat(response.leaderboard()).singleElement().satisfies(entry -> {
+            assertThat(entry.participantId()).isEqualTo(participantId);
+            assertThat(entry.studentId()).isEqualTo(studentId);
+        });
+    }
+
+    @Test
+    void stateDoesNotIncludeLeaderboardSnapshotWhenRoomHidesLeaderboard() {
+        LiveQuizRoom room = room();
+        room.setShowLeaderboard(false);
+        LiveQuizParticipant participant = participant(now.minusSeconds(5), now.plusSeconds(5));
+        when(roomRepo.findById(roomId)).thenReturn(Optional.of(room));
+        when(participantRepo.findByRoomIdAndStudentIdForUpdate(roomId, studentId)).thenReturn(Optional.of(participant));
+
+        var response = service.state(roomId, studentId);
+
+        assertThat(response.showLeaderboard()).isFalse();
+        assertThat(response.leaderboard()).isEmpty();
+    }
+
     private LiveQuizRoom room() {
         LiveQuizRoom room = new LiveQuizRoom();
         room.setId(roomId);
@@ -247,6 +277,7 @@ class LiveQuizPlayServiceTest {
         room.setOwnerTeacherId(UUID.randomUUID());
         room.setStatus(LiveQuizRoomStatus.STARTED);
         room.setQuestionCount(1);
+        room.setShowLeaderboard(true);
         return room;
     }
 
@@ -315,6 +346,21 @@ class LiveQuizPlayServiceTest {
                 examId,
                 1,
                 List.of(new AnswerEntryDTO(questionId, List.of(optionAId, optionBId), 10))
+        );
+    }
+
+    private LiveQuizLeaderboardEntryDTO leaderboardEntry() {
+        return new LiveQuizLeaderboardEntryDTO(
+                1,
+                participantId,
+                studentId,
+                "Student Demo",
+                BigDecimal.ZERO,
+                0,
+                0,
+                0,
+                null,
+                false
         );
     }
 }

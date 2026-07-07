@@ -54,7 +54,7 @@ spring:
                 - Path=/v1/api/result-service/**,/v1/api/admin/result-service/**
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET::01234567890123456789012345678901}
 
 gateway:
-  trusted-secret: ${GATEWAY_TRUSTED_SECRET}
+  trusted-secret: ${GATEWAY_TRUSTED_SECRET:replace-with-a-long-random-gateway-secret}

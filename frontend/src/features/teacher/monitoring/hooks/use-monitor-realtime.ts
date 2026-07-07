@@ -49,17 +49,42 @@ export function useMonitorRealtime(examId: string, snapshot?: MonitorSnapshot) {
   }), [displaySnapshot, effectiveStatus, realtimeActive]);
 }
 
-function reconcileSnapshot(current?: MonitorSnapshot, next?: MonitorSnapshot) {
+export function reconcileSnapshot(current: MonitorSnapshot | undefined, next: MonitorSnapshot): MonitorSnapshot;
+export function reconcileSnapshot(current?: MonitorSnapshot, next?: MonitorSnapshot): MonitorSnapshot | undefined;
+export function reconcileSnapshot(current?: MonitorSnapshot, next?: MonitorSnapshot): MonitorSnapshot | undefined {
   if (!next) return current;
   if (!current || current.examId !== next.examId) return next;
+
+  const currentParticipantsMap = new Map(
+    current.participants.map((p) => [p.studentId, p])
+  );
+
+  const mergedParticipants = next.participants.map((nextPart) => {
+    const currentPart = currentParticipantsMap.get(nextPart.studentId);
+    if (!currentPart) return nextPart;
+
+    const currentTs = getParticipantTimestamp(currentPart);
+    const nextTs = getParticipantTimestamp(nextPart);
+
+    return currentTs > nextTs ? currentPart : nextPart;
+  });
+
   const eventIds = new Set(next.events.map((event) => event.id));
   return {
     ...next,
+    participants: mergedParticipants,
     events: [
       ...next.events,
       ...current.events.filter((event) => !eventIds.has(event.id)),
     ].slice(0, 100),
   };
+}
+
+function getParticipantTimestamp(p: any): number {
+  const times = [p.lastEventAt, p.lastHeartbeatAt, p.lastSeenAt]
+    .filter(Boolean)
+    .map((t) => new Date(t).getTime());
+  return times.length > 0 ? Math.max(...times) : 0;
 }
 
 function emptySnapshot(examId: string): MonitorSnapshot {

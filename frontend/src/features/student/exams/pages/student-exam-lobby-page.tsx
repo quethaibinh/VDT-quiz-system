@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowRight, CalendarDays, Clock, HelpCircle, Maximize2, Play, ShieldCheck } from "lucide-react";
@@ -10,6 +10,7 @@ import { getApiErrorMessage } from "@/lib/http/api-error";
 import { studentExamRepository } from "../api/student-exam-repository";
 import { studentRuntimeRepository } from "../api/student-runtime-repository";
 import { ExamLobbyState } from "../components/exam-lobby-state";
+import { RuntimeClock } from "../lib/runtime-clock";
 
 function formatDuration(totalSeconds: number) {
   const h = Math.floor(totalSeconds / 3600);
@@ -55,28 +56,29 @@ export function StudentExamLobbyPage() {
   const startMutation = useMutation({
     mutationFn: () => studentRuntimeRepository.startStudentExam(examId),
     onSuccess: () => navigate(`/student/exams/${examId}/session`),
+    retry: (failureCount, error) => {
+      return getApiErrorMessage(error) === "EXAM_NOT_STARTED" && failureCount < 5;
+    },
+    retryDelay: 1000,
   });
 
-  useEffect(() => {
-    if (!joinQuery.data) return;
-    const timer = setTimeout(() => setRemainingSeconds(joinQuery.data.remainingSecondsToStart), 0);
-    return () => clearTimeout(timer);
+  const clock = useMemo(() => {
+    if (!joinQuery.data) return null;
+    return new RuntimeClock(joinQuery.data.serverTime);
   }, [joinQuery.data]);
 
   useEffect(() => {
-    if (remainingSeconds === null || remainingSeconds <= 0) return;
-    const interval = setInterval(() => {
-      setRemainingSeconds((prev) => {
-        if (prev === null || prev <= 1) {
-          clearInterval(interval);
-          void joinQuery.refetch();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    if (!joinQuery.data || !clock) return;
+
+    const update = () => {
+      const remaining = clock.getRemainingSeconds(joinQuery.data.startAt);
+      setRemainingSeconds(remaining);
+    };
+
+    update();
+    const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [remainingSeconds, joinQuery]);
+  }, [joinQuery.data, clock]);
 
   const openConsent = (action: "start" | "continue") => {
     setConsentAction(action);
@@ -131,6 +133,7 @@ export function StudentExamLobbyPage() {
     }
   }
 
+  const canStartFrontend = joinQuery.data?.canStart || (remainingSeconds !== null && remainingSeconds <= 0);
   const isLoading = examQuery.isLoading || joinQuery.isLoading;
   const error = examQuery.error ?? joinQuery.error;
 
@@ -204,7 +207,7 @@ export function StudentExamLobbyPage() {
                   <div className="h-px w-full bg-line" />
                 </div>
 
-                {joinQuery.data.status === "CREATED" && !joinQuery.data.canStart && (
+                {joinQuery.data.status === "CREATED" && !canStartFrontend && (
                   <div className="my-6 space-y-3">
                     <div className="font-mono text-4xl font-extrabold tracking-wider text-primary">
                       {remainingSeconds !== null ? formatDuration(remainingSeconds) : "00:00"}
@@ -214,7 +217,7 @@ export function StudentExamLobbyPage() {
                   </div>
                 )}
 
-                {joinQuery.data.status === "CREATED" && joinQuery.data.canStart && (
+                {joinQuery.data.status === "CREATED" && canStartFrontend && (
                   <div className="my-6 space-y-4">
                     <div className="mb-2 inline-flex rounded-full bg-success/10 p-3 text-success">
                       <Play size={28} />
@@ -239,7 +242,7 @@ export function StudentExamLobbyPage() {
                     <Button
                       variant="primary"
                       className="h-11 w-full"
-                      disabled={!joinQuery.data.canStart || startMutation.isPending || fullscreenPending}
+                      disabled={!canStartFrontend || startMutation.isPending || fullscreenPending}
                       loading={startMutation.isPending || fullscreenPending}
                       onClick={() => openConsent("start")}
                     >
@@ -286,7 +289,7 @@ export function StudentExamLobbyPage() {
                 {fullscreenError}
               </span>
             )}
-            {startMutation.error && (
+            {startMutation.error && getApiErrorMessage(startMutation.error) !== "EXAM_NOT_STARTED" && (
               <span role="alert" className="block rounded-lg bg-danger/10 p-3 text-danger">
                 {getApiErrorMessage(startMutation.error)}
               </span>

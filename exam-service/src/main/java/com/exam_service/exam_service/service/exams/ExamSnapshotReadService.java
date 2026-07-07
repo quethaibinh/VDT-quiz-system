@@ -12,9 +12,9 @@ import com.exam_service.exam_service.repository.ExamQuestionRepo;
 import com.exam_service.exam_service.repository.ExamRepo;
 import com.exam_service.exam_service.util.exception.ConflictException;
 import com.exam_service.exam_service.util.exception.NotFoundException;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.UUID;
@@ -79,7 +79,9 @@ public class ExamSnapshotReadService {
                 exam.getEndAt(),
                 exam.getJoinBeforeMinutes(),
                 exam.getJoinAfterMinutes(),
-                exam.getShowResultPolicy() != null ? exam.getShowResultPolicy().name() : null
+                exam.getShowResultPolicy() != null ? exam.getShowResultPolicy().name() : null,
+                exam.getMaxViolationAllowed(),
+                exam.getHandleViolation() != null ? exam.getHandleViolation().name() : "LOCK"
         );
     }
 
