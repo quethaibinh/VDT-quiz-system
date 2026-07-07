@@ -1,5 +1,22 @@
 name: quiz-platform
 
+x-examruntime-environment: &examruntime-environment
+  DB_EXAMRUNTIME_URL: jdbc:postgresql://examruntime-postgres:5432/${DB_EXAMRUNTIME_NAME:-examruntime-service-db}
+  DB_EXAMRUNTIME_USERNAME: ${DB_EXAMRUNTIME_USERNAME:-postgres}
+  DB_EXAMRUNTIME_PASSWORD: ${DB_EXAMRUNTIME_PASSWORD:-postgres}
+  AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+  QUESTION_SERVICE_URL: ${QUESTION_SERVICE_URL}
+  EXAM_SERVICE_URL: ${EXAM_SERVICE_URL}
+  RESULT_SERVICE_URL: ${RESULT_SERVICE_URL}
+  INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
+  GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  EXAMRUNTIME_KAFKA_GROUP_ID: ${EXAMRUNTIME_KAFKA_GROUP_ID:-examruntime-service}
+  EXAM_KAFKA_TOPIC_EXAM_LIFECYCLE: ${EXAM_KAFKA_TOPIC_EXAM_LIFECYCLE:-exam-lifecycle-events}
+  EXAMRUNTIME_KAFKA_TOPIC_LIVE_QUIZ_RESULT: ${EXAMRUNTIME_KAFKA_TOPIC_LIVE_QUIZ_RESULT:-live-quiz-result-events}
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -210,21 +227,45 @@ services:
       context: ./examruntime-service
     restart: unless-stopped
     environment:
-      DB_EXAMRUNTIME_URL: jdbc:postgresql://examruntime-postgres:5432/${DB_EXAMRUNTIME_NAME:-examruntime-service-db}
-      DB_EXAMRUNTIME_USERNAME: ${DB_EXAMRUNTIME_USERNAME:-postgres}
-      DB_EXAMRUNTIME_PASSWORD: ${DB_EXAMRUNTIME_PASSWORD:-postgres}
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
-      QUESTION_SERVICE_URL: ${QUESTION_SERVICE_URL}
-      EXAM_SERVICE_URL: ${EXAM_SERVICE_URL}
-      RESULT_SERVICE_URL: ${RESULT_SERVICE_URL}
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
-      GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      EXAMRUNTIME_KAFKA_GROUP_ID: ${EXAMRUNTIME_KAFKA_GROUP_ID:-examruntime-service}
-      EXAM_KAFKA_TOPIC_EXAM_LIFECYCLE: ${EXAM_KAFKA_TOPIC_EXAM_LIFECYCLE:-exam-lifecycle-events}
-      EXAMRUNTIME_KAFKA_TOPIC_LIVE_QUIZ_RESULT: ${EXAMRUNTIME_KAFKA_TOPIC_LIVE_QUIZ_RESULT:-live-quiz-result-events}
+      <<: *examruntime-environment
+      EXAMRUNTIME_KAFKA_ENABLED: "false"
+      EXAMRUNTIME_OUTBOX_ENABLED: "false"
+      EXAMRUNTIME_RESULT_RECONCILIATION_ENABLED: "false"
+      EXAMRUNTIME_AUTOSUBMIT_ENABLED: "false"
+      EXAMRUNTIME_ANSWERS_CHECKPOINT_ENABLED: "false"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "bash -c '</dev/tcp/127.0.0.1/8084'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    depends_on:
+      examruntime-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      exam-service:
+        condition: service_healthy
+
+  examruntime-worker:
+    build:
+      context: ./examruntime-service
+    restart: unless-stopped
+    environment:
+      <<: *examruntime-environment
+      EXAMRUNTIME_KAFKA_ENABLED: "true"
+      EXAMRUNTIME_OUTBOX_ENABLED: "true"
+      EXAMRUNTIME_RESULT_RECONCILIATION_ENABLED: "true"
+      EXAMRUNTIME_AUTOSUBMIT_ENABLED: "true"
+      EXAMRUNTIME_ANSWERS_CHECKPOINT_ENABLED: "true"
+      EXAMRUNTIME_MONITOR_REDIS_PUBSUB_ENABLED: "false"
+      EXAMRUNTIME_LIVEQUIZ_REDIS_PUBSUB_ENABLED: "false"
     healthcheck:
       test:
         [

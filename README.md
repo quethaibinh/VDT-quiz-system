@@ -46,6 +46,23 @@ Open the frontend at `http://localhost:3000`. Override the published
 port with `FRONTEND_PORT` in `.env`. Nginx forwards frontend `/v1/api` requests
 to the Gateway over the Compose network.
 
+The Compose stack splits Exam Runtime into two roles:
+
+- `examruntime-service`: public REST/WebSocket runtime role. It can be scaled
+  horizontally and has scheduled/Kafka workers disabled.
+- `examruntime-worker`: singleton background role. It runs activation Kafka
+  consumption, answer checkpointing, auto-submit, outbox publishing, and result
+  reconciliation.
+
+Scale only the runtime API role when you need more exam traffic capacity:
+
+```powershell
+docker compose up --build -d --scale examruntime-service=3
+```
+
+Keep `examruntime-worker` at one replica unless the workers are redesigned with
+per-job claim/lease protection.
+
 ### Admin workspace
 
 Administrators sign in through the same frontend and are routed to
