@@ -18,8 +18,35 @@ public record QuestionUpsertRequestDTO(
         Double defaultScore,
         Integer estimatedSecond,
         String visibility,
+        String imageObjectKey,
         @NotNull(message = "options are required")
         @Size(min = 2, message = "at least two options are required")
         List<@Valid QuestionOptionRequestDTO> options
 ) {
+    public QuestionUpsertRequestDTO(
+            UUID topicId,
+            String questionType,
+            String content,
+            String contentFormat,
+            String explanation,
+            String difficulty,
+            Double defaultScore,
+            Integer estimatedSecond,
+            String visibility,
+            List<@Valid QuestionOptionRequestDTO> options
+    ) {
+        this(
+                topicId,
+                questionType,
+                content,
+                contentFormat,
+                explanation,
+                difficulty,
+                defaultScore,
+                estimatedSecond,
+                visibility,
+                null,
+                options
+        );
+    }
 }

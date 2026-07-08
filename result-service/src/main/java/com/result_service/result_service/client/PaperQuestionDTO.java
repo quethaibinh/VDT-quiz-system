@@ -11,6 +11,20 @@ public record PaperQuestionDTO(
         String content,
         String contentFormat,
         double score,
+        Integer timeLimitSeconds,
+        String imageObjectKey,
         List<PaperOptionDTO> options
 ) {
+    public PaperQuestionDTO(
+            UUID questionId,
+            long questionVersion,
+            String difficulty,
+            String type,
+            String content,
+            String contentFormat,
+            double score,
+            List<PaperOptionDTO> options
+    ) {
+        this(questionId, questionVersion, difficulty, type, content, contentFormat, score, null, null, options);
+    }
 }

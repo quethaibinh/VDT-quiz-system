@@ -19,6 +19,8 @@ public record LiveQuizCurrentQuestionDTO(
         String type,
         String content,
         String contentFormat,
+        String imageObjectKey,
+        String imageUrl,
         List<PaperOptionDTO> options,
         OffsetDateTime startedAt,
         OffsetDateTime endsAt,

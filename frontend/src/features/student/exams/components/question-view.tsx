@@ -37,6 +37,7 @@ export function QuestionView({
   return (
     <QuizQuestionCard
       content={question.content}
+      imageUrl={question.imageUrl}
       options={question.options}
       isMultipleChoice={isMultiple}
       selectedOptionIds={answer.selectedOptionIds}

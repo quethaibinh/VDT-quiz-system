@@ -4,6 +4,7 @@ import com.result_service.result_service.client.AuthServiceClient;
 import com.result_service.result_service.client.ExamPaperPoolDTO;
 import com.result_service.result_service.client.ExamServiceClient;
 import com.result_service.result_service.client.PaperQuestionDTO;
+import com.result_service.result_service.client.QuestionMediaClient;
 import com.result_service.result_service.client.StudentSummary;
 import com.result_service.result_service.client.RuntimeActivationDTO;
 import com.result_service.result_service.model.dto.common.PageResponseDTO;
@@ -58,6 +59,7 @@ public class ResultReviewService {
     private final ResultRankingService rankingService;
     private final AuthServiceClient authServiceClient;
     private final ExamServiceClient examServiceClient;
+    private final QuestionMediaClient questionMediaClient;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -69,6 +71,7 @@ public class ResultReviewService {
             ResultRankingService rankingService,
             AuthServiceClient authServiceClient,
             ExamServiceClient examServiceClient,
+            QuestionMediaClient questionMediaClient,
             ObjectMapper objectMapper,
             Clock clock
     ) {
@@ -79,6 +82,7 @@ public class ResultReviewService {
         this.rankingService = rankingService;
         this.authServiceClient = authServiceClient;
         this.examServiceClient = examServiceClient;
+        this.questionMediaClient = questionMediaClient;
         this.objectMapper = objectMapper;
         this.clock = clock;
     }
@@ -149,10 +153,11 @@ public class ResultReviewService {
         
         // Neu snapshot cau hoi trong DB bi loi thoi hoac thieu, goi API exam-service lay thong tin cau hoi de fallback
         Map<UUID, PaperQuestionDTO> fallbackQuestions = fallbackQuestions(examId, resultAnswers);
+        Map<String, String> imageUrls = signedQuestionUrls(resultAnswers, fallbackQuestions);
         Map<UUID, StudentSummary> resolvedStudents = resolveStudents(List.of(result));
         
         List<TeacherResultDetailDTO.TeacherResultAnswerDTO> answers = resultAnswers.stream()
-                .map(answer -> teacherAnswer(answer, fallbackQuestions))
+                .map(answer -> teacherAnswer(answer, fallbackQuestions, imageUrls))
                 .toList();
                 
         return new TeacherResultDetailDTO(
@@ -489,13 +494,14 @@ public class ResultReviewService {
 
     private TeacherResultDetailDTO.TeacherResultAnswerDTO teacherAnswer(
             ResultAnswer answer,
-            Map<UUID, PaperQuestionDTO> fallbackQuestions
+            Map<UUID, PaperQuestionDTO> fallbackQuestions,
+            Map<String, String> imageUrls
     ) {
         List<UUID> selectedOptionIds = readUuidList(answer.getSelectedOptionIds());
         List<UUID> correctOptionIds = readUuidList(answer.getCorrectOptionIds());
         JsonNode snapshot = questionSnapshot(answer);
         PaperQuestionDTO fallback = fallbackQuestions.get(answer.getQuestionId());
-        TeacherResultDetailDTO.QuestionDisplayDTO question = questionDisplay(answer.getQuestionId(), snapshot, fallback);
+        TeacherResultDetailDTO.QuestionDisplayDTO question = questionDisplay(answer.getQuestionId(), snapshot, fallback, imageUrls);
         List<TeacherResultDetailDTO.OptionDisplayDTO> options = optionDisplays(snapshot, fallback, selectedOptionIds, correctOptionIds);
         return new TeacherResultDetailDTO.TeacherResultAnswerDTO(
                 answer.getQuestionId(),
@@ -528,15 +534,36 @@ public class ResultReviewService {
     private TeacherResultDetailDTO.QuestionDisplayDTO questionDisplay(
             UUID questionId,
             JsonNode snapshot,
-            PaperQuestionDTO fallback
+            PaperQuestionDTO fallback,
+            Map<String, String> imageUrls
     ) {
+        String imageObjectKey = firstNonBlank(text(snapshot, "imageObjectKey"), fallback != null ? fallback.imageObjectKey() : null);
         return new TeacherResultDetailDTO.QuestionDisplayDTO(
                 questionId,
                 firstNonBlank(text(snapshot, "content"), fallback != null ? fallback.content() : null),
                 firstNonBlank(text(snapshot, "type"), fallback != null ? fallback.type() : null),
                 firstNonBlank(text(snapshot, "difficulty"), fallback != null ? fallback.difficulty() : null),
-                firstNonBlank(text(snapshot, "contentFormat"), fallback != null ? fallback.contentFormat() : null)
+                firstNonBlank(text(snapshot, "contentFormat"), fallback != null ? fallback.contentFormat() : null),
+                imageObjectKey,
+                imageUrls.get(imageObjectKey)
         );
+    }
+
+    private Map<String, String> signedQuestionUrls(
+            List<ResultAnswer> answers,
+            Map<UUID, PaperQuestionDTO> fallbackQuestions
+    ) {
+        List<String> objectKeys = answers.stream()
+                .map(answer -> firstNonBlank(
+                        text(questionSnapshot(answer), "imageObjectKey"),
+                        fallbackQuestions.get(answer.getQuestionId()) != null
+                                ? fallbackQuestions.get(answer.getQuestionId()).imageObjectKey()
+                                : null
+                ))
+                .filter(key -> key != null && !key.isBlank())
+                .distinct()
+                .toList();
+        return questionMediaClient.signedUrls(objectKeys);
     }
 
     private List<TeacherResultDetailDTO.OptionDisplayDTO> optionDisplays(

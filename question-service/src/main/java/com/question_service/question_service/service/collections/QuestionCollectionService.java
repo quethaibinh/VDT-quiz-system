@@ -17,6 +17,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -39,17 +41,20 @@ public class QuestionCollectionService {
     private final QuestionCollectionItemRepo itemRepo;
     private final com.question_service.question_service.repository.QuestionOptionRepo optionRepo;
     private final TeacherSubjectAccessService subjectAccessService;
+    private final ObjectMapper objectMapper;
 
     public QuestionCollectionService(
             QuestionCollectionRepo collectionRepo,
             QuestionCollectionItemRepo itemRepo,
             com.question_service.question_service.repository.QuestionOptionRepo optionRepo,
-            TeacherSubjectAccessService subjectAccessService
+            TeacherSubjectAccessService subjectAccessService,
+            ObjectMapper objectMapper
     ) {
         this.collectionRepo = collectionRepo;
         this.itemRepo = itemRepo;
         this.optionRepo = optionRepo;
         this.subjectAccessService = subjectAccessService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -390,6 +395,7 @@ public class QuestionCollectionService {
                 question.getContentFormat(),
                 question.getDefaultScore(),
                 question.getEstimatedSecond(),
+                imageObjectKey(question.getMetadata()),
                 options.stream()
                         .map(option -> new ExamOptionSnapshotDTO(
                                 option.getId(),
@@ -430,5 +436,29 @@ public class QuestionCollectionService {
 
     private ResponseStatusException error(HttpStatus status, String code) {
         return new ResponseStatusException(status, code);
+    }
+
+    private String imageObjectKey(String metadata) {
+        if (metadata == null || metadata.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, Object> value = objectMapper.readValue(
+                    metadata,
+                    new TypeReference<Map<String, Object>>() {}
+            );
+            Object imageObjectKey = value.get("imageObjectKey");
+            if (!(imageObjectKey instanceof String text) || text.isBlank()) {
+                return null;
+            }
+            if (!text.startsWith("questions/") || text.contains("..") || text.contains("\\") || text.contains("//")) {
+                throw error(HttpStatus.BAD_REQUEST, "QUESTION_MEDIA_OBJECT_KEY_INVALID");
+            }
+            return text;
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw error(HttpStatus.BAD_REQUEST, "QUESTION_METADATA_INVALID");
+        }
     }
 }

@@ -14,10 +14,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -35,17 +38,20 @@ public class TeacherQuestionSearchService {
     private final TopicRepo topicRepo;
     private final QuestionCollectionRepo collectionRepo;
     private final TeacherSubjectAccessService subjectAccessService;
+    private final ObjectMapper objectMapper;
 
     public TeacherQuestionSearchService(
             QuestionRepo questionRepo,
             TopicRepo topicRepo,
             QuestionCollectionRepo collectionRepo,
-            TeacherSubjectAccessService subjectAccessService
+            TeacherSubjectAccessService subjectAccessService,
+            ObjectMapper objectMapper
     ) {
         this.questionRepo = questionRepo;
         this.topicRepo = topicRepo;
         this.collectionRepo = collectionRepo;
         this.subjectAccessService = subjectAccessService;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -215,10 +221,30 @@ public class TeacherQuestionSearchService {
                 question.getDefaultScore(),
                 question.getEstimatedSecond(),
                 question.getVisibility(),
+                imageObjectKey(question.getMetadata()),
                 question.getStatus(),
                 question.getCreatedAt(),
                 question.getUpdatedAt()
         );
+    }
+
+    private String imageObjectKey(String metadata) {
+        if (metadata == null || metadata.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, Object> value = objectMapper.readValue(
+                    metadata,
+                    new TypeReference<Map<String, Object>>() {}
+            );
+            Object imageObjectKey = value.get("imageObjectKey");
+            if (!(imageObjectKey instanceof String text)) {
+                return null;
+            }
+            return text.startsWith("questions/") && !text.contains("..") ? text : null;
+        } catch (Exception exception) {
+            return null;
+        }
     }
 
     private ResponseStatusException error(HttpStatus status, String code) {

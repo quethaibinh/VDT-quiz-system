@@ -252,6 +252,7 @@ function QuestionSession({
       questionPosition={question.questionPosition}
       totalQuestions={question.totalQuestions}
       content={question.content}
+      imageUrl={question.imageUrl}
       options={question.options}
       isMultipleChoice={multipleChoice}
       selectedOptionIds={selected}

@@ -93,6 +93,7 @@ public class QuestionContentValidator {
                 defaultScore,
                 estimatedSecond,
                 visibility,
+                trimToNull(request.imageObjectKey()),
                 List.copyOf(options)
         );
     }
@@ -147,6 +148,7 @@ public class QuestionContentValidator {
             double defaultScore,
             int estimatedSecond,
             QuestionVisibility visibility,
+            String imageObjectKey,
             List<ValidatedOption> options
     ) {
     }

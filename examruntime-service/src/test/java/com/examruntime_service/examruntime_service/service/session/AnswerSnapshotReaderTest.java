@@ -1,5 +1,6 @@
 package com.examruntime_service.examruntime_service.service.session;
 
+import com.examruntime_service.examruntime_service.client.QuestionMediaClient;
 import com.examruntime_service.examruntime_service.model.dto.session.AnswerDraftRecord;
 import com.examruntime_service.examruntime_service.model.entity.ExamSession;
 import com.examruntime_service.examruntime_service.model.entity.SessionAnswer;
@@ -17,6 +18,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,10 +41,12 @@ class AnswerSnapshotReaderTest {
     void setUp() {
         draftStore = mock(AnswerDraftStore.class);
         sessionAnswerRepo = mock(SessionAnswerRepo.class);
+        QuestionMediaClient questionMediaClient = mock(QuestionMediaClient.class);
+        when(questionMediaClient.signedUrls(any())).thenReturn(Map.of());
         reader = new AnswerSnapshotReader(
                 draftStore,
                 sessionAnswerRepo,
-                new StudentPaperMapper(new ObjectMapper()),
+                new StudentPaperMapper(new ObjectMapper(), questionMediaClient),
                 Clock.fixed(Instant.parse("2026-07-01T08:00:00Z"), ZoneId.of("UTC"))
         );
     }

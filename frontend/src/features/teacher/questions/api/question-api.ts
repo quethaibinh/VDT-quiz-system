@@ -1,7 +1,15 @@
 import type { ApiResponse, PageResponse } from "@/lib/api-types";
 import { apiClient } from "@/lib/http/api-client";
 import { unwrap } from "@/lib/http/unwrap";
-import type { Question, QuestionFilters, QuestionDetail, QuestionInput, Topic } from "@/features/teacher/questions/model/question-types";
+import type {
+  Question,
+  QuestionFilters,
+  QuestionDetail,
+  QuestionInput,
+  QuestionMediaUploadResponse,
+  QuestionMediaUrlResponse,
+  Topic,
+} from "@/features/teacher/questions/model/question-types";
 
 const root = (subjectId: string) => `/v1/api/question-service/teacher/subjects/${subjectId}`;
 
@@ -32,6 +40,25 @@ export async function archiveQuestion(subjectId: string, id: string) {
 
 export async function restoreQuestion(subjectId: string, id: string) {
   const response = await apiClient.patch<ApiResponse<QuestionDetail>>(`${root(subjectId)}/questions/${id}/restore`);
+  return unwrap(response.data);
+}
+
+export async function uploadQuestionImage(subjectId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await apiClient.post<ApiResponse<QuestionMediaUploadResponse>>(
+    `${root(subjectId)}/question-media`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return unwrap(response.data);
+}
+
+export async function getQuestionImageUrl(subjectId: string, imageObjectKey: string) {
+  const response = await apiClient.get<ApiResponse<QuestionMediaUrlResponse>>(
+    `${root(subjectId)}/question-media/url`,
+    { params: { objectKey: imageObjectKey } },
+  );
   return unwrap(response.data);
 }
 

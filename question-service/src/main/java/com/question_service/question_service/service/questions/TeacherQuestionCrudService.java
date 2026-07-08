@@ -11,14 +11,19 @@ import com.question_service.question_service.model.entity.enums.Source;
 import com.question_service.question_service.repository.QuestionOptionRepo;
 import com.question_service.question_service.repository.QuestionRepo;
 import com.question_service.question_service.repository.TopicRepo;
+import com.question_service.question_service.service.media.QuestionMediaStorageService;
 import com.question_service.question_service.service.subjects.TeacherSubjectAccessService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -29,19 +34,25 @@ public class TeacherQuestionCrudService {
     private final TopicRepo topicRepo;
     private final TeacherSubjectAccessService subjectAccessService;
     private final QuestionContentValidator contentValidator;
+    private final QuestionMediaStorageService mediaStorageService;
+    private final ObjectMapper objectMapper;
 
     public TeacherQuestionCrudService(
             QuestionRepo questionRepo,
             QuestionOptionRepo optionRepo,
             TopicRepo topicRepo,
             TeacherSubjectAccessService subjectAccessService,
-            QuestionContentValidator contentValidator
+            QuestionContentValidator contentValidator,
+            QuestionMediaStorageService mediaStorageService,
+            ObjectMapper objectMapper
     ) {
         this.questionRepo = questionRepo;
         this.optionRepo = optionRepo;
         this.topicRepo = topicRepo;
         this.subjectAccessService = subjectAccessService;
         this.contentValidator = contentValidator;
+        this.mediaStorageService = mediaStorageService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -140,6 +151,10 @@ public class TeacherQuestionCrudService {
         question.setDefaultScore(validated.defaultScore());
         question.setEstimatedSecond(validated.estimatedSecond());
         question.setVisibility(validated.visibility());
+        question.setMetadata(metadataWithImageObjectKey(
+                question.getMetadata(),
+                mediaStorageService.validateObjectKey(validated.imageObjectKey())
+        ));
     }
 
     private void saveOptions(
@@ -207,6 +222,7 @@ public class TeacherQuestionCrudService {
                 question.getDefaultScore(),
                 question.getEstimatedSecond(),
                 question.getVisibility(),
+                imageObjectKey(question.getMetadata()),
                 question.getStatus(),
                 question.getSource(),
                 options,
@@ -217,5 +233,42 @@ public class TeacherQuestionCrudService {
 
     private ResponseStatusException error(HttpStatus status, String code) {
         return new ResponseStatusException(status, code);
+    }
+
+    private String metadataWithImageObjectKey(String existingMetadata, String imageObjectKey) {
+        Map<String, Object> metadata = readMetadata(existingMetadata);
+        if (imageObjectKey == null) {
+            metadata.remove("imageObjectKey");
+        } else {
+            metadata.put("imageObjectKey", imageObjectKey);
+        }
+        if (metadata.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(metadata);
+        } catch (Exception exception) {
+            throw error(HttpStatus.BAD_REQUEST, "QUESTION_METADATA_INVALID");
+        }
+    }
+
+    private String imageObjectKey(String metadataJson) {
+        Object value = readMetadata(metadataJson).get("imageObjectKey");
+        return value instanceof String text ? mediaStorageService.validateObjectKey(text) : null;
+    }
+
+    private Map<String, Object> readMetadata(String metadataJson) {
+        if (metadataJson == null || metadataJson.isBlank()) {
+            return new LinkedHashMap<>();
+        }
+        try {
+            Map<String, Object> value = objectMapper.readValue(
+                    metadataJson,
+                    new TypeReference<Map<String, Object>>() {}
+            );
+            return value == null ? new LinkedHashMap<>() : new LinkedHashMap<>(value);
+        } catch (Exception exception) {
+            throw error(HttpStatus.BAD_REQUEST, "QUESTION_METADATA_INVALID");
+        }
     }
 }

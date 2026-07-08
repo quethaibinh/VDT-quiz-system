@@ -23,6 +23,7 @@ public record QuestionDetailResponseDTO(
         Double defaultScore,
         int estimatedSecond,
         QuestionVisibility visibility,
+        String imageObjectKey,
         QuestionStatus status,
         Source source,
         List<QuestionOptionResponseDTO> options,

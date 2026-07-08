@@ -2,7 +2,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Clock, FileText, HelpCircle, Info, ShieldAlert, Award, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getQuestionDetail, listTopics } from "@/features/teacher/questions/api/question-api";
+import { getQuestionDetail, getQuestionImageUrl, listTopics } from "@/features/teacher/questions/api/question-api";
 
 export function QuestionDetailModal({
   open,
@@ -25,6 +25,12 @@ export function QuestionDetailModal({
     queryKey: ["teacher", "topics", subjectId],
     queryFn: () => listTopics(subjectId),
     enabled: open,
+  });
+
+  const { data: imageUrl } = useQuery({
+    queryKey: ["teacher", "question-image-url", subjectId, question?.imageObjectKey],
+    queryFn: () => getQuestionImageUrl(subjectId, question!.imageObjectKey!).then((value) => value.url),
+    enabled: open && !!question?.imageObjectKey,
   });
 
   const topicName = topics?.find((t) => t.id === question?.topicId)?.name || "Chưa phân loại";
@@ -126,6 +132,11 @@ export function QuestionDetailModal({
                 <div className="rounded-xl border border-line bg-surface p-4 text-sm font-medium leading-relaxed whitespace-pre-wrap">
                   {question.content}
                 </div>
+                {imageUrl && (
+                  <div className="overflow-hidden rounded-xl border border-line bg-white">
+                    <img src={imageUrl} alt="" className="max-h-80 w-full object-contain" loading="lazy" />
+                  </div>
+                )}
               </div>
 
               {/* Options List */}

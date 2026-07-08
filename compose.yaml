@@ -100,6 +100,13 @@ services:
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
       GATEWAY_TRUSTED_SECRET: ${GATEWAY_TRUSTED_SECRET:?GATEWAY_TRUSTED_SECRET must be set}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-http://localhost:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET_QUESTION_MEDIA: ${MINIO_BUCKET_QUESTION_MEDIA:-quiz-question-media}
+      QUESTION_MEDIA_MAX_BYTES: ${QUESTION_MEDIA_MAX_BYTES:-5242880}
+      QUESTION_MEDIA_ALLOWED_TYPES: ${QUESTION_MEDIA_ALLOWED_TYPES:-image/png,image/jpeg,image/webp}
     healthcheck:
       test:
         [
@@ -115,6 +122,8 @@ services:
         condition: service_healthy
       auth-service:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
 
   exam-postgres:
     image: postgres:17-alpine
@@ -304,6 +313,7 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
       EXAM_SERVICE_URL: ${EXAM_SERVICE_URL}
+      QUESTION_SERVICE_URL: ${QUESTION_SERVICE_URL}
     healthcheck:
       test:
         [
@@ -329,6 +339,41 @@ services:
     restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    restart: "no"
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET_QUESTION_MEDIA: ${MINIO_BUCKET_QUESTION_MEDIA:-quiz-question-media}
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 \"$${MINIO_ACCESS_KEY}\" \"$${MINIO_SECRET_KEY}\" &&
+      mc mb --ignore-existing local/\"$${MINIO_BUCKET_QUESTION_MEDIA}\"
+      "
+    depends_on:
+      minio:
+        condition: service_healthy
 
   kafka:
     image: apache/kafka:3.7.0
@@ -427,3 +472,4 @@ volumes:
   exam-postgres-data:
   examruntime-postgres-data:
   result-postgres-data:
+  minio-data:

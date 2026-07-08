@@ -84,6 +84,7 @@ public record LiveQuizRoomClosedEvent(
             String contentFormat,
             double score,
             Integer timeLimitSeconds,
+            String imageObjectKey,
             List<OptionSnapshot> options
     ) {
     }

@@ -18,6 +18,7 @@ public record QuestionResponseDTO(
         Double defaultScore,
         int estimatedSecond,
         QuestionVisibility visibility,
+        String imageObjectKey,
         QuestionStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

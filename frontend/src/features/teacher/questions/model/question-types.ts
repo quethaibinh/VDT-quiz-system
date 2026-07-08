@@ -12,6 +12,7 @@ export interface Question {
   defaultScore: number;
   estimatedSecond: number;
   visibility: Visibility;
+  imageObjectKey?: string | null;
   status: "ACTIVE" | "ARCHIVED";
   createdAt: string;
   updatedAt: string;
@@ -51,7 +52,18 @@ export interface QuestionInput {
   defaultScore?: number | null;
   estimatedSecond?: number | null;
   visibility?: Visibility | null;
+  imageObjectKey?: string | null;
   options: QuestionOptionInput[];
+}
+
+export interface QuestionMediaUploadResponse {
+  imageObjectKey: string;
+}
+
+export interface QuestionMediaUrlResponse {
+  imageObjectKey: string;
+  url: string;
+  expiresInSeconds: number;
 }
 
 export interface Topic {

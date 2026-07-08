@@ -324,6 +324,7 @@ public class LiveQuizCloseFinalizationService {
                         question.contentFormat(),
                         question.score(),
                         question.timeLimitSeconds(),
+                        question.imageObjectKey(),
                         question.options().stream()
                                 .map(option -> new LiveQuizRoomClosedEvent.OptionSnapshot(
                                         option.optionId(),

@@ -8,6 +8,7 @@ export interface QuizOption {
 
 export interface QuizQuestionCardProps {
   content: ReactNode;
+  imageUrl?: string | null;
   options: QuizOption[];
   isMultipleChoice?: boolean;
   selectedOptionIds: string[];
@@ -18,6 +19,7 @@ export interface QuizQuestionCardProps {
 
 export function QuizQuestionCard({
   content,
+  imageUrl,
   options,
   isMultipleChoice,
   selectedOptionIds,
@@ -39,6 +41,16 @@ export function QuizQuestionCard({
       {header && <div className="mb-4">{header}</div>}
 
       <div className="text-center">
+        {imageUrl && (
+          <div className="mx-auto mb-6 flex max-h-[360px] max-w-3xl justify-center overflow-hidden rounded-lg border border-[#efd8d1] bg-white">
+            <img
+              src={imageUrl}
+              alt=""
+              className="max-h-[360px] w-full object-contain"
+              loading="lazy"
+            />
+          </div>
+        )}
         <h2 className="mx-auto max-w-4xl whitespace-pre-wrap font-serif text-3xl font-bold leading-tight text-ink md:text-4xl">
           {content}
         </h2>

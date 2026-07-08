@@ -2,6 +2,7 @@ package com.result_service.result_service.service.livequiz;
 
 import com.result_service.result_service.model.dto.common.PageResponseDTO;
 import com.result_service.result_service.model.dto.livequiz.LiveQuizResultAnswerDTO;
+import com.result_service.result_service.client.QuestionMediaClient;
 import com.result_service.result_service.model.dto.livequiz.StudentLiveQuizFinalResultDTO;
 import com.result_service.result_service.model.dto.livequiz.TeacherLiveQuizResultDetailDTO;
 import com.result_service.result_service.model.dto.livequiz.TeacherLiveQuizResultRowDTO;
@@ -33,17 +34,20 @@ public class LiveQuizResultQueryService {
     private final ExamResultRepo examResultRepo;
     private final ResultAnswerRepo resultAnswerRepo;
     private final LiveQuizResultSnapshotReader snapshotReader;
+    private final QuestionMediaClient questionMediaClient;
     private final ObjectMapper objectMapper;
 
     public LiveQuizResultQueryService(
             ExamResultRepo examResultRepo,
             ResultAnswerRepo resultAnswerRepo,
             LiveQuizResultSnapshotReader snapshotReader,
+            QuestionMediaClient questionMediaClient,
             ObjectMapper objectMapper
     ) {
         this.examResultRepo = examResultRepo;
         this.resultAnswerRepo = resultAnswerRepo;
         this.snapshotReader = snapshotReader;
+        this.questionMediaClient = questionMediaClient;
         this.objectMapper = objectMapper;
     }
 
@@ -89,7 +93,7 @@ public class LiveQuizResultQueryService {
         requireTeacher(teacherId, result);
         List<LiveQuizResultAnswerDTO> answers = resultAnswerRepo.findByResultIdOrderByQuestionPositionAsc(result.getId())
                 .stream()
-                .map(this::answerDto)
+                .map(answer -> answerDto(answer, signedUrlMap(answer)))
                 .toList();
         return new TeacherLiveQuizResultDetailDTO(teacherRow(result), answers);
     }
@@ -167,9 +171,15 @@ public class LiveQuizResultQueryService {
         );
     }
 
-    private LiveQuizResultAnswerDTO answerDto(ResultAnswer answer) {
+    private LiveQuizResultAnswerDTO answerDto(ResultAnswer answer, Map<String, String> imageUrls) {
         // Convert JSON string trong DB thanh list/map de frontend co the render chi tiet cau tra loi.
         // Neu parse loi thi helper tra rong, tranh lam hong toan bo man hinh detail.
+        Map<String, Object> questionSnapshot = readMap(answer.getQuestionSnapshot());
+        Object imageObjectKey = questionSnapshot.get("imageObjectKey");
+        if (imageObjectKey instanceof String key && !key.isBlank()) {
+            questionSnapshot = new java.util.LinkedHashMap<>(questionSnapshot);
+            questionSnapshot.put("imageUrl", imageUrls.get(key));
+        }
         return new LiveQuizResultAnswerDTO(
                 answer.getQuestionId(),
                 answer.getQuestionPosition() != null ? answer.getQuestionPosition() : answer.getQuestionOrder(),
@@ -181,8 +191,17 @@ public class LiveQuizResultQueryService {
                 answer.getAnswerStatus(),
                 answer.getResponseTimeMs(),
                 answer.getAnsweredAt(),
-                readMap(answer.getQuestionSnapshot())
+                questionSnapshot
         );
+    }
+
+    private Map<String, String> signedUrlMap(ResultAnswer answer) {
+        Map<String, Object> questionSnapshot = readMap(answer.getQuestionSnapshot());
+        Object imageObjectKey = questionSnapshot.get("imageObjectKey");
+        if (!(imageObjectKey instanceof String key) || key.isBlank()) {
+            return Map.of();
+        }
+        return questionMediaClient.signedUrls(List.of(key));
     }
 
     private void requireTeacher(UUID teacherId, ExamResult result) {

@@ -1,5 +1,6 @@
 package com.examruntime_service.examruntime_service.service.paper;
 
+import com.examruntime_service.examruntime_service.client.QuestionMediaClient;
 import com.examruntime_service.examruntime_service.model.dto.cache.ExamPaperPoolDTO;
 import com.examruntime_service.examruntime_service.model.dto.cache.PaperOptionDTO;
 import com.examruntime_service.examruntime_service.model.dto.cache.PaperQuestionDTO;
@@ -24,9 +25,11 @@ import java.util.stream.Collectors;
 public class StudentPaperMapper {
 
     private final ObjectMapper objectMapper;
+    private final QuestionMediaClient questionMediaClient;
 
-    public StudentPaperMapper(ObjectMapper objectMapper) {
+    public StudentPaperMapper(ObjectMapper objectMapper, QuestionMediaClient questionMediaClient) {
         this.objectMapper = objectMapper;
+        this.questionMediaClient = questionMediaClient;
     }
 
     // Chuyen doi pool cau hoi va thu tu sap xep thanh danh sach cau hoi da sap xep dung
@@ -41,6 +44,11 @@ public class StudentPaperMapper {
 
         Map<UUID, PaperQuestionDTO> questionMap = pool.questions().stream()
                 .collect(Collectors.toMap(PaperQuestionDTO::questionId, Function.identity()));
+        Map<String, String> imageUrls = questionMediaClient.signedUrls(pool.questions().stream()
+                .map(PaperQuestionDTO::imageObjectKey)
+                .filter(key -> key != null && !key.isBlank())
+                .distinct()
+                .toList());
 
         List<StudentQuestionDTO> result = new ArrayList<>();
         for (UUID questionId : questionOrder) {
@@ -59,6 +67,8 @@ public class StudentPaperMapper {
                     .content(question.content())
                     .contentFormat(question.contentFormat())
                     .score(question.score())
+                    .imageObjectKey(question.imageObjectKey())
+                    .imageUrl(imageUrl(imageUrls, question.imageObjectKey()))
                     .options(studentOptions)
                     .build();
 
@@ -66,6 +76,13 @@ public class StudentPaperMapper {
         }
 
         return result;
+    }
+
+    private String imageUrl(Map<String, String> imageUrls, String imageObjectKey) {
+        if (imageObjectKey == null || imageObjectKey.isBlank()) {
+            return null;
+        }
+        return imageUrls.get(imageObjectKey);
     }
 
     private List<StudentOptionDTO> mapToStudentOptions(List<PaperOptionDTO> options, List<UUID> optOrder) {

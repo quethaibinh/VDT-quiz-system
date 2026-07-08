@@ -1,5 +1,6 @@
 package com.examruntime_service.examruntime_service.service.livequiz;
 
+import com.examruntime_service.examruntime_service.client.QuestionMediaClient;
 import com.examruntime_service.examruntime_service.model.dto.cache.AnswerEntryDTO;
 import com.examruntime_service.examruntime_service.model.dto.cache.ExamAnswerKeyDTO;
 import com.examruntime_service.examruntime_service.model.dto.cache.ExamPaperPoolDTO;
@@ -29,6 +30,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -56,6 +58,7 @@ class LiveQuizPlayServiceTest {
     private LiveQuizRoomCache roomCache;
     private LiveQuizRealtimePublisher realtimePublisher;
     private LiveQuizTeacherSnapshotService snapshotService;
+    private QuestionMediaClient questionMediaClient;
     private LiveQuizPlayService service;
 
     @BeforeEach
@@ -67,6 +70,7 @@ class LiveQuizPlayServiceTest {
         roomCache = mock(LiveQuizRoomCache.class);
         realtimePublisher = mock(LiveQuizRealtimePublisher.class);
         snapshotService = mock(LiveQuizTeacherSnapshotService.class);
+        questionMediaClient = mock(QuestionMediaClient.class);
         service = new LiveQuizPlayService(
                 roomRepo,
                 participantRepo,
@@ -76,6 +80,7 @@ class LiveQuizPlayServiceTest {
                 realtimePublisher,
                 snapshotService,
                 new LiveQuizScoringPolicy(),
+                questionMediaClient,
                 new ObjectMapper(),
                 Clock.fixed(Instant.parse("2026-07-03T10:00:05Z"), ZoneOffset.UTC)
         );
@@ -88,6 +93,7 @@ class LiveQuizPlayServiceTest {
         when(participantRepo.findByRoomId(roomId)).thenReturn(List.of(participant(now.minusSeconds(5), now.plusSeconds(5))));
         when(snapshotService.currentRank(roomId, participantId)).thenReturn(1);
         when(snapshotService.leaderboard(any())).thenReturn(List.of(leaderboardEntry()));
+        when(questionMediaClient.signedUrls(any())).thenReturn(Map.of());
         when(answerRepo.save(any())).thenAnswer(invocation -> {
             LiveQuizAnswer answer = invocation.getArgument(0);
             answer.setId(UUID.randomUUID());

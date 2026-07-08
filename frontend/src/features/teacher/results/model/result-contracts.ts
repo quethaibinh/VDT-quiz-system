@@ -74,6 +74,8 @@ export interface TeacherResultDetail {
       type: string | null;
       difficulty: string | null;
       contentFormat: string | null;
+      imageObjectKey?: string | null;
+      imageUrl?: string | null;
     };
     options: {
       optionId: string;

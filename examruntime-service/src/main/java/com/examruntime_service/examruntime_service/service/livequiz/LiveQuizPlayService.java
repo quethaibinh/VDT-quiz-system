@@ -4,6 +4,7 @@ import com.examruntime_service.examruntime_service.model.dto.cache.AnswerEntryDT
 import com.examruntime_service.examruntime_service.model.dto.cache.ExamAnswerKeyDTO;
 import com.examruntime_service.examruntime_service.model.dto.cache.ExamPaperPoolDTO;
 import com.examruntime_service.examruntime_service.model.dto.cache.PaperQuestionDTO;
+import com.examruntime_service.examruntime_service.client.QuestionMediaClient;
 import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizAnswerRequestDTO;
 import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizAnswerResponseDTO;
 import com.examruntime_service.examruntime_service.model.dto.livequiz.LiveQuizCurrentQuestionDTO;
@@ -51,6 +52,7 @@ public class LiveQuizPlayService {
     private final LiveQuizRealtimePublisher realtimePublisher;
     private final LiveQuizTeacherSnapshotService snapshotService;
     private final LiveQuizScoringPolicy scoringPolicy;
+    private final QuestionMediaClient questionMediaClient;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -63,6 +65,7 @@ public class LiveQuizPlayService {
             LiveQuizRealtimePublisher realtimePublisher,
             LiveQuizTeacherSnapshotService snapshotService,
             LiveQuizScoringPolicy scoringPolicy,
+            QuestionMediaClient questionMediaClient,
             ObjectMapper objectMapper,
             Clock clock
     ) {
@@ -74,6 +77,7 @@ public class LiveQuizPlayService {
         this.realtimePublisher = realtimePublisher;
         this.snapshotService = snapshotService;
         this.scoringPolicy = scoringPolicy;
+        this.questionMediaClient = questionMediaClient;
         this.objectMapper = objectMapper;
         this.clock = clock;
     }
@@ -134,6 +138,8 @@ public class LiveQuizPlayService {
                 question.type(),
                 question.content(),
                 question.contentFormat(),
+                question.imageObjectKey(),
+                signedUrl(question.imageObjectKey()),
                 question.options(),
                 saved.getCurrentQuestionStartedAt(),
                 saved.getCurrentQuestionEndsAt(),
@@ -486,6 +492,13 @@ public class LiveQuizPlayService {
         }
         return paperPool.questions().stream()
                 .collect(Collectors.toMap(PaperQuestionDTO::questionId, Function.identity()));
+    }
+
+    private String signedUrl(String imageObjectKey) {
+        if (imageObjectKey == null || imageObjectKey.isBlank()) {
+            return null;
+        }
+        return questionMediaClient.signedUrls(List.of(imageObjectKey)).get(imageObjectKey);
     }
 
     /**

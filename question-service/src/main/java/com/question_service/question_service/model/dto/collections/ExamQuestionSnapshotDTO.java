@@ -18,6 +18,7 @@ public record ExamQuestionSnapshotDTO(
         ContentFormat contentFormat,
         Double defaultScore,
         int estimatedSecond,
+        String imageObjectKey,
         List<ExamOptionSnapshotDTO> options
 ) {
     public ExamQuestionSnapshotDTO(
@@ -28,8 +29,22 @@ public record ExamQuestionSnapshotDTO(
             String content,
             ContentFormat contentFormat,
             Double defaultScore,
+            int estimatedSecond,
             List<ExamOptionSnapshotDTO> options
     ) {
-        this(questionId, questionVersion, difficulty, type, content, contentFormat, defaultScore, 0, options);
+        this(questionId, questionVersion, difficulty, type, content, contentFormat, defaultScore, estimatedSecond, null, options);
+    }
+
+    public ExamQuestionSnapshotDTO(
+            UUID questionId,
+            long questionVersion,
+            Difficulty difficulty,
+            String type,
+            String content,
+            ContentFormat contentFormat,
+            Double defaultScore,
+            List<ExamOptionSnapshotDTO> options
+    ) {
+        this(questionId, questionVersion, difficulty, type, content, contentFormat, defaultScore, 0, null, options);
     }
 }

@@ -144,6 +144,7 @@ public class LiveQuizPrepareTransactionService {
                 item.contentFormat(),
                 item.defaultScore(),
                 item.estimatedSecond(),
+                item.imageObjectKey(),
                 item.options().stream()
                         .map(option -> new PaperOptionDTO(
                                 option.optionId(),

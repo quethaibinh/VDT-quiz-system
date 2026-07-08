@@ -65,6 +65,8 @@ export interface StudentLiveQuizCurrentQuestion {
   type: StudentLiveQuizQuestionType;
   content: string;
   contentFormat: string | null;
+  imageObjectKey?: string | null;
+  imageUrl?: string | null;
   options: StudentLiveQuizOption[];
   startedAt: string;
   endsAt: string;

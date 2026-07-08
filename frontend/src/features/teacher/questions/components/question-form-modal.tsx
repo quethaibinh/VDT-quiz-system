@@ -1,14 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Trash2, X } from "lucide-react";
-import { useEffect } from "react";
+import { Image, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { listTopics } from "@/features/teacher/questions/api/question-api";
+import { getQuestionImageUrl, listTopics, uploadQuestionImage } from "@/features/teacher/questions/api/question-api";
 import type { QuestionDetail, QuestionInput } from "@/features/teacher/questions/model/question-types";
 
 const optionSchema = z.object({
@@ -26,6 +26,7 @@ const questionSchema = z.object({
   defaultScore: z.coerce.number().min(0, "Điểm phải lớn hơn hoặc bằng 0").default(1.0),
   estimatedSecond: z.coerce.number().min(1, "Thời gian phải lớn hơn hoặc bằng 1 giây").default(60),
   visibility: z.enum(["PUBLIC", "PRIVATE"]),
+  imageObjectKey: z.string().optional().nullable(),
   explanation: z.string().optional().nullable(),
   options: z.array(optionSchema).min(2, "Phải có ít nhất 2 đáp án."),
 });
@@ -53,6 +54,9 @@ export function QuestionFormModal({
     queryFn: () => listTopics(subjectId),
     enabled: open,
   });
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const {
     register,
@@ -72,6 +76,7 @@ export function QuestionFormModal({
       estimatedSecond: 60,
       visibility: "PRIVATE",
       explanation: "",
+      imageObjectKey: null,
       options: [
         { optionKey: "A", content: "", correct: false, explanation: "" },
         { optionKey: "B", content: "", correct: false, explanation: "" },
@@ -86,6 +91,7 @@ export function QuestionFormModal({
 
   const questionType = useWatch({ control, name: "questionType" });
   const optionsValues = useWatch({ control, name: "options" }) ?? [];
+  const imageObjectKey = useWatch({ control, name: "imageObjectKey" });
 
   // Reset form khi question thay đổi (ví dụ khi mở modal sửa)
   useEffect(() => {
@@ -99,6 +105,7 @@ export function QuestionFormModal({
         estimatedSecond: question.estimatedSecond,
         visibility: question.visibility,
         explanation: question.explanation ?? "",
+        imageObjectKey: question.imageObjectKey ?? null,
         options: question.options.map((opt) => ({
           optionKey: opt.optionKey,
           content: opt.content,
@@ -116,6 +123,7 @@ export function QuestionFormModal({
         estimatedSecond: 60,
         visibility: "PRIVATE",
         explanation: "",
+        imageObjectKey: null,
         options: [
           { optionKey: "A", content: "", correct: false, explanation: "" },
           { optionKey: "B", content: "", correct: false, explanation: "" },
@@ -123,6 +131,24 @@ export function QuestionFormModal({
       });
     }
   }, [question, reset, open]);
+
+  useEffect(() => {
+    if (!open || !imageObjectKey) {
+      setImagePreviewUrl(null);
+      return;
+    }
+    let cancelled = false;
+    getQuestionImageUrl(subjectId, imageObjectKey)
+      .then((response) => {
+        if (!cancelled) setImagePreviewUrl(response.url);
+      })
+      .catch(() => {
+        if (!cancelled) setImagePreviewUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [imageObjectKey, open, subjectId]);
 
   // Đảm bảo tính nhất quán của SINGLE_CHOICE: chỉ có 1 đáp án đúng
   const handleCorrectChange = (index: number, checked: boolean) => {
@@ -140,6 +166,27 @@ export function QuestionFormModal({
     append({ optionKey: nextKey, content: "", correct: false, explanation: "" });
   };
 
+  const handleImageChange = async (file?: File | null) => {
+    if (!file) return;
+    setImageUploading(true);
+    setImageError(null);
+    try {
+      const response = await uploadQuestionImage(subjectId, file);
+      setValue("imageObjectKey", response.imageObjectKey, { shouldDirty: true });
+      setImagePreviewUrl(URL.createObjectURL(file));
+    } catch {
+      setImageError("Khong the tai anh len. Vui long kiem tra dinh dang va dung luong.");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setValue("imageObjectKey", null, { shouldDirty: true });
+    setImagePreviewUrl(null);
+    setImageError(null);
+  };
+
   const onFormSubmit = (data: FormValues) => {
     onSubmit({
       topicId: data.topicId,
@@ -150,6 +197,7 @@ export function QuestionFormModal({
       estimatedSecond: data.estimatedSecond,
       visibility: data.visibility,
       explanation: data.explanation || null,
+      imageObjectKey: data.imageObjectKey || null,
       options: data.options.map((opt) => ({
         optionKey: opt.optionKey,
         content: opt.content,
@@ -214,6 +262,38 @@ export function QuestionFormModal({
               />
               {errors.content && <p className="mt-1 text-xs text-danger">{errors.content.message}</p>}
             </label>
+
+            <div className="rounded-lg border border-line bg-surface p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Image className="h-4 w-4 text-primary" />
+                  Anh minh hoa
+                </div>
+                <div className="flex items-center gap-2">
+                  {imageObjectKey && (
+                    <Button type="button" variant="secondary" onClick={handleRemoveImage}>
+                      Xoa anh
+                    </Button>
+                  )}
+                  <label className="inline-flex cursor-pointer items-center rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-ink/5">
+                    {imageUploading ? "Dang tai..." : "Chon anh"}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="sr-only"
+                      disabled={imageUploading}
+                      onChange={(event) => handleImageChange(event.target.files?.[0])}
+                    />
+                  </label>
+                </div>
+              </div>
+              {imagePreviewUrl && (
+                <div className="mt-3 max-h-64 overflow-hidden rounded-lg border border-line bg-white">
+                  <img src={imagePreviewUrl} alt="" className="max-h-64 w-full object-contain" />
+                </div>
+              )}
+              {imageError && <p className="mt-2 text-xs text-danger">{imageError}</p>}
+            </div>
 
             {/* Thông số câu hỏi */}
             <div className="grid gap-4 sm:grid-cols-4">

@@ -35,7 +35,9 @@ public record TeacherResultDetailDTO(
             String content,
             String type,
             String difficulty,
-            String contentFormat
+            String contentFormat,
+            String imageObjectKey,
+            String imageUrl
     ) {
     }
 

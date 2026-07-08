@@ -20,5 +20,7 @@ public class StudentQuestionDTO {
     private String content;
     private String contentFormat;
     private double score;
+    private String imageObjectKey;
+    private String imageUrl;
     private List<StudentOptionDTO> options;
 }

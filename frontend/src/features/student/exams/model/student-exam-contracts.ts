@@ -64,6 +64,8 @@ export interface StudentQuestion {
   content: string;
   contentFormat: "TEXT" | "HTML";
   score: number;
+  imageObjectKey?: string | null;
+  imageUrl?: string | null;
   options: StudentOption[];
 }
 

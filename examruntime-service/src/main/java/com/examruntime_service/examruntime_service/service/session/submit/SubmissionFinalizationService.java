@@ -341,6 +341,7 @@ public class SubmissionFinalizationService {
         visibleQuestion.put("content", question.content());
         visibleQuestion.put("contentFormat", question.contentFormat());
         visibleQuestion.put("score", question.score());
+        visibleQuestion.put("imageObjectKey", question.imageObjectKey());
         visibleQuestion.put("options", orderedOptions);
 
         Map<String, Object> snapshot = new LinkedHashMap<>();

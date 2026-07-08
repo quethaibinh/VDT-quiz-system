@@ -16,6 +16,7 @@ interface LiveQuizQuestionStageProps {
   questionPosition: number;
   totalQuestions: number;
   content: string;
+  imageUrl?: string | null;
   options: LiveQuizStageOption[];
   isMultipleChoice: boolean;
   selectedOptionIds: string[];
@@ -38,6 +39,7 @@ export function LiveQuizQuestionStage({
   questionPosition,
   totalQuestions,
   content,
+  imageUrl,
   options,
   isMultipleChoice,
   selectedOptionIds,
@@ -97,6 +99,11 @@ export function LiveQuizQuestionStage({
             <h1 className="m-0 mx-auto mt-4 max-w-4xl whitespace-pre-wrap font-serif text-3xl font-semibold leading-tight text-[#31211f] md:text-5xl">
               {content}
             </h1>
+            {imageUrl && (
+              <div className="mx-auto mt-5 max-h-[320px] max-w-3xl overflow-hidden rounded-lg border border-[#f2dfda] bg-white">
+                <img src={imageUrl} alt="" className="max-h-[320px] w-full object-contain" loading="lazy" />
+              </div>
+            )}
             <p className="m-0 mt-3 text-[11px] font-semibold text-muted md:text-xs">
               {isMultipleChoice ? "Chọn tất cả đáp án đúng trước khi hết giờ." : "Chọn đáp án đúng trước khi hết giờ."}
             </p>
