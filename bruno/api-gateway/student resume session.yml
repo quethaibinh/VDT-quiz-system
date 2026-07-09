@@ -1,0 +1,34 @@
+info:
+  name: student resume session
+  type: http
+  seq: 29
+
+http:
+  method: GET
+  url: "{{url}}/v1/api/examruntime-service/student/sessions/{{sessionId}}"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+        const data = body?.data ?? body;
+
+        if (!data?.sessionId) {
+          throw new Error("Resume response must contain data.sessionId.");
+        }
+        if (data.sessionId !== bru.getEnvVar("sessionId")) {
+          throw new Error(`Resume response sessionId mismatch. Expected ${bru.getEnvVar("sessionId")}, got ${data.sessionId}`);
+        }
+        if (!["CREATED", "IN_PROGRESS", "SUBMITTED", "AUTO_SUBMITTED", "EXPIRED", "LOCKED"].includes(data.status)) {
+          throw new Error(`Unexpected resume session status: ${data.status}`);
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,29 @@
+info:
+  name: teacher create live quiz
+  type: http
+  seq: 31
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/exam-service/teacher/subjects/{{subjectId}}/live-quizzes"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Quick live quiz",
+        "description": "Self-paced live quiz",
+        "collectionId": "{{collectionId}}",
+        "shuffleQuestions": true,
+        "showLeaderboard": true,
+        "showCorrectAnswer": false,
+        "joinPolicy": "CODE_ONLY"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

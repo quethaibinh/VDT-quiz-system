@@ -1,0 +1,17 @@
+info:
+  name: teacher remove exam student
+  type: http
+  seq: 24
+
+http:
+  method: DELETE
+  url: "{{url}}/v1/api/exam-service/teacher/subjects/{{subjectId}}/exams/{{examId}}/assignments/{{studentId}}"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

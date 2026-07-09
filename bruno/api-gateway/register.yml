@@ -1,0 +1,31 @@
+info:
+  name: register
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/auth-service/register"
+  body:
+    type: json
+    data: |-
+      {
+        "username": "thanh1",
+        "password": "123456",
+        "fullName": "vu duc thanh",
+        "email": "thanh1@gmail.com",
+        "studentCode": "B22DCCN801",
+        "phone": "8888888886",
+        "nationalId": "888888888886",
+        "birthDate": "2004-07-03",
+        "gender": "MALE"
+      }
+  auth:
+    type: bearer
+    token: ""
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

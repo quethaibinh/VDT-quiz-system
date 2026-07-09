@@ -1,0 +1,20 @@
+name: Auth Service CI
+
+on:
+  push:
+    paths:
+      - 'auth-service/**'
+      - '.github/workflows/auth-service-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+  pull_request:
+    paths:
+      - 'auth-service/**'
+      - '.github/workflows/auth-service-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/template-java-ci.yml
+    with:
+      working-directory: auth-service
+    secrets: inherit

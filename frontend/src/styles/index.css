@@ -1,0 +1,60 @@
+@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "EB Garamond", Georgia, serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
+  --color-canvas: #FFF9F9;
+  --color-surface: #FCF2F2;
+  --color-primary: #CF1F1F;
+  --color-primary-hover: #940909;
+  --color-accent: #660E03;
+  --color-ink: #22222E;
+  --color-muted: #636275;
+  --color-line: #CCAAA3;
+  --color-success: #0AA825;
+  --color-warning: #a46b22;
+  --color-danger: #B02A20;
+  --shadow-soft: 0 2px 16px rgba(58, 48, 42, 0.06);
+}
+
+:root { color: #22222E; background: #FFF9F9; font-family: "Manrope", system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid #CF1F1F; outline-offset: 2px; }
+h1, h2, h3 { font-family: "EB Garamond", Georgia, serif; }
+
+@keyframes quiz-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.quiz-float {
+  animation: quiz-float 3.4s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes quiz-answer-flash {
+  0%, 100% { transform: translateY(0); filter: brightness(1); }
+  30% { transform: translateY(-3px); filter: brightness(1.08); }
+  60% { transform: translateY(0); filter: brightness(.96); }
+}
+
+.quiz-answer-flash {
+  animation: quiz-answer-flash 0.34s ease-in-out 3;
+  will-change: transform, filter;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quiz-float {
+    animation: none;
+    will-change: auto;
+  }
+
+  .quiz-answer-flash {
+    animation: none;
+    will-change: auto;
+  }
+}

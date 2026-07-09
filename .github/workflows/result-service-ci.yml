@@ -1,0 +1,20 @@
+name: Result Service CI
+
+on:
+  push:
+    paths:
+      - 'result-service/**'
+      - '.github/workflows/result-service-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+  pull_request:
+    paths:
+      - 'result-service/**'
+      - '.github/workflows/result-service-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/template-java-ci.yml
+    with:
+      working-directory: result-service
+    secrets: inherit

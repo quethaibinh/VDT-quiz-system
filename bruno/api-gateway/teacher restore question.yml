@@ -1,0 +1,17 @@
+info:
+  name: teacher restore question
+  type: http
+  seq: 15
+
+http:
+  method: PATCH
+  url: "{{url}}/v1/api/question-service/teacher/subjects/{{subjectId}}/questions/{{questionId}}/restore"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

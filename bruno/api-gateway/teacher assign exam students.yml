@@ -1,0 +1,23 @@
+info:
+  name: teacher assign exam students
+  type: http
+  seq: 23
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/exam-service/teacher/subjects/{{subjectId}}/exams/{{examId}}/assignments"
+  body:
+    type: json
+    data: |-
+      {
+        "studentIds": ["{{studentId}}"]
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

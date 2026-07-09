@@ -1,0 +1,35 @@
+info:
+  name: teacher create question
+  type: http
+  seq: 11
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/question-service/teacher/subjects/{{subjectId}}/questions"
+  body:
+    type: json
+    data: |-
+      {
+        "topicId": "{{topicId}}",
+        "questionType": "SINGLE_CHOICE",
+        "content": "Which statement is valid?",
+        "contentFormat": "PLAIN_TEXT",
+        "explanation": "Owner-only explanation",
+        "difficulty": "EASY",
+        "defaultScore": 1.0,
+        "estimatedSecond": 30,
+        "visibility": "PRIVATE",
+        "options": [
+          {"optionKey": "A", "content": "Statement A", "correct": true},
+          {"optionKey": "B", "content": "Statement B", "correct": false}
+        ]
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

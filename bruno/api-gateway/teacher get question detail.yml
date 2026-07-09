@@ -1,0 +1,24 @@
+info:
+  name: teacher get question detail
+  type: http
+  seq: 12
+
+http:
+  method: GET
+  url: "{{url}}/v1/api/question-service/teacher/subjects/{{subjectId}}/questions/{{questionId}}"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+runtime:
+  variables:
+    - name: subjectId
+      value: 7a9358f1-e173-4dd7-b5d0-2f589c5a4b1e
+    - name: questionId
+      value: 02c1256c-6bcd-4b3a-bede-72048e602b2a
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

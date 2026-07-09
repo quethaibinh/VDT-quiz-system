@@ -1,0 +1,60 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          # Cau hinh CORS toan cuc cho gateway.
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOriginPatterns: "*"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - PATCH
+                  - DELETE
+                  - OPTIONS
+                allowedHeaders: "*"
+                allowCredentials: true
+
+          # Dinh tuyen request tu gateway xuong cac microservice.
+          routes:
+            - id: auth-service-route
+              uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/v1/api/auth-service/**,/v1/api/admin/auth-service/**
+
+            - id: question-service-route
+              uri: ${QUESTION_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/v1/api/question-service/**,/v1/api/admin/question-service/**
+
+            - id: exam-service-route
+              uri: ${EXAM_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/v1/api/exam-service/**,/v1/api/admin/exam-service/**
+
+            - id: examruntime-service-route
+              uri: ${EXAMRUNTIME_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/v1/api/examruntime-service/**,/v1/api/admin/examruntime-service/**
+
+            - id: result-service-route
+              uri: ${RESULT_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/v1/api/result-service/**,/v1/api/admin/result-service/**
+
+jwt:
+  secret: ${JWT_SECRET::01234567890123456789012345678901}
+
+gateway:
+  trusted-secret: ${GATEWAY_TRUSTED_SECRET:replace-with-a-long-random-gateway-secret}

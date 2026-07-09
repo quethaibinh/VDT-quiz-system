@@ -1,0 +1,56 @@
+info:
+  name: student submit session
+  type: http
+  seq: 31
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/examruntime-service/student/sessions/{{sessionId}}/submit"
+  auth:
+    type: bearer
+    token: "{{token}}"
+  body:
+    type: json
+    data: |-
+      {
+        "idempotencyKey": "{{submitIdempotencyKey}}",
+        "clientSeq": {{clientSeq}},
+        "finalAnswers": [
+          {
+            "questionId": "{{questionId}}",
+            "selectedOptionIds": ["{{optionId}}"],
+            "answerText": null,
+            "markedForReview": false
+          }
+        ]
+      }
+
+runtime:
+  scripts:
+    - type: pre-request
+      code: |-
+        if (!bru.getEnvVar("submitIdempotencyKey")) {
+          bru.setEnvVar("submitIdempotencyKey", crypto.randomUUID());
+        }
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+        const data = body?.data ?? body;
+
+        if (!data?.submissionId) {
+          throw new Error("Submit response must contain data.submissionId.");
+        }
+        if (data.sessionId !== bru.getEnvVar("sessionId")) {
+          throw new Error(`Submit response sessionId mismatch. Expected ${bru.getEnvVar("sessionId")}, got ${data.sessionId}`);
+        }
+        if (!["STUDENT", "TIME_UP"].includes(data.submitReason)) {
+          throw new Error(`Unexpected submitReason: ${data.submitReason}`);
+        }
+        bru.setEnvVar("submissionId", data.submissionId);
+        console.log(`Submission accepted: ${data.submissionId}`);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

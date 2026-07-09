@@ -1,0 +1,29 @@
+info:
+  name: student resume invalid session
+  type: http
+  seq: 33
+
+http:
+  method: GET
+  url: "{{url}}/v1/api/examruntime-service/student/sessions/00000000-0000-0000-0000-000000000000"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+        const message = body?.message ?? body?.error ?? "";
+
+        if (message !== "SESSION_NOT_FOUND") {
+          throw new Error(`Expected SESSION_NOT_FOUND, got: ${message || JSON.stringify(body)}`);
+        }
+        console.log("Invalid session was rejected as expected.");
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

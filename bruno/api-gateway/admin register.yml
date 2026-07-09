@@ -1,0 +1,24 @@
+info:
+  name: admin register
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/admin/auth-service/users/import"
+  body:
+    type: multipart-form
+    data:
+      - name: file
+        type: file
+        value:
+          - D:\VDT\mini-project\quiz_v0.2_coding\docs\samples\student-import-100.xlsx
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

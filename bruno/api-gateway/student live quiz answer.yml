@@ -1,0 +1,18 @@
+meta:
+  name: student live quiz answer
+  type: http
+  seq: 0
+
+post:
+  url: {{baseUrl}}/v1/api/examruntime-service/student/live-quizzes/{{roomId}}/answer
+  body: json
+  auth: bearer
+
+auth:bearer:
+  token: {{studentToken}}
+
+body:json:
+  {
+    "questionId": "{{questionId}}",
+    "selectedOptionIds": ["{{optionId}}"]
+  }

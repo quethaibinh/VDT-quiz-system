@@ -1,0 +1,40 @@
+info:
+  name: login
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/auth-service/login"
+  body:
+    type: json
+    data: |-
+      {
+        "username": "thanh1",
+        "password": "123456"
+      }
+  auth:
+    type: bearer
+    token: ""
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+        const token = typeof body === "string"
+          ? body.trim().replace(/^"|"$/g, "")
+          : body?.token ?? body?.data;
+
+        if (typeof token === "string" && token.split(".").length === 3) {
+          bru.setEnvVar("token", token);
+          console.log("JWT token updated.");
+        } else {
+          throw new Error("Login response does not contain a valid JWT.");
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

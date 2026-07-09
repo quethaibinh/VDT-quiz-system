@@ -1,0 +1,52 @@
+info:
+  name: student autosave answers
+  type: http
+  seq: 30
+
+http:
+  method: PUT
+  url: "{{url}}/v1/api/examruntime-service/student/sessions/{{sessionId}}/answers"
+  auth:
+    type: bearer
+    token: "{{token}}"
+  body:
+    type: json
+    data: |-
+      {
+        "clientSeq": {{clientSeq}},
+        "answers": [
+          {
+            "questionId": "{{questionId}}",
+            "selectedOptionIds": ["{{optionId}}"],
+            "answerText": null,
+            "markedForReview": false
+          }
+        ]
+      }
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+        const data = body?.data ?? body;
+
+        if (!data?.sessionId) {
+          throw new Error("Autosave response must contain data.sessionId.");
+        }
+        if (data.sessionId !== bru.getEnvVar("sessionId")) {
+          throw new Error(`Autosave response sessionId mismatch. Expected ${bru.getEnvVar("sessionId")}, got ${data.sessionId}`);
+        }
+        if (Number(data.acceptedSeq) !== Number(bru.getEnvVar("clientSeq"))) {
+          throw new Error(`Autosave acceptedSeq mismatch. Expected ${bru.getEnvVar("clientSeq")}, got ${data.acceptedSeq}`);
+        }
+
+        const nextSeq = Number(bru.getEnvVar("clientSeq") || 1) + 1;
+        bru.setEnvVar("clientSeq", String(nextSeq));
+        console.log(`Autosave accepted. Next clientSeq=${nextSeq}`);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

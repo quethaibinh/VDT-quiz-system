@@ -1,0 +1,23 @@
+info:
+  name: admin assign teacher subject
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/admin/question-service/subjects/7a9358f1-e173-4dd7-b5d0-2f589c5a4b1e/teachers"
+  body:
+    type: json
+    data: |-
+      {
+        "teacherId": "f8bf8233-160c-47aa-8c33-670e384fa391"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

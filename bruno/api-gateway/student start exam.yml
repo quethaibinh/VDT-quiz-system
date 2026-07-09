@@ -1,0 +1,48 @@
+info:
+  name: student start exam
+  type: http
+  seq: 28
+
+http:
+  method: POST
+  url: "{{url}}/v1/api/examruntime-service/student/exams/{{examId}}/start"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+        const data = body?.data ?? body;
+
+        if (!data?.sessionId) {
+          throw new Error("Start response must contain data.sessionId.");
+        }
+        if (data.sessionId !== bru.getEnvVar("sessionId")) {
+          throw new Error(`Start response sessionId mismatch. Expected ${bru.getEnvVar("sessionId")}, got ${data.sessionId}`);
+        }
+        if (data.status !== "IN_PROGRESS") {
+          throw new Error(`Start response status must be IN_PROGRESS, got ${data.status}`);
+        }
+        if (!Array.isArray(data.questions) || data.questions.length === 0) {
+          throw new Error("Start response must contain at least one question.");
+        }
+
+        const firstQuestion = data.questions.find(q => Array.isArray(q.options) && q.options.length > 0) ?? data.questions[0];
+        bru.setEnvVar("questionId", firstQuestion.questionId);
+
+        const firstOption = Array.isArray(firstQuestion.options) ? firstQuestion.options[0] : null;
+        if (firstOption?.optionId) {
+          bru.setEnvVar("optionId", firstOption.optionId);
+          console.log(`Saved questionId=${firstQuestion.questionId}, optionId=${firstOption.optionId}`);
+        } else {
+          console.log(`Saved questionId=${firstQuestion.questionId}. No optionId found; autosave text-only payload may be needed for essay questions.`);
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

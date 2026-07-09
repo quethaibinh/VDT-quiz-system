@@ -1,0 +1,20 @@
+name: Question Service CI
+
+on:
+  push:
+    paths:
+      - 'question-service/**'
+      - '.github/workflows/question-service-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+  pull_request:
+    paths:
+      - 'question-service/**'
+      - '.github/workflows/question-service-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/template-java-ci.yml
+    with:
+      working-directory: question-service
+    secrets: inherit

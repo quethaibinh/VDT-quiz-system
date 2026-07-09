@@ -1,0 +1,20 @@
+name: Gateway Service CI
+
+on:
+  push:
+    paths:
+      - 'gateway/**'
+      - '.github/workflows/gateway-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+  pull_request:
+    paths:
+      - 'gateway/**'
+      - '.github/workflows/gateway-ci.yml'
+      - '.github/workflows/template-java-ci.yml'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/template-java-ci.yml
+    with:
+      working-directory: gateway
+    secrets: inherit
